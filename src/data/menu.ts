@@ -7,6 +7,7 @@ export type MenuItem = {
   category: Category;
   patties?: number;
   ingredients: string[];
+  description?: string;
   ingredientsPlaceholder?: boolean;
   tag?: string;
   vegetarian?: boolean;
@@ -152,15 +153,32 @@ export const BUSINESS = {
   email: "info@tasteitstasty.de",
 };
 
-export const OPENING_HOURS = [
-  { day: "Montag", hours: "Ruhetag" },
-  { day: "Dienstag", hours: "11:00 – 20:00" },
-  { day: "Mittwoch", hours: "11:00 – 20:00" },
-  { day: "Donnerstag", hours: "11:00 – 20:00" },
-  { day: "Freitag", hours: "11:00 – 21:00" },
-  { day: "Samstag", hours: "11:00 – 21:00" },
-  { day: "Sonntag", hours: "12:00 – 19:00" },
+/** Wochentage – Index entspricht Date.getDay() (0 = Sonntag). */
+export const WEEKDAYS = [
+  "Sonntag",
+  "Montag",
+  "Dienstag",
+  "Mittwoch",
+  "Donnerstag",
+  "Freitag",
+  "Samstag",
+] as const;
+
+export type DayHours = { open: string; close: string; closed: boolean };
+
+/** Standard-Öffnungszeiten: Mo–Sa 11:00–18:00, Sonntag geschlossen. */
+export const DEFAULT_HOURS: DayHours[] = [
+  { open: "11:00", close: "18:00", closed: true }, // Sonntag
+  { open: "11:00", close: "18:00", closed: false },
+  { open: "11:00", close: "18:00", closed: false },
+  { open: "11:00", close: "18:00", closed: false },
+  { open: "11:00", close: "18:00", closed: false },
+  { open: "11:00", close: "18:00", closed: false },
+  { open: "11:00", close: "18:00", closed: false }, // Samstag
 ];
+
+export const formatDayHours = (h: DayHours) =>
+  h.closed ? "Geschlossen" : `${h.open} – ${h.close}`;
 
 export const formatPrice = (value: number) =>
   new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(value);
