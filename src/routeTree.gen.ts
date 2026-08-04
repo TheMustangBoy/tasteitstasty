@@ -12,7 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BestellungRouteImport } from './routes/bestellung'
 import { Route as CheckoutRouteImport } from './routes/checkout'
+import { Route as OeffnungszeitenRouteImport } from './routes/oeffnungszeiten'
 import { Route as SpeisekarteRouteImport } from './routes/speisekarte'
+import { Route as StandortRouteImport } from './routes/standort'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -29,9 +31,19 @@ const CheckoutRoute = CheckoutRouteImport.update({
   path: '/checkout',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OeffnungszeitenRoute = OeffnungszeitenRouteImport.update({
+  id: '/oeffnungszeiten',
+  path: '/oeffnungszeiten',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SpeisekarteRoute = SpeisekarteRouteImport.update({
   id: '/speisekarte',
   path: '/speisekarte',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StandortRoute = StandortRouteImport.update({
+  id: '/standort',
+  path: '/standort',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -39,34 +51,61 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/bestellung': typeof BestellungRoute
   '/checkout': typeof CheckoutRoute
+  '/oeffnungszeiten': typeof OeffnungszeitenRoute
   '/speisekarte': typeof SpeisekarteRoute
+  '/standort': typeof StandortRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/bestellung': typeof BestellungRoute
   '/checkout': typeof CheckoutRoute
+  '/oeffnungszeiten': typeof OeffnungszeitenRoute
   '/speisekarte': typeof SpeisekarteRoute
+  '/standort': typeof StandortRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/bestellung': typeof BestellungRoute
   '/checkout': typeof CheckoutRoute
+  '/oeffnungszeiten': typeof OeffnungszeitenRoute
   '/speisekarte': typeof SpeisekarteRoute
+  '/standort': typeof StandortRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/bestellung' | '/checkout' | '/speisekarte'
+  fullPaths:
+    | '/'
+    | '/bestellung'
+    | '/checkout'
+    | '/oeffnungszeiten'
+    | '/speisekarte'
+    | '/standort'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/bestellung' | '/checkout' | '/speisekarte'
-  id: '__root__' | '/' | '/bestellung' | '/checkout' | '/speisekarte'
+  to:
+    | '/'
+    | '/bestellung'
+    | '/checkout'
+    | '/oeffnungszeiten'
+    | '/speisekarte'
+    | '/standort'
+  id:
+    | '__root__'
+    | '/'
+    | '/bestellung'
+    | '/checkout'
+    | '/oeffnungszeiten'
+    | '/speisekarte'
+    | '/standort'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BestellungRoute: typeof BestellungRoute
   CheckoutRoute: typeof CheckoutRoute
+  OeffnungszeitenRoute: typeof OeffnungszeitenRoute
   SpeisekarteRoute: typeof SpeisekarteRoute
+  StandortRoute: typeof StandortRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -92,11 +131,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/oeffnungszeiten': {
+      id: '/oeffnungszeiten'
+      path: '/oeffnungszeiten'
+      fullPath: '/oeffnungszeiten'
+      preLoaderRoute: typeof OeffnungszeitenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/speisekarte': {
       id: '/speisekarte'
       path: '/speisekarte'
       fullPath: '/speisekarte'
       preLoaderRoute: typeof SpeisekarteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/standort': {
+      id: '/standort'
+      path: '/standort'
+      fullPath: '/standort'
+      preLoaderRoute: typeof StandortRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -106,7 +159,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BestellungRoute: BestellungRoute,
   CheckoutRoute: CheckoutRoute,
+  OeffnungszeitenRoute: OeffnungszeitenRoute,
   SpeisekarteRoute: SpeisekarteRoute,
+  StandortRoute: StandortRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
