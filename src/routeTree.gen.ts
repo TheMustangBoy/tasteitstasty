@@ -10,33 +10,141 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AgbRouteImport } from './routes/agb'
+import { Route as BestellungRouteImport } from './routes/bestellung'
+import { Route as CheckoutRouteImport } from './routes/checkout'
+import { Route as DatenschutzRouteImport } from './routes/datenschutz'
+import { Route as ImpressumRouteImport } from './routes/impressum'
+import { Route as OeffnungszeitenRouteImport } from './routes/oeffnungszeiten'
+import { Route as SpeisekarteRouteImport } from './routes/speisekarte'
+import { Route as StandortRouteImport } from './routes/standort'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AgbRoute = AgbRouteImport.update({
+  id: '/agb',
+  path: '/agb',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BestellungRoute = BestellungRouteImport.update({
+  id: '/bestellung',
+  path: '/bestellung',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CheckoutRoute = CheckoutRouteImport.update({
+  id: '/checkout',
+  path: '/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DatenschutzRoute = DatenschutzRouteImport.update({
+  id: '/datenschutz',
+  path: '/datenschutz',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ImpressumRoute = ImpressumRouteImport.update({
+  id: '/impressum',
+  path: '/impressum',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OeffnungszeitenRoute = OeffnungszeitenRouteImport.update({
+  id: '/oeffnungszeiten',
+  path: '/oeffnungszeiten',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SpeisekarteRoute = SpeisekarteRouteImport.update({
+  id: '/speisekarte',
+  path: '/speisekarte',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StandortRoute = StandortRouteImport.update({
+  id: '/standort',
+  path: '/standort',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/agb': typeof AgbRoute
+  '/bestellung': typeof BestellungRoute
+  '/checkout': typeof CheckoutRoute
+  '/datenschutz': typeof DatenschutzRoute
+  '/impressum': typeof ImpressumRoute
+  '/oeffnungszeiten': typeof OeffnungszeitenRoute
+  '/speisekarte': typeof SpeisekarteRoute
+  '/standort': typeof StandortRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/agb': typeof AgbRoute
+  '/bestellung': typeof BestellungRoute
+  '/checkout': typeof CheckoutRoute
+  '/datenschutz': typeof DatenschutzRoute
+  '/impressum': typeof ImpressumRoute
+  '/oeffnungszeiten': typeof OeffnungszeitenRoute
+  '/speisekarte': typeof SpeisekarteRoute
+  '/standort': typeof StandortRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/agb': typeof AgbRoute
+  '/bestellung': typeof BestellungRoute
+  '/checkout': typeof CheckoutRoute
+  '/datenschutz': typeof DatenschutzRoute
+  '/impressum': typeof ImpressumRoute
+  '/oeffnungszeiten': typeof OeffnungszeitenRoute
+  '/speisekarte': typeof SpeisekarteRoute
+  '/standort': typeof StandortRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/agb'
+    | '/bestellung'
+    | '/checkout'
+    | '/datenschutz'
+    | '/impressum'
+    | '/oeffnungszeiten'
+    | '/speisekarte'
+    | '/standort'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/agb'
+    | '/bestellung'
+    | '/checkout'
+    | '/datenschutz'
+    | '/impressum'
+    | '/oeffnungszeiten'
+    | '/speisekarte'
+    | '/standort'
+  id:
+    | '__root__'
+    | '/'
+    | '/agb'
+    | '/bestellung'
+    | '/checkout'
+    | '/datenschutz'
+    | '/impressum'
+    | '/oeffnungszeiten'
+    | '/speisekarte'
+    | '/standort'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AgbRoute: typeof AgbRoute
+  BestellungRoute: typeof BestellungRoute
+  CheckoutRoute: typeof CheckoutRoute
+  DatenschutzRoute: typeof DatenschutzRoute
+  ImpressumRoute: typeof ImpressumRoute
+  OeffnungszeitenRoute: typeof OeffnungszeitenRoute
+  SpeisekarteRoute: typeof SpeisekarteRoute
+  StandortRoute: typeof StandortRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,22 +156,76 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/agb': {
+      id: '/agb'
+      path: '/agb'
+      fullPath: '/agb'
+      preLoaderRoute: typeof AgbRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bestellung': {
+      id: '/bestellung'
+      path: '/bestellung'
+      fullPath: '/bestellung'
+      preLoaderRoute: typeof BestellungRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checkout': {
+      id: '/checkout'
+      path: '/checkout'
+      fullPath: '/checkout'
+      preLoaderRoute: typeof CheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/datenschutz': {
+      id: '/datenschutz'
+      path: '/datenschutz'
+      fullPath: '/datenschutz'
+      preLoaderRoute: typeof DatenschutzRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/impressum': {
+      id: '/impressum'
+      path: '/impressum'
+      fullPath: '/impressum'
+      preLoaderRoute: typeof ImpressumRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/oeffnungszeiten': {
+      id: '/oeffnungszeiten'
+      path: '/oeffnungszeiten'
+      fullPath: '/oeffnungszeiten'
+      preLoaderRoute: typeof OeffnungszeitenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/speisekarte': {
+      id: '/speisekarte'
+      path: '/speisekarte'
+      fullPath: '/speisekarte'
+      preLoaderRoute: typeof SpeisekarteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/standort': {
+      id: '/standort'
+      path: '/standort'
+      fullPath: '/standort'
+      preLoaderRoute: typeof StandortRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AgbRoute: AgbRoute,
+  BestellungRoute: BestellungRoute,
+  CheckoutRoute: CheckoutRoute,
+  DatenschutzRoute: DatenschutzRoute,
+  ImpressumRoute: ImpressumRoute,
+  OeffnungszeitenRoute: OeffnungszeitenRoute,
+  SpeisekarteRoute: SpeisekarteRoute,
+  StandortRoute: StandortRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
