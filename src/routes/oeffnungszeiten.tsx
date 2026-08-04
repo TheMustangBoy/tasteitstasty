@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { OPENING_HOURS } from "@/data/menu";
+import { WEEKDAYS, formatDayHours } from "@/data/menu";
+import { useShop } from "@/context/shop";
+import { nextOpeningLabel } from "@/lib/pickup";
 
 export const Route = createFileRoute("/oeffnungszeiten")({
   head: () => ({
@@ -17,28 +19,33 @@ export const Route = createFileRoute("/oeffnungszeiten")({
 });
 
 function HoursPage() {
+  const { settings } = useShop();
+  // Anzeige beginnt bei Montag (Index 1) und endet mit Sonntag.
+  const order = [1, 2, 3, 4, 5, 6, 0];
   return (
     <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 sm:py-16">
       <h1 className="text-3xl sm:text-5xl">Öffnungszeiten</h1>
       <p className="mt-3 text-muted-foreground">
-        Platzhalter-Zeiten – können später im Adminbereich gepflegt werden.
+        Montag bis Samstag 11:00 – 18:00 Uhr, Sonntag geschlossen. Pflegbar im Adminbereich.
       </p>
       <ul className="mt-8 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
-        {OPENING_HOURS.map((entry) => (
-          <li key={entry.day} className="flex items-center justify-between gap-4 px-5 py-4">
-            <span className="font-semibold">{entry.day}</span>
-            <span
-              className={
-                entry.hours === "Ruhetag" ? "text-muted-foreground" : "font-display text-primary"
-              }
-            >
-              {entry.hours}
-            </span>
-          </li>
-        ))}
+        {order.map((index) => {
+          const entry = settings.hours[index]!;
+          return (
+            <li key={index} className="flex items-center justify-between gap-4 px-5 py-4">
+              <span className="font-semibold">{WEEKDAYS[index]}</span>
+              <span
+                className={entry.closed ? "text-muted-foreground" : "font-display text-primary"}
+              >
+                {formatDayHours(entry)}
+              </span>
+            </li>
+          );
+        })}
       </ul>
       <p className="mt-6 text-sm text-muted-foreground">
-        Bestellungen sind ausschließlich zur Abholung möglich – mit mindestens 15 Minuten Vorlauf.
+        Bestellungen sind ausschließlich zur Abholung möglich – mit mindestens{" "}
+        {settings.minLeadMinutes} Minuten Vorlauf. Bestellbar {nextOpeningLabel(new Date(), settings.hours)}.
       </p>
     </div>
   );

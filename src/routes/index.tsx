@@ -2,7 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Clock, MapPin, Flame, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import heroBurger from "@/assets/hero-burger.jpg";
-import { BUSINESS, MENU, formatPrice } from "@/data/menu";
+import { BUSINESS, formatPrice } from "@/data/menu";
+import { useShop } from "@/context/shop";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -24,7 +25,8 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const highlights = MENU.filter((i) =>
+  const { products } = useShop();
+  const highlights = products.filter((i) =>
     ["smash-burger", "tripple-smash", "trueffel-smash"].includes(i.id),
   );
 
@@ -89,10 +91,12 @@ function Index() {
             </div>
             <div className="rounded-2xl border border-border bg-card/80 p-5">
               <dt className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-primary">
-                <Clock className="h-4 w-4" /> Abholung
+                <Clock className="h-4 w-4" /> Öffnungszeiten
               </dt>
               <dd className="mt-2 text-sm text-muted-foreground">
-                Ab 15 Minuten Vorlauf, im 5-Minuten-Takt. Vorbestellung möglich.
+                Mo – Sa: 11:00 – 18:00 Uhr
+                <br />
+                Sonntag: geschlossen
               </dd>
             </div>
             <div className="rounded-2xl border border-border bg-card/80 p-5">
