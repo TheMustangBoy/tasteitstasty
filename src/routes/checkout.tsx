@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AlertCircle, Clock, CreditCard, Smartphone, Wallet, Banknote } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { formatPrice, BUSINESS } from "@/data/menu";
 import { linePrice, useCart } from "@/context/cart";
-import { buildSlots, nextAvailableSlot, MAX_ORDERS_PER_SLOT } from "@/lib/pickup";
+import { useShop } from "@/context/shop";
+import {
+  buildSlotDays,
+  flattenSlots,
+  isOpenNow,
+  nextAvailableSlot,
+  nextOpeningLabel,
+} from "@/lib/pickup";
 
 const PAYMENTS = [
   { id: "card", label: "Kreditkarte", icon: CreditCard, hint: "Online bezahlen" },
@@ -36,15 +43,45 @@ export const Route = createFileRoute("/checkout")({
 function CheckoutPage() {
   const navigate = useNavigate();
   const { lines, total, placeOrder } = useCart();
-  const slots = useMemo(() => buildSlots(), []);
-  const suggested = nextAvailableSlot(slots);
-  const [slotKey, setSlotKey] = useState(suggested?.key ?? "");
+  const { settings, bookings, addOrder } = useShop();
+  const [now, setNow] = useState<Date | null>(null);
+
+  // Slots erst im Browser berechnen, damit SSR und Client identisch starten.
+  useEffect(() => {
+    setNow(new Date());
+    const timer = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const slotDays = useMemo(
+    () =>
+      now
+        ? buildSlotDays({
+            now,
+            hours: settings.hours,
+            minLeadMinutes: settings.minLeadMinutes,
+            maxOrdersPerSlot: settings.maxOrdersPerSlot,
+            bookings,
+          })
+        : [],
+    [now, settings, bookings],
+  );
+  const slots = useMemo(() => flattenSlots(slotDays), [slotDays]);
+  const suggested = nextAvailableSlot(slotDays);
+  const [slotKey, setSlotKey] = useState("");
+  const [dayKey, setDayKey] = useState("");
+  const activeDayKey = slotDays.some((d) => d.dayKey === dayKey)
+    ? dayKey
+    : (suggested?.dayKey ?? slotDays[0]?.dayKey ?? "");
+  const activeDay = slotDays.find((d) => d.dayKey === activeDayKey);
   const [payment, setPayment] = useState<string>("card");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [note, setNote] = useState("");
 
-  const selectedSlot = slots.find((s) => s.key === slotKey) ?? suggested;
+  const selectedSlot =
+    slots.find((s) => s.key === slotKey && !s.full) ??
+    (activeDay ? (activeDay.slots.find((s) => !s.full) ?? suggested) : suggested);
   const canSubmit = lines.length > 0 && Boolean(selectedSlot) && name.trim().length > 1;
 
   if (lines.length === 0) {
@@ -73,17 +110,59 @@ function CheckoutPage() {
               <Clock className="h-5 w-5 text-primary" /> Abholzeit
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              Mindestens 15 Minuten Vorlauf, 5-Minuten-Takt, max. {MAX_ORDERS_PER_SLOT} Bestellungen
-              pro Zeitfenster. Volle Fenster sind gesperrt.
+              Mindestens {settings.minLeadMinutes} Minuten Vorlauf, 5-Minuten-Takt, max.{" "}
+              {settings.maxOrdersPerSlot} Bestellungen pro Zeitfenster. Nur innerhalb der
+              Öffnungszeiten (Mo – Sa 11:00 – 18:00 Uhr, Sonntag geschlossen).
             </p>
-            {suggested && slots[0]?.full && (
-              <p className="mt-3 flex items-start gap-2 rounded-lg border border-primary/40 bg-primary/10 p-3 text-sm">
+
+            {now && slotDays.length === 0 && (
+              <p className="mt-4 flex items-start gap-2 rounded-lg border border-primary/40 bg-primary/10 p-4 text-sm">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                Nächstes freies Zeitfenster: <strong>{suggested.label} Uhr</strong>
+                Aktuell sind keine Abholzeiten verfügbar.
               </p>
             )}
+
+            {now && !isOpenNow(now, settings.hours) && slotDays.length > 0 && (
+              <p className="mt-4 flex items-start gap-2 rounded-lg border border-primary/40 bg-primary/10 p-4 text-sm">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                Der Truck ist gerade geschlossen. Vorbestellung möglich – wieder geöffnet{" "}
+                {nextOpeningLabel(now, settings.hours)}.
+              </p>
+            )}
+
+            {suggested && (
+              <p className="mt-3 text-sm text-muted-foreground">
+                Vorschlag – nächstes freies Zeitfenster:{" "}
+                <strong className="text-foreground">
+                  {suggested.dayLabel}, {suggested.label} Uhr
+                </strong>
+              </p>
+            )}
+
+            {slotDays.length > 1 && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {slotDays.map((day) => (
+                  <button
+                    key={day.dayKey}
+                    type="button"
+                    onClick={() => {
+                      setDayKey(day.dayKey);
+                      setSlotKey("");
+                    }}
+                    className={`rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+                      day.dayKey === activeDayKey
+                        ? "border-primary bg-primary/15 text-primary"
+                        : "border-border bg-card hover:border-primary/60"
+                    }`}
+                  >
+                    {day.dayLabel}
+                  </button>
+                ))}
+              </div>
+            )}
+
             <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-6">
-              {slots.slice(0, 36).map((slot) => {
+              {(activeDay?.slots ?? []).map((slot) => {
                 const active = slot.key === selectedSlot?.key;
                 return (
                   <button
@@ -195,17 +274,35 @@ function CheckoutPage() {
             <span className="font-display text-2xl">{formatPrice(total)}</span>
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
-            Abholung: {selectedSlot ? `${selectedSlot.label} Uhr` : "kein Fenster verfügbar"}
+            Abholung:{" "}
+            {selectedSlot
+              ? `${selectedSlot.dayLabel}, ${selectedSlot.label} Uhr`
+              : "kein Fenster verfügbar"}
           </p>
           <Button
             size="lg"
             disabled={!canSubmit}
             className="mt-5 h-14 w-full rounded-xl bg-flame text-base font-bold uppercase tracking-wide text-primary-foreground shadow-flame hover:opacity-90"
             onClick={() => {
-              placeOrder({
-                pickupLabel: selectedSlot ? `${selectedSlot.label} Uhr` : "",
-                payment: PAYMENTS.find((p) => p.id === payment)?.label ?? "",
+              if (!selectedSlot) return;
+              const paymentLabel = PAYMENTS.find((p) => p.id === payment)?.label ?? "";
+              const pickupLabel = `${selectedSlot.dayLabel}, ${selectedSlot.label} Uhr`;
+              const order = placeOrder({
+                pickupLabel,
+                payment: paymentLabel,
                 name: name.trim(),
+              });
+              addOrder({
+                reference: order.reference,
+                createdAt: new Date().toISOString(),
+                pickupISO: selectedSlot.key,
+                pickupLabel,
+                name: order.name,
+                phone: phone.trim(),
+                note: note.trim(),
+                payment: paymentLabel,
+                lines: order.lines,
+                total: order.total,
               });
               navigate({ to: "/bestellung" });
             }}

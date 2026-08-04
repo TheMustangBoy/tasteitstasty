@@ -4,6 +4,7 @@ import { Menu, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "./logo";
 import { useCart } from "@/context/cart";
+import { formatPrice } from "@/data/menu";
 
 const NAV = [
   { to: "/speisekarte", label: "Speisekarte" },
@@ -12,7 +13,7 @@ const NAV = [
 ] as const;
 
 export function SiteHeader() {
-  const { count, setOpen } = useCart();
+  const { count, total, setOpen } = useCart();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
@@ -45,9 +46,14 @@ export function SiteHeader() {
           >
             <ShoppingBag className="h-5 w-5" />
             {count > 0 && (
-              <span className="ml-2 rounded-full bg-flame px-2 py-0.5 text-xs font-bold text-primary-foreground">
-                {count}
-              </span>
+              <>
+                <span className="ml-2 rounded-full bg-flame px-2 py-0.5 text-xs font-bold text-primary-foreground">
+                  {count}
+                </span>
+                <span className="ml-2 hidden text-sm font-semibold sm:inline">
+                  {formatPrice(total)}
+                </span>
+              </>
             )}
           </Button>
           <Button

@@ -23,7 +23,7 @@ export function ProductDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { add, setOpen } = useCart();
+  const { add } = useCart();
   const [removed, setRemoved] = useState<string[]>([]);
   const [bacon, setBacon] = useState(false);
   const [quantity, setQuantity] = useState(1);
@@ -150,8 +150,9 @@ export function ProductDialog({
             onClick={() => {
               add(item, { removed, bacon, quantity });
               onOpenChange(false);
-              toast.success(`${quantity}× ${item.name} im Warenkorb`);
-              setOpen(true);
+              toast.success("Zum Warenkorb hinzugefügt", {
+                description: `${quantity}× ${item.name}`,
+              });
             }}
           >
             In den Warenkorb
