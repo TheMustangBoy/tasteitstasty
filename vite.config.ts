@@ -7,6 +7,18 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
+  vite: {
+    server: {
+      // The preview is served through an HTTPS proxy. Let the browser keep its
+      // current hostname while connecting on the proxy's public WSS port;
+      // otherwise Vite advertises localhost and stale React modules survive
+      // dependency re-optimization, producing invalid-hook dispatcher errors.
+      hmr: {
+        protocol: "wss",
+        clientPort: 443,
+      },
+    },
+  },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
