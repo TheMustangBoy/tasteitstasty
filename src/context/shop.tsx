@@ -168,16 +168,13 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const patch = useCallback((fn: (prev: ShopState) => ShopState) => setState(fn), []);
 
   const value = useMemo<ShopContextValue>(() => {
-    const products = MENU.map((item) => {
+    const products: MenuItem[] = MENU.map((item) => {
       const o = state.overrides[item.id];
-      return o
-        ? {
-            ...item,
-            name: o.name ?? item.name,
-            price: o.price ?? item.price,
-            description: o.description ?? item.description,
-          }
-        : item;
+      if (!o) return item;
+      const next: MenuItem = { ...item, name: o.name ?? item.name, price: o.price ?? item.price };
+      const description = o.description ?? item.description;
+      if (description !== undefined) next.description = description;
+      return next;
     });
     const orderable = products.filter((p) => {
       const o = state.overrides[p.id];
