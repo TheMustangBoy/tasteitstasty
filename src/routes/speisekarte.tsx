@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { CATEGORIES, MENU, type MenuItem } from "@/data/menu";
+import { CATEGORIES, type MenuItem } from "@/data/menu";
+import { useShop } from "@/context/shop";
 import { ProductCard } from "@/components/shop/product-card";
 import { ProductDialog } from "@/components/shop/product-dialog";
 
@@ -25,6 +26,7 @@ export const Route = createFileRoute("/speisekarte")({
 function MenuPage() {
   const [selected, setSelected] = useState<MenuItem | null>(null);
   const [open, setOpen] = useState(false);
+  const { products, overrides } = useShop();
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
@@ -43,16 +45,20 @@ function MenuPage() {
               <p className="mt-2 text-sm text-muted-foreground">{category.note}</p>
             </div>
             <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {MENU.filter((item) => item.category === category.id).map((item) => (
-                <ProductCard
-                  key={item.id}
-                  item={item}
-                  onSelect={() => {
-                    setSelected(item);
-                    setOpen(true);
-                  }}
-                />
-              ))}
+              {products
+                .filter((item) => item.category === category.id)
+                .filter((item) => overrides[item.id]?.available !== false)
+                .map((item) => (
+                  <ProductCard
+                    key={item.id}
+                    item={item}
+                    soldOut={overrides[item.id]?.soldOut === true}
+                    onSelect={() => {
+                      setSelected(item);
+                      setOpen(true);
+                    }}
+                  />
+                ))}
             </div>
           </section>
         ))}
