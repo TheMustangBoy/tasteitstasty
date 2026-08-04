@@ -10,11 +10,23 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BestellungRouteImport } from './routes/bestellung'
+import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as SpeisekarteRouteImport } from './routes/speisekarte'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BestellungRoute = BestellungRouteImport.update({
+  id: '/bestellung',
+  path: '/bestellung',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CheckoutRoute = CheckoutRouteImport.update({
+  id: '/checkout',
+  path: '/checkout',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SpeisekarteRoute = SpeisekarteRouteImport.update({
@@ -25,27 +37,35 @@ const SpeisekarteRoute = SpeisekarteRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/bestellung': typeof BestellungRoute
+  '/checkout': typeof CheckoutRoute
   '/speisekarte': typeof SpeisekarteRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/bestellung': typeof BestellungRoute
+  '/checkout': typeof CheckoutRoute
   '/speisekarte': typeof SpeisekarteRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/bestellung': typeof BestellungRoute
+  '/checkout': typeof CheckoutRoute
   '/speisekarte': typeof SpeisekarteRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/speisekarte'
+  fullPaths: '/' | '/bestellung' | '/checkout' | '/speisekarte'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/speisekarte'
-  id: '__root__' | '/' | '/speisekarte'
+  to: '/' | '/bestellung' | '/checkout' | '/speisekarte'
+  id: '__root__' | '/' | '/bestellung' | '/checkout' | '/speisekarte'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BestellungRoute: typeof BestellungRoute
+  CheckoutRoute: typeof CheckoutRoute
   SpeisekarteRoute: typeof SpeisekarteRoute
 }
 
@@ -56,6 +76,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bestellung': {
+      id: '/bestellung'
+      path: '/bestellung'
+      fullPath: '/bestellung'
+      preLoaderRoute: typeof BestellungRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checkout': {
+      id: '/checkout'
+      path: '/checkout'
+      fullPath: '/checkout'
+      preLoaderRoute: typeof CheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/speisekarte': {
@@ -70,6 +104,8 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BestellungRoute: BestellungRoute,
+  CheckoutRoute: CheckoutRoute,
   SpeisekarteRoute: SpeisekarteRoute,
 }
 export const routeTree = rootRouteImport
