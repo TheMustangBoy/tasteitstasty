@@ -1,4 +1,5 @@
-import { Link } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -8,6 +9,13 @@ import { linePrice, useCart } from "@/context/cart";
 
 export function CartDrawer() {
   const { lines, isOpen, setOpen, setQuantity, remove, total, count } = useCart();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  // Drawer schließt nach Navigation – nicht im Klick-Handler, sonst bricht der Link ab.
+  useEffect(() => {
+    setOpen(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   return (
     <Sheet open={isOpen} onOpenChange={setOpen}>
@@ -22,7 +30,7 @@ export function CartDrawer() {
           {lines.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
               <p className="text-sm text-muted-foreground">Dein Warenkorb ist noch leer.</p>
-              <Button asChild variant="secondary" onClick={() => setOpen(false)}>
+              <Button asChild variant="secondary">
                 <Link to="/speisekarte">Zur Speisekarte</Link>
               </Button>
             </div>
@@ -94,7 +102,6 @@ export function CartDrawer() {
               asChild
               size="lg"
               className="mt-4 h-14 w-full rounded-xl bg-flame text-base font-bold uppercase tracking-wide text-primary-foreground shadow-flame hover:opacity-90"
-              onClick={() => setOpen(false)}
             >
               <Link to="/checkout">Zur Kasse</Link>
             </Button>
