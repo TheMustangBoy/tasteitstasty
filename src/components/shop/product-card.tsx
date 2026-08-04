@@ -1,5 +1,4 @@
 import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { formatPrice, type MenuItem } from "@/data/menu";
 
 export function ProductCard({ item, onSelect }: { item: MenuItem; onSelect: () => void }) {
