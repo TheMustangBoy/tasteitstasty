@@ -1,4 +1,10 @@
-export type Category = "burger" | "beilagen";
+export type Category = string;
+
+/** Extra/Topping – zubuchbar pro Produkt. */
+export type Extra = { id: string; name: string; price: number };
+
+/** Variante (z. B. Größe) – Preisdifferenz zum Basispreis. */
+export type Variant = { id: string; name: string; priceDelta: number };
 
 export type MenuItem = {
   id: string;
@@ -11,6 +17,11 @@ export type MenuItem = {
   ingredientsPlaceholder?: boolean;
   tag?: string;
   vegetarian?: boolean;
+  imageUrl?: string;
+  /** Abwählbare Zutaten (Teilmenge von ingredients). */
+  removable?: string[];
+  extras?: Extra[];
+  variants?: Variant[];
 };
 
 /** Zutaten, die abgewählt werden können – sofern im Produkt enthalten. */
@@ -25,6 +36,14 @@ export const REMOVABLE = [
 ] as const;
 
 export const BACON_EXTRA = { id: "bacon", name: "Bacon", price: 1.0 };
+
+/** Standard-Extras des Katalogs. */
+export const DEFAULT_EXTRAS: Extra[] = [
+  { id: "bacon", name: "Bacon", price: 1.0 },
+  { id: "extra-cheese", name: "Extra Käse", price: 1.0 },
+  { id: "extra-jalapenos", name: "Extra Jalapeños", price: 0.5 },
+  { id: "extra-patty", name: "Extra Patty", price: 2.5 },
+];
 
 export const MENU: MenuItem[] = [
   {
