@@ -240,7 +240,14 @@ function CheckoutPage() {
                   <span className="block truncate font-semibold">
                     {line.quantity}× {line.name}
                   </span>
-                  {line.bacon && <span className="block text-xs text-primary">+ Bacon</span>}
+                  {line.variant && (
+                    <span className="block text-xs text-muted-foreground">{line.variant.name}</span>
+                  )}
+                  {(line.extras?.length || line.bacon) && (
+                    <span className="block text-xs text-primary">
+                      + {(line.extras?.length ? line.extras.map((e) => e.name) : ["Bacon"]).join(", ")}
+                    </span>
+                  )}
                   {line.removed.length > 0 && (
                     <span className="block text-xs text-muted-foreground">
                       ohne {line.removed.join(", ")}
