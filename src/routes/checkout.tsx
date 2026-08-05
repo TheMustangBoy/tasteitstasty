@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import { WheelPicker } from "@/components/ui/wheel-picker";
 import { formatPrice, BUSINESS } from "@/data/menu";
 import { linePrice, useCart } from "@/context/cart";
 import { useShop } from "@/context/shop";
@@ -109,11 +110,15 @@ function CheckoutPage() {
             <h2 className="flex items-center gap-2 text-xl">
               <Clock className="h-5 w-5 text-primary" /> Abholzeit
             </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Mindestens {settings.minLeadMinutes} Minuten Vorlauf, 5-Minuten-Takt, max.{" "}
-              {settings.maxOrdersPerSlot} Bestellungen pro Zeitfenster. Nur innerhalb der
-              Öffnungszeiten (Mo – Sa 11:00 – 18:00 Uhr, Sonntag geschlossen).
-            </p>
+            {suggested && (
+              <p className="mt-2 text-sm text-muted-foreground">
+                Früheste Abholung:{" "}
+                <strong className="text-foreground">
+                  {suggested.dayLabel === "Heute" ? "" : `${suggested.dayLabel}, `}
+                  {suggested.label} Uhr
+                </strong>
+              </p>
+            )}
 
             {now && slotDays.length === 0 && (
               <p className="mt-4 flex items-start gap-2 rounded-lg border border-primary/40 bg-primary/10 p-4 text-sm">
@@ -130,59 +135,37 @@ function CheckoutPage() {
               </p>
             )}
 
-            {suggested && (
-              <p className="mt-3 text-sm text-muted-foreground">
-                Vorschlag – nächstes freies Zeitfenster:{" "}
-                <strong className="text-foreground">
-                  {suggested.dayLabel}, {suggested.label} Uhr
-                </strong>
-              </p>
-            )}
-
-            {slotDays.length > 1 && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {slotDays.map((day) => (
-                  <button
-                    key={day.dayKey}
-                    type="button"
-                    onClick={() => {
-                      setDayKey(day.dayKey);
+            {slotDays.length > 0 && (
+              <div className="mt-5 grid grid-cols-2 gap-3 rounded-2xl border border-border bg-card p-3 sm:max-w-md">
+                <div>
+                  <p className="mb-1 text-center text-xs font-bold uppercase tracking-[0.15em] text-muted-foreground">
+                    Tag
+                  </p>
+                  <WheelPicker
+                    ariaLabel="Abholtag wählen"
+                    value={activeDayKey}
+                    options={slotDays.map((d) => ({ value: d.dayKey, label: d.dayLabel }))}
+                    onChange={(next) => {
+                      setDayKey(next);
                       setSlotKey("");
                     }}
-                    className={`rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
-                      day.dayKey === activeDayKey
-                        ? "border-primary bg-primary/15 text-primary"
-                        : "border-border bg-card hover:border-primary/60"
-                    }`}
-                  >
-                    {day.dayLabel}
-                  </button>
-                ))}
+                  />
+                </div>
+                <div>
+                  <p className="mb-1 text-center text-xs font-bold uppercase tracking-[0.15em] text-muted-foreground">
+                    Uhrzeit
+                  </p>
+                  <WheelPicker
+                    ariaLabel="Abholzeit wählen"
+                    value={selectedSlot?.key ?? ""}
+                    options={(activeDay?.slots ?? [])
+                      .filter((slot) => !slot.full)
+                      .map((slot) => ({ value: slot.key, label: slot.label }))}
+                    onChange={setSlotKey}
+                  />
+                </div>
               </div>
             )}
-
-            <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-6">
-              {(activeDay?.slots ?? []).map((slot) => {
-                const active = slot.key === selectedSlot?.key;
-                return (
-                  <button
-                    key={slot.key}
-                    type="button"
-                    disabled={slot.full}
-                    onClick={() => setSlotKey(slot.key)}
-                    className={`rounded-lg border px-2 py-3 text-sm font-semibold transition-colors ${
-                      active
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : slot.full
-                          ? "cursor-not-allowed border-border/60 bg-muted/40 text-muted-foreground/50 line-through"
-                          : "border-border bg-card hover:border-primary/60"
-                    }`}
-                  >
-                    {slot.label}
-                  </button>
-                );
-              })}
-            </div>
           </section>
 
           <section>
