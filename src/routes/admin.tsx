@@ -240,7 +240,7 @@ function AdminConsole() {
       </header>
 
       <Tabs defaultValue="live" className="mt-8">
-        <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-4">
+        <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-5">
           <TabsTrigger value="live" className="py-3">
             <ClipboardList className="mr-2 h-4 w-4" /> Live
             {newCount > 0 && (
