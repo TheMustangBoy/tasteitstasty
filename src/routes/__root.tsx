@@ -14,6 +14,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { CartProvider } from "@/context/cart";
 import { ShopProvider } from "@/context/shop";
 import { CartDrawer } from "@/components/shop/cart-drawer";
+import { CartBar } from "@/components/shop/cart-bar";
 import { SiteHeader } from "@/components/shop/site-header";
 import { SiteFooter } from "@/components/shop/site-footer";
 import { Toaster } from "@/components/ui/sonner";
@@ -147,8 +148,11 @@ function RootComponent() {
             <Outlet />
           </main>
           <SiteFooter />
+          {/* Platz für die schwebende Warenkorb-Leiste, damit nichts verdeckt wird. */}
+          <div className="h-24 md:h-20" aria-hidden />
         </div>
         <CartDrawer />
+        <CartBar />
         <Toaster />
       </CartProvider>
       </ShopProvider>
