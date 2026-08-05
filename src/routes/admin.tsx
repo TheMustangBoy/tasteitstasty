@@ -4,10 +4,16 @@ import {
   BarChart3,
   Bell,
   ClipboardList,
+  Copy,
+  Download,
+  Layers,
   LogOut,
+  Pencil,
+  Plus,
   Search,
   Settings,
   ShieldCheck,
+  Trash2,
   UtensilsCrossed,
   Volume2,
   VolumeX,
@@ -20,15 +26,30 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { OrderCard } from "@/components/admin/order-card";
+import { ProductEditor } from "@/components/admin/product-editor";
+import { CatalogManager } from "@/components/admin/catalog-manager";
 import { formatPrice, WEEKDAYS } from "@/data/menu";
 import {
+  emptyProduct,
   ORDER_STATUSES,
   STATUS_LABEL,
   useShop,
   type OrderStatus,
+  type ProductRecord,
 } from "@/context/shop";
 import { playNotificationSound } from "@/lib/admin-sound";
+import { downloadCsv, ordersToCsv } from "@/lib/csv";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -115,8 +136,8 @@ function AdminLogin() {
 function AdminConsole() {
   const {
     orders,
-    products,
-    overrides,
+    productRows,
+    catalog,
     settings,
     soundOn,
     setSoundOn,
@@ -124,12 +145,25 @@ function AdminConsole() {
     setSettings,
     setDayHours,
     setOrderStatus,
+    setOrderNote,
+    duplicateProduct,
+    deleteProduct,
     simulateOrder,
     logout,
   } = useShop();
 
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<OrderStatus | "alle">("alle");
+  const [editing, setEditing] = useState<ProductRecord | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<ProductRecord | null>(null);
+
+  const categoryLabel = (id: string) =>
+    catalog.categories.find((c) => c.id === id)?.label ?? id;
+  const sortedProducts = useMemo(
+    () => [...productRows].sort((a, b) => a.categoryId.localeCompare(b.categoryId) || a.sortOrder - b.sortOrder),
+    [productRows],
+  );
 
   const live = orders.filter(
     (o) => o.status !== "abgeschlossen" && o.status !== "abgelehnt",
@@ -221,6 +255,9 @@ function AdminConsole() {
           <TabsTrigger value="produkte" className="py-3">
             <UtensilsCrossed className="mr-2 h-4 w-4" /> Produkte
           </TabsTrigger>
+          <TabsTrigger value="katalog" className="py-3">
+            <Layers className="mr-2 h-4 w-4" /> Katalog
+          </TabsTrigger>
           <TabsTrigger value="einstellungen" className="py-3">
             <Settings className="mr-2 h-4 w-4" /> Einstellungen
           </TabsTrigger>
@@ -253,6 +290,7 @@ function AdminConsole() {
                     key={order.id}
                     order={order}
                     onStatus={(status) => setOrderStatus(order.id, status)}
+                    onNote={(note) => setOrderNote(order.id, note)}
                   />
                 ))}
               </div>
@@ -268,6 +306,21 @@ function AdminConsole() {
               placeholder="Suche nach Bestellnummer, Name oder Produkt"
               className="h-12"
             />
+            <Button
+              variant="outline"
+              className="h-12 shrink-0"
+              onClick={() => {
+                downloadCsv(
+                  `bestellungen-${new Date().toISOString().slice(0, 10)}.csv`,
+                  ordersToCsv(history),
+                );
+                toast.success("CSV-Export erstellt", {
+                  description: `${history.length} Bestellungen exportiert (Demo).`,
+                });
+              }}
+            >
+              <Download className="mr-2 h-4 w-4" /> CSV-Export
+            </Button>
           </div>
           <div className="flex flex-wrap gap-2">
             {(["alle", ...ORDER_STATUSES] as const).map((status) => (
@@ -296,6 +349,7 @@ function AdminConsole() {
                   key={order.id}
                   order={order}
                   onStatus={(status) => setOrderStatus(order.id, status)}
+                  onNote={(note) => setOrderNote(order.id, note)}
                 />
               ))}
             </div>
@@ -303,71 +357,114 @@ function AdminConsole() {
         </TabsContent>
 
         <TabsContent value="produkte" className="mt-6 space-y-4">
-          {products.map((item) => {
-            const o = overrides[item.id] ?? {};
-            return (
-              <div key={item.id} className="rounded-2xl border border-border bg-card p-4 sm:p-5">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-lg">{item.name}</h3>
-                    {o.soldOut && <Badge variant="destructive">Ausverkauft</Badge>}
-                    {o.available === false && <Badge variant="outline">Inaktiv</Badge>}
+          <Button
+            className="h-12 w-full rounded-xl bg-flame font-bold uppercase text-primary-foreground sm:w-auto"
+            onClick={() => {
+              setEditing(emptyProduct(catalog.categories[0]?.id ?? "burger", productRows.length));
+              setEditorOpen(true);
+            }}
+          >
+            <Plus className="mr-2 h-4 w-4" /> Neues Produkt
+          </Button>
+
+          {sortedProducts.map((row) => (
+            <div key={row.id} className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="truncate text-lg">{row.name || "Ohne Namen"}</h3>
+                    {row.soldOut && <Badge variant="destructive">Ausverkauft</Badge>}
+                    {!row.active && <Badge variant="outline">Inaktiv</Badge>}
                   </div>
-                  <div className="flex flex-wrap items-center gap-4">
-                    <label className="flex items-center gap-2 text-sm">
-                      <Switch
-                        checked={o.available !== false}
-                        onCheckedChange={(v) => setOverride(item.id, { available: v })}
-                      />
-                      Aktiv
-                    </label>
-                    <label className="flex items-center gap-2 text-sm">
-                      <Switch
-                        checked={o.soldOut === true}
-                        onCheckedChange={(v) => setOverride(item.id, { soldOut: v })}
-                      />
-                      Ausverkauft
-                    </label>
-                  </div>
+                  <p className="mt-1 truncate text-sm text-muted-foreground">
+                    {categoryLabel(row.categoryId)} · {formatPrice(row.price)}
+                    {row.ingredients.length > 0 && ` · ${row.ingredients.join(", ")}`}
+                  </p>
                 </div>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <div>
-                    <Label htmlFor={`name-${item.id}`}>Name</Label>
-                    <Input
-                      id={`name-${item.id}`}
-                      value={item.name}
-                      onChange={(e) => setOverride(item.id, { name: e.target.value })}
-                      className="mt-2 h-12"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor={`price-${item.id}`}>Preis (€)</Label>
-                    <Input
-                      id={`price-${item.id}`}
-                      type="number"
-                      step="0.5"
-                      min="0"
-                      value={item.price}
-                      onChange={(e) =>
-                        setOverride(item.id, { price: Math.max(0, Number(e.target.value) || 0) })
-                      }
-                      className="mt-2 h-12"
-                    />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <Label htmlFor={`desc-${item.id}`}>Beschreibung</Label>
-                    <Textarea
-                      id={`desc-${item.id}`}
-                      value={item.description ?? ""}
-                      placeholder={item.ingredients.join(" · ") || "Beschreibung ergänzen"}
-                      onChange={(e) => setOverride(item.id, { description: e.target.value })}
-                      className="mt-2"
-                    />
-                  </div>
-                </div>
+                <span className="flex shrink-0 gap-1">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-11 w-11"
+                    aria-label="Produkt bearbeiten"
+                    onClick={() => {
+                      setEditing(row);
+                      setEditorOpen(true);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-11 w-11"
+                    aria-label="Produkt duplizieren"
+                    onClick={() => {
+                      const copy = duplicateProduct(row.id);
+                      if (copy) toast.success(`„${copy.name}“ angelegt (inaktiv)`);
+                    }}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-11 w-11 text-destructive"
+                    aria-label="Produkt löschen"
+                    onClick={() => setDeleteTarget(row)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </span>
               </div>
-            );
-          })}
+              <div className="mt-4 flex flex-wrap items-center gap-6">
+                <label className="flex items-center gap-2 text-sm">
+                  <Switch
+                    checked={row.active}
+                    onCheckedChange={(v) => setOverride(row.id, { available: v })}
+                  />
+                  Aktiv
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <Switch
+                    checked={row.soldOut}
+                    onCheckedChange={(v) => setOverride(row.id, { soldOut: v })}
+                  />
+                  Ausverkauft
+                </label>
+              </div>
+            </div>
+          ))}
+
+          <ProductEditor product={editing} open={editorOpen} onOpenChange={setEditorOpen} />
+
+          <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>„{deleteTarget?.name}“ löschen?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Das Produkt verschwindet sofort aus der Speisekarte. Bereits bestehende
+                  Bestellungen bleiben unverändert.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => {
+                    if (deleteTarget) deleteProduct(deleteTarget.id);
+                    setDeleteTarget(null);
+                    toast.success("Produkt gelöscht");
+                  }}
+                >
+                  Löschen
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </TabsContent>
+
+        <TabsContent value="katalog" className="mt-6">
+          <CatalogManager />
         </TabsContent>
 
         <TabsContent value="einstellungen" className="mt-6 space-y-6">
