@@ -6,12 +6,22 @@ import { useCart } from "@/context/cart";
 
 const HIDDEN_ON = ["/checkout", "/bestellung", "/admin"];
 
+function useCartBarVisible() {
+  const { count, isOpen } = useCart();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  return count > 0 && !isOpen && !HIDDEN_ON.some((p) => pathname.startsWith(p));
+}
+
+/** Platzhalter im Fluss, damit die Leiste keine Inhalte verdeckt. */
+export function CartBarSpacer() {
+  return useCartBarVisible() ? <div className="h-28 md:h-24" aria-hidden /> : null;
+}
+
 /** Schwebende Warenkorb-Leiste – erscheint ab dem ersten Artikel. */
 export function CartBar() {
-  const { count, total, setOpen, isOpen } = useCart();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-
-  if (count === 0 || isOpen || HIDDEN_ON.some((p) => pathname.startsWith(p))) return null;
+  const { count, total, setOpen } = useCart();
+  const visible = useCartBarVisible();
+  if (!visible) return null;
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
