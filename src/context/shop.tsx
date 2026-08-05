@@ -1,5 +1,23 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { DEFAULT_HOURS, MENU, type DayHours, type MenuItem } from "@/data/menu";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import {
+  CATEGORIES,
+  DEFAULT_EXTRAS,
+  DEFAULT_HOURS,
+  MENU,
+  REMOVABLE,
+  type DayHours,
+  type Extra,
+  type MenuItem,
+  type Variant,
+} from "@/data/menu";
 import { DEFAULT_MAX_ORDERS_PER_SLOT, DEFAULT_MIN_LEAD_MINUTES } from "@/lib/pickup";
 import type { CartLine } from "@/context/cart";
 
@@ -32,9 +50,49 @@ export type ShopOrder = {
   name: string;
   phone: string;
   note: string;
+  /** Interne Notiz – nur im Adminbereich sichtbar. */
+  internalNote?: string;
   payment: string;
   lines: CartLine[];
   total: number;
+};
+
+/* -------------------------------------------------------------------------
+ * Katalog-Datenstruktur (tabellenartig, damit eine spätere Migration nach
+ * Postgres/Supabase 1:1 möglich ist: jede Liste = eine Tabelle mit id + sortOrder)
+ * ---------------------------------------------------------------------- */
+
+export type CategoryRecord = { id: string; label: string; note: string; sortOrder: number };
+export type IngredientRecord = { id: string; name: string; sortOrder: number };
+export type ExtraRecord = { id: string; name: string; price: number; sortOrder: number };
+
+export type ProductRecord = {
+  id: string;
+  name: string;
+  categoryId: string;
+  description: string;
+  price: number;
+  imageUrl: string;
+  active: boolean;
+  soldOut: boolean;
+  patties: number | null;
+  /** Standardmäßig enthaltene Zutaten (Namen aus der Zutatenliste). */
+  ingredients: string[];
+  /** Teilmenge von ingredients, die Kund:innen abwählen dürfen. */
+  removable: string[];
+  /** IDs aus dem Extra-Katalog. */
+  extraIds: string[];
+  variants: Variant[];
+  tag: string;
+  vegetarian: boolean;
+  ingredientsPlaceholder: boolean;
+  sortOrder: number;
+};
+
+export type Catalog = {
+  categories: CategoryRecord[];
+  ingredients: IngredientRecord[];
+  extras: ExtraRecord[];
 };
 
 export type ProductOverride = {
@@ -53,19 +111,57 @@ export type ShopSettings = {
 
 type ShopState = {
   settings: ShopSettings;
-  overrides: Record<string, ProductOverride>;
+  catalog: Catalog;
+  productRows: ProductRecord[];
   orders: ShopOrder[];
   adminAuthed: boolean;
   soundOn: boolean;
 };
 
-const STORAGE_KEY = "tit-shop-state-v1";
+const STORAGE_KEY = "tit-shop-state-v2";
 
 const DEFAULT_SETTINGS: ShopSettings = {
   hours: DEFAULT_HOURS,
   maxOrdersPerSlot: DEFAULT_MAX_ORDERS_PER_SLOT,
   minLeadMinutes: DEFAULT_MIN_LEAD_MINUTES,
 };
+
+function seedCatalog(): Catalog {
+  const names = new Set<string>();
+  for (const item of MENU) for (const i of item.ingredients) names.add(i);
+  for (const i of REMOVABLE) names.add(i);
+  return {
+    categories: CATEGORIES.map((c, i) => ({ id: c.id, label: c.label, note: c.note, sortOrder: i })),
+    ingredients: [...names].sort((a, b) => a.localeCompare(b, "de")).map((name, i) => ({
+      id: name.toLowerCase().replace(/[^a-z0-9]+/gi, "-"),
+      name,
+      sortOrder: i,
+    })),
+    extras: DEFAULT_EXTRAS.map((e, i) => ({ ...e, sortOrder: i })),
+  };
+}
+
+function seedProducts(): ProductRecord[] {
+  return MENU.map((item, i) => ({
+    id: item.id,
+    name: item.name,
+    categoryId: item.category,
+    description: item.description ?? "",
+    price: item.price,
+    imageUrl: "",
+    active: true,
+    soldOut: false,
+    patties: item.patties ?? null,
+    ingredients: [...item.ingredients],
+    removable: item.ingredients.filter((x) => (REMOVABLE as readonly string[]).includes(x)),
+    extraIds: item.category === "burger" ? ["bacon", "extra-cheese", "extra-patty"] : [],
+    variants: [],
+    tag: item.tag ?? "",
+    vegetarian: item.vegetarian === true,
+    ingredientsPlaceholder: item.ingredientsPlaceholder === true,
+    sortOrder: i,
+  }));
+}
 
 const DEMO_NAMES = ["Lena Fischer", "Tobias Reiter", "Marie Huber", "Jonas Weber", "Sara Klein"];
 const DEMO_PAYMENTS = ["Kreditkarte", "Apple Pay", "Barzahlung bei Abholung", "Google Pay"];
@@ -100,6 +196,7 @@ function seedOrders(): ShopOrder[] {
       name: DEMO_NAMES[i % DEMO_NAMES.length]!,
       phone: "0151 2345678",
       note: i === 1 ? "Bitte gut durch" : "",
+      internalNote: "",
       payment: DEMO_PAYMENTS[i % DEMO_PAYMENTS.length]!,
       lines,
       total,
@@ -108,14 +205,28 @@ function seedOrders(): ShopOrder[] {
 }
 
 type ShopContextValue = ShopState & {
+  /** Für die Kundenansicht aufbereitete Produkte (aktiv + inaktiv). */
   products: MenuItem[];
   orderableProducts: MenuItem[];
+  /** Kompatibilitäts-Sicht auf Produktflags. */
+  overrides: Record<string, ProductOverride>;
   bookings: Record<string, number>;
   setSettings: (patch: Partial<ShopSettings>) => void;
   setDayHours: (index: number, patch: Partial<DayHours>) => void;
   setOverride: (id: string, patch: ProductOverride) => void;
+  upsertProduct: (row: ProductRecord) => void;
+  duplicateProduct: (id: string) => ProductRecord | null;
+  deleteProduct: (id: string) => void;
+  upsertCategory: (row: CategoryRecord) => void;
+  deleteCategory: (id: string) => void;
+  upsertIngredient: (row: IngredientRecord) => void;
+  deleteIngredient: (id: string) => void;
+  upsertExtra: (row: ExtraRecord) => void;
+  deleteExtra: (id: string) => void;
+  moveEntry: (list: "categories" | "ingredients" | "extras", id: string, dir: -1 | 1) => void;
   addOrder: (order: Omit<ShopOrder, "id" | "status">) => ShopOrder;
   setOrderStatus: (id: string, status: OrderStatus) => void;
+  setOrderNote: (id: string, internalNote: string) => void;
   simulateOrder: () => ShopOrder;
   login: (user: string, password: string) => boolean;
   logout: () => void;
@@ -126,7 +237,8 @@ const ShopContext = createContext<ShopContextValue | null>(null);
 
 const initialState: ShopState = {
   settings: DEFAULT_SETTINGS,
-  overrides: {},
+  catalog: seedCatalog(),
+  productRows: seedProducts(),
   orders: [],
   adminAuthed: false,
   soundOn: true,
@@ -139,17 +251,15 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as Partial<ShopState>;
-        setState({
-          ...initialState,
-          ...parsed,
-          settings: { ...DEFAULT_SETTINGS, ...(parsed.settings ?? {}) },
-          orders: parsed.orders?.length ? parsed.orders : seedOrders(),
-        });
-      } else {
-        setState({ ...initialState, orders: seedOrders() });
-      }
+      const parsed = raw ? (JSON.parse(raw) as Partial<ShopState>) : null;
+      setState({
+        ...initialState,
+        ...(parsed ?? {}),
+        settings: { ...DEFAULT_SETTINGS, ...(parsed?.settings ?? {}) },
+        catalog: { ...seedCatalog(), ...(parsed?.catalog ?? {}) },
+        productRows: parsed?.productRows?.length ? parsed.productRows : seedProducts(),
+        orders: parsed?.orders?.length ? parsed.orders : seedOrders(),
+      });
     } catch {
       setState({ ...initialState, orders: seedOrders() });
     }
@@ -168,18 +278,51 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const patch = useCallback((fn: (prev: ShopState) => ShopState) => setState(fn), []);
 
   const value = useMemo<ShopContextValue>(() => {
-    const products: MenuItem[] = MENU.map((item) => {
-      const o = state.overrides[item.id];
-      if (!o) return item;
-      const next: MenuItem = { ...item, name: o.name ?? item.name, price: o.price ?? item.price };
-      const description = o.description ?? item.description;
-      if (description !== undefined) next.description = description;
-      return next;
-    });
-    const orderable = products.filter((p) => {
-      const o = state.overrides[p.id];
-      return o?.available !== false && o?.soldOut !== true;
-    });
+    const extraById = new Map(state.catalog.extras.map((e) => [e.id, e]));
+    const categoryOrder = new Map(state.catalog.categories.map((c) => [c.id, c.sortOrder]));
+
+    const rows = [...state.productRows].sort(
+      (a, b) =>
+        (categoryOrder.get(a.categoryId) ?? 99) - (categoryOrder.get(b.categoryId) ?? 99) ||
+        a.sortOrder - b.sortOrder,
+    );
+
+    const toMenuItem = (row: ProductRecord): MenuItem => {
+      const extras: Extra[] = row.extraIds
+        .map((id) => extraById.get(id))
+        .filter((e): e is ExtraRecord => Boolean(e))
+        .map((e) => ({ id: e.id, name: e.name, price: e.price }));
+      const item: MenuItem = {
+        id: row.id,
+        name: row.name,
+        price: row.price,
+        category: row.categoryId,
+        ingredients: row.ingredients,
+        removable: row.removable,
+        extras,
+        variants: row.variants,
+      };
+      if (row.patties) item.patties = row.patties;
+      if (row.description) item.description = row.description;
+      if (row.imageUrl) item.imageUrl = row.imageUrl;
+      if (row.tag) item.tag = row.tag;
+      if (row.vegetarian) item.vegetarian = true;
+      if (row.ingredientsPlaceholder) item.ingredientsPlaceholder = true;
+      return item;
+    };
+
+    const products = rows.map(toMenuItem);
+    const overrides: Record<string, ProductOverride> = {};
+    for (const row of rows) {
+      overrides[row.id] = {
+        name: row.name,
+        price: row.price,
+        description: row.description,
+        available: row.active,
+        soldOut: row.soldOut,
+      };
+    }
+    const orderable = rows.filter((r) => r.active && !r.soldOut).map(toMenuItem);
 
     const bookings: Record<string, number> = {};
     for (const order of state.orders) {
@@ -187,10 +330,14 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       bookings[order.pickupISO] = (bookings[order.pickupISO] ?? 0) + 1;
     }
 
+    const reindex = <T extends { sortOrder: number }>(list: T[]) =>
+      list.map((entry, i) => ({ ...entry, sortOrder: i }));
+
     return {
       ...state,
       products,
       orderableProducts: orderable,
+      overrides,
       bookings,
       setSettings: (p) => patch((prev) => ({ ...prev, settings: { ...prev.settings, ...p } })),
       setDayHours: (index, p) =>
@@ -204,10 +351,113 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       setOverride: (id, p) =>
         patch((prev) => ({
           ...prev,
-          overrides: { ...prev.overrides, [id]: { ...prev.overrides[id], ...p } },
+          productRows: prev.productRows.map((row) =>
+            row.id !== id
+              ? row
+              : {
+                  ...row,
+                  name: p.name ?? row.name,
+                  price: p.price ?? row.price,
+                  description: p.description ?? row.description,
+                  active: p.available ?? row.active,
+                  soldOut: p.soldOut ?? row.soldOut,
+                },
+          ),
         })),
+      upsertProduct: (row) =>
+        patch((prev) => ({
+          ...prev,
+          productRows: prev.productRows.some((r) => r.id === row.id)
+            ? prev.productRows.map((r) => (r.id === row.id ? row : r))
+            : [...prev.productRows, row],
+        })),
+      duplicateProduct: (id) => {
+        const source = state.productRows.find((r) => r.id === id);
+        if (!source) return null;
+        const copy: ProductRecord = {
+          ...source,
+          id: `${source.id}-kopie-${Math.random().toString(36).slice(2, 6)}`,
+          name: `${source.name} (Kopie)`,
+          active: false,
+          sortOrder: source.sortOrder + 0.5,
+        };
+        patch((prev) => ({ ...prev, productRows: [...prev.productRows, copy] }));
+        return copy;
+      },
+      deleteProduct: (id) =>
+        patch((prev) => ({ ...prev, productRows: prev.productRows.filter((r) => r.id !== id) })),
+      upsertCategory: (row) =>
+        patch((prev) => ({
+          ...prev,
+          catalog: {
+            ...prev.catalog,
+            categories: prev.catalog.categories.some((c) => c.id === row.id)
+              ? prev.catalog.categories.map((c) => (c.id === row.id ? row : c))
+              : [...prev.catalog.categories, row],
+          },
+        })),
+      deleteCategory: (id) =>
+        patch((prev) => ({
+          ...prev,
+          catalog: {
+            ...prev.catalog,
+            categories: reindex(prev.catalog.categories.filter((c) => c.id !== id)),
+          },
+        })),
+      upsertIngredient: (row) =>
+        patch((prev) => ({
+          ...prev,
+          catalog: {
+            ...prev.catalog,
+            ingredients: prev.catalog.ingredients.some((c) => c.id === row.id)
+              ? prev.catalog.ingredients.map((c) => (c.id === row.id ? row : c))
+              : [...prev.catalog.ingredients, row],
+          },
+        })),
+      deleteIngredient: (id) =>
+        patch((prev) => ({
+          ...prev,
+          catalog: {
+            ...prev.catalog,
+            ingredients: reindex(prev.catalog.ingredients.filter((c) => c.id !== id)),
+          },
+        })),
+      upsertExtra: (row) =>
+        patch((prev) => ({
+          ...prev,
+          catalog: {
+            ...prev.catalog,
+            extras: prev.catalog.extras.some((c) => c.id === row.id)
+              ? prev.catalog.extras.map((c) => (c.id === row.id ? row : c))
+              : [...prev.catalog.extras, row],
+          },
+        })),
+      deleteExtra: (id) =>
+        patch((prev) => ({
+          ...prev,
+          catalog: { ...prev.catalog, extras: reindex(prev.catalog.extras.filter((c) => c.id !== id)) },
+          productRows: prev.productRows.map((r) => ({
+            ...r,
+            extraIds: r.extraIds.filter((x) => x !== id),
+          })),
+        })),
+      moveEntry: (list, id, dir) =>
+        patch((prev) => {
+          const entries = [...prev.catalog[list]].sort((a, b) => a.sortOrder - b.sortOrder);
+          const index = entries.findIndex((e) => e.id === id);
+          const target = index + dir;
+          if (index < 0 || target < 0 || target >= entries.length) return prev;
+          const swapped = [...entries];
+          const a = swapped[index]!;
+          swapped[index] = swapped[target]!;
+          swapped[target] = a;
+          return {
+            ...prev,
+            catalog: { ...prev.catalog, [list]: reindex(swapped) } as Catalog,
+          };
+        }),
       addOrder: (order) => {
-        const full: ShopOrder = { ...order, id: `${Date.now()}`, status: "neu" };
+        const full: ShopOrder = { internalNote: "", ...order, id: `${Date.now()}`, status: "neu" };
         patch((prev) => ({ ...prev, orders: [full, ...prev.orders] }));
         return full;
       },
@@ -215,6 +465,11 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         patch((prev) => ({
           ...prev,
           orders: prev.orders.map((o) => (o.id === id ? { ...o, status } : o)),
+        })),
+      setOrderNote: (id, internalNote) =>
+        patch((prev) => ({
+          ...prev,
+          orders: prev.orders.map((o) => (o.id === id ? { ...o, internalNote } : o)),
         })),
       simulateOrder: () => {
         const pool = orderable.length ? orderable : products;
@@ -235,6 +490,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
           name: DEMO_NAMES[Math.floor(Math.random() * DEMO_NAMES.length)]!,
           phone: "0151 2345678",
           note: "",
+          internalNote: "",
           payment: DEMO_PAYMENTS[Math.floor(Math.random() * DEMO_PAYMENTS.length)]!,
           lines,
           total,
@@ -259,4 +515,27 @@ export function useShop() {
   const ctx = useContext(ShopContext);
   if (!ctx) throw new Error("useShop must be used within ShopProvider");
   return ctx;
+}
+
+/** Leeres Produkt für „Neues Produkt anlegen“. */
+export function emptyProduct(categoryId: string, sortOrder: number): ProductRecord {
+  return {
+    id: `produkt-${Date.now().toString(36)}`,
+    name: "",
+    categoryId,
+    description: "",
+    price: 0,
+    imageUrl: "",
+    active: true,
+    soldOut: false,
+    patties: null,
+    ingredients: [],
+    removable: [],
+    extraIds: [],
+    variants: [],
+    tag: "",
+    vegetarian: false,
+    ingredientsPlaceholder: false,
+    sortOrder,
+  };
 }
