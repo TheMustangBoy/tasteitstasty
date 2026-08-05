@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { CATEGORIES, type MenuItem } from "@/data/menu";
+import { type MenuItem } from "@/data/menu";
 import { useShop } from "@/context/shop";
 import { ProductCard } from "@/components/shop/product-card";
 import { ProductDialog } from "@/components/shop/product-dialog";
@@ -26,7 +26,8 @@ export const Route = createFileRoute("/speisekarte")({
 function MenuPage() {
   const [selected, setSelected] = useState<MenuItem | null>(null);
   const [open, setOpen] = useState(false);
-  const { products, overrides } = useShop();
+  const { products, overrides, catalog } = useShop();
+  const categories = [...catalog.categories].sort((a, b) => a.sortOrder - b.sortOrder);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
@@ -36,7 +37,7 @@ function MenuPage() {
       </p>
 
       <div className="mt-10 space-y-14">
-        {CATEGORIES.map((category) => (
+        {categories.map((category) => (
           <section key={category.id} id={category.id}>
             <div className="border-b border-border pb-4">
               <h2 className="text-2xl sm:text-3xl">

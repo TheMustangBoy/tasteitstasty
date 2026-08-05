@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
-import { BACON_EXTRA, type MenuItem } from "@/data/menu";
+import { BACON_EXTRA, type Extra, type MenuItem, type Variant } from "@/data/menu";
 
 export type CartLine = {
   lineId: string;
@@ -9,6 +9,9 @@ export type CartLine = {
   quantity: number;
   removed: string[];
   bacon: boolean;
+  /** Ausgewählte Extras (inkl. Bacon, falls gewählt). */
+  extras?: Extra[];
+  variant?: Variant | null;
 };
 
 export type PlacedOrder = {
@@ -20,8 +23,14 @@ export type PlacedOrder = {
   name: string;
 };
 
-export const linePrice = (line: CartLine) =>
-  (line.basePrice + (line.bacon ? BACON_EXTRA.price : 0)) * line.quantity;
+export const linePrice = (line: CartLine) => {
+  const extras = line.extras ?? [];
+  const extrasSum = extras.reduce((s, e) => s + e.price, 0);
+  // Legacy-Zeilen ohne extras-Liste: Bacon separat verrechnen.
+  const legacyBacon = extras.length === 0 && line.bacon ? BACON_EXTRA.price : 0;
+  const variantDelta = line.variant?.priceDelta ?? 0;
+  return (line.basePrice + variantDelta + extrasSum + legacyBacon) * line.quantity;
+};
 
 type CartContextValue = {
   lines: CartLine[];
@@ -29,7 +38,16 @@ type CartContextValue = {
   total: number;
   isOpen: boolean;
   setOpen: (open: boolean) => void;
-  add: (item: MenuItem, opts: { removed: string[]; bacon: boolean; quantity: number }) => void;
+  add: (
+    item: MenuItem,
+    opts: {
+      removed: string[];
+      bacon: boolean;
+      quantity: number;
+      extras?: Extra[];
+      variant?: Variant | null;
+    },
+  ) => void;
   setQuantity: (lineId: string, quantity: number) => void;
   remove: (lineId: string) => void;
   clear: () => void;
@@ -54,9 +72,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setOpen,
       add: (item, opts) =>
         setLines((prev) => {
-          const signature = `${item.id}|${[...opts.removed].sort().join(",")}|${opts.bacon}`;
+          const sig = (
+            id: string,
+            removed: string[],
+            extras: Extra[] | undefined,
+            variant: Variant | null | undefined,
+          ) =>
+            `${id}|${[...removed].sort().join(",")}|${(extras ?? [])
+              .map((e) => e.id)
+              .sort()
+              .join(",")}|${variant?.id ?? ""}`;
+          const signature = sig(item.id, opts.removed, opts.extras, opts.variant);
           const existing = prev.find(
-            (l) => `${l.itemId}|${[...l.removed].sort().join(",")}|${l.bacon}` === signature,
+            (l) => sig(l.itemId, l.removed, l.extras, l.variant) === signature,
           );
           if (existing) {
             return prev.map((l) =>
@@ -75,6 +103,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
               quantity: opts.quantity,
               removed: opts.removed,
               bacon: opts.bacon,
+              extras: opts.extras ?? [],
+              variant: opts.variant ?? null,
             },
           ];
         }),

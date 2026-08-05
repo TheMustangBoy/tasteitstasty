@@ -41,7 +41,15 @@ export function CartDrawer() {
                   <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
                     <div className="min-w-0">
                       <p className="truncate font-semibold">{line.name}</p>
-                      {line.bacon && <p className="text-xs text-primary">+ Bacon</p>}
+                      {line.variant && (
+                        <p className="text-xs text-muted-foreground">{line.variant.name}</p>
+                      )}
+                      {(line.extras?.length ? line.extras.map((e) => e.name) : line.bacon ? ["Bacon"] : []).length >
+                        0 && (
+                        <p className="text-xs text-primary">
+                          + {(line.extras?.length ? line.extras.map((e) => e.name) : ["Bacon"]).join(", ")}
+                        </p>
+                      )}
                       {line.removed.length > 0 && (
                         <p className="text-xs text-muted-foreground">
                           ohne {line.removed.join(", ")}
