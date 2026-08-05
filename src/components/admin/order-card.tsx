@@ -1,9 +1,12 @@
+import { useEffect, useState } from "react";
 import { Clock, Phone, StickyNote, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { WheelPicker } from "@/components/ui/wheel-picker";
 import { formatPrice } from "@/data/menu";
 import { linePrice } from "@/context/cart";
-import { STATUS_LABEL, type OrderStatus, type ShopOrder } from "@/context/shop";
+import { ORDER_STATUSES, STATUS_LABEL, type OrderStatus, type ShopOrder } from "@/context/shop";
 
 const STATUS_STYLE: Record<OrderStatus, string> = {
   neu: "bg-primary/20 text-primary border-primary/50",
@@ -23,11 +26,15 @@ const NEXT_STATUS: Partial<Record<OrderStatus, { to: OrderStatus; label: string 
 export function OrderCard({
   order,
   onStatus,
+  onNote,
 }: {
   order: ShopOrder;
   onStatus: (status: OrderStatus) => void;
+  onNote?: (note: string) => void;
 }) {
   const next = NEXT_STATUS[order.status];
+  const [note, setNote] = useState(order.internalNote ?? "");
+  useEffect(() => setNote(order.internalNote ?? ""), [order.internalNote]);
 
   return (
     <article className="rounded-2xl border border-border bg-card p-4 sm:p-5">
@@ -66,7 +73,14 @@ export function OrderCard({
               <span className="block truncate font-semibold">
                 {line.quantity}× {line.name}
               </span>
-              {line.bacon && <span className="block text-xs text-primary">+ Bacon</span>}
+              {line.variant && (
+                <span className="block text-xs text-muted-foreground">{line.variant.name}</span>
+              )}
+              {(line.extras?.length || line.bacon) && (
+                <span className="block text-xs text-primary">
+                  + {(line.extras?.length ? line.extras.map((e) => e.name) : ["Bacon"]).join(", ")}
+                </span>
+              )}
               {line.removed.length > 0 && (
                 <span className="block text-xs text-muted-foreground">
                   ohne {line.removed.join(", ")}
@@ -120,6 +134,34 @@ export function OrderCard({
           >
             Zurück auf „Neu“
           </Button>
+        )}
+      </div>
+
+      <div className="mt-4 grid gap-4 rounded-xl border border-border/70 bg-background/40 p-3 sm:grid-cols-[190px_minmax(0,1fr)]">
+        <div>
+          <p className="mb-1 text-xs font-bold uppercase tracking-[0.15em] text-muted-foreground">
+            Status
+          </p>
+          <WheelPicker
+            ariaLabel="Bestellstatus wählen"
+            value={order.status}
+            options={ORDER_STATUSES.map((s) => ({ value: s, label: STATUS_LABEL[s] }))}
+            onChange={(v) => onStatus(v as OrderStatus)}
+          />
+        </div>
+        {onNote && (
+          <div>
+            <p className="mb-1 text-xs font-bold uppercase tracking-[0.15em] text-muted-foreground">
+              Interne Notiz
+            </p>
+            <Textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              onBlur={() => note !== (order.internalNote ?? "") && onNote(note)}
+              placeholder="Nur intern sichtbar, z. B. Sonderwunsch oder Rückruf"
+              className="min-h-[132px]"
+            />
+          </div>
         )}
       </div>
     </article>
