@@ -185,7 +185,7 @@ function seedOrders(): ShopOrder[] {
     const items = [MENU[i % MENU.length]!, MENU[(i + 3) % MENU.length]!];
     const lines = [demoLine(items[0]!, 1 + (i % 2), i % 2 === 0), demoLine(items[1]!, 1)];
     const total = lines.reduce((s, l) => s + (l.basePrice + (l.bacon ? 1 : 0)) * l.quantity, 0);
-    const pickup = new Date(now + (i - 2) * 25 * 60_000);
+    const pickup = demoPickupDate(new Date(now + (i - 2) * 25 * 60_000));
     return {
       id: `demo-${i}`,
       reference: `TIT-${1200 + i * 37}`,
@@ -478,8 +478,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
           demoLine(pool[Math.floor(Math.random() * pool.length)]!, 1),
         ];
         const total = lines.reduce((s, l) => s + (l.basePrice + (l.bacon ? 1 : 0)) * l.quantity, 0);
-        const pickup = new Date(Date.now() + 25 * 60_000);
-        pickup.setSeconds(0, 0);
+        const pickup = demoPickupDate(new Date(Date.now() + 25 * 60_000));
         const order: ShopOrder = {
           id: `${Date.now()}`,
           reference: `TIT-${Math.floor(1000 + Math.random() * 9000)}`,
