@@ -27,7 +27,8 @@ export type SlotConfig = {
 };
 
 const pad = (n: number) => String(n).padStart(2, "0");
-export const dayKeyOf = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+export const dayKeyOf = (d: Date) =>
+  `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
 function parseTime(value: string) {
   const [h, m] = value.split(":").map(Number);

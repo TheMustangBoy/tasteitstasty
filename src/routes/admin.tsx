@@ -158,16 +158,16 @@ function AdminConsole() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ProductRecord | null>(null);
 
-  const categoryLabel = (id: string) =>
-    catalog.categories.find((c) => c.id === id)?.label ?? id;
+  const categoryLabel = (id: string) => catalog.categories.find((c) => c.id === id)?.label ?? id;
   const sortedProducts = useMemo(
-    () => [...productRows].sort((a, b) => a.categoryId.localeCompare(b.categoryId) || a.sortOrder - b.sortOrder),
+    () =>
+      [...productRows].sort(
+        (a, b) => a.categoryId.localeCompare(b.categoryId) || a.sortOrder - b.sortOrder,
+      ),
     [productRows],
   );
 
-  const live = orders.filter(
-    (o) => o.status !== "abgeschlossen" && o.status !== "abgelehnt",
-  );
+  const live = orders.filter((o) => o.status !== "abgeschlossen" && o.status !== "abgelehnt");
   const newCount = orders.filter((o) => o.status === "neu").length;
 
   const history = useMemo(() => {
@@ -190,7 +190,8 @@ function AdminConsole() {
     );
     const revenue = relevant.reduce((s, o) => s + o.total, 0);
     const counter = new Map<string, number>();
-    for (const o of relevant) for (const l of o.lines) counter.set(l.name, (counter.get(l.name) ?? 0) + l.quantity);
+    for (const o of relevant)
+      for (const l of o.lines) counter.set(l.name, (counter.get(l.name) ?? 0) + l.quantity);
     const top = [...counter.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
     return {
       revenue,
@@ -270,7 +271,9 @@ function AdminConsole() {
             <Metric label="Ø Bestellwert" value={formatPrice(metrics.average)} />
             <Metric
               label="Beliebteste Produkte"
-              value={metrics.top.length ? metrics.top.map(([n, q]) => `${q}× ${n}`).join(", ") : "–"}
+              value={
+                metrics.top.length ? metrics.top.map(([n, q]) => `${q}× ${n}`).join(", ") : "–"
+              }
               small
             />
           </section>
@@ -438,7 +441,10 @@ function AdminConsole() {
 
           <ProductEditor product={editing} open={editorOpen} onOpenChange={setEditorOpen} />
 
-          <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+          <AlertDialog
+            open={Boolean(deleteTarget)}
+            onOpenChange={(o) => !o && setDeleteTarget(null)}
+          >
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>„{deleteTarget?.name}“ löschen?</AlertDialogTitle>

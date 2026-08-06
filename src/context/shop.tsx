@@ -132,12 +132,19 @@ function seedCatalog(): Catalog {
   for (const item of MENU) for (const i of item.ingredients) names.add(i);
   for (const i of REMOVABLE) names.add(i);
   return {
-    categories: CATEGORIES.map((c, i) => ({ id: c.id, label: c.label, note: c.note, sortOrder: i })),
-    ingredients: [...names].sort((a, b) => a.localeCompare(b, "de")).map((name, i) => ({
-      id: name.toLowerCase().replace(/[^a-z0-9]+/gi, "-"),
-      name,
+    categories: CATEGORIES.map((c, i) => ({
+      id: c.id,
+      label: c.label,
+      note: c.note,
       sortOrder: i,
     })),
+    ingredients: [...names]
+      .sort((a, b) => a.localeCompare(b, "de"))
+      .map((name, i) => ({
+        id: name.toLowerCase().replace(/[^a-z0-9]+/gi, "-"),
+        name,
+        sortOrder: i,
+      })),
     extras: DEFAULT_EXTRAS.map((e, i) => ({ ...e, sortOrder: i })),
   };
 }
@@ -168,7 +175,12 @@ const DEMO_NAMES = ["Lena Fischer", "Tobias Reiter", "Marie Huber", "Jonas Weber
 
 const DEMO_PAYMENTS = ["Kreditkarte", "Apple Pay", "Barzahlung bei Abholung", "Google Pay"];
 
-function demoLine(item: MenuItem, quantity: number, bacon = false, removed: string[] = []): CartLine {
+function demoLine(
+  item: MenuItem,
+  quantity: number,
+  bacon = false,
+  removed: string[] = [],
+): CartLine {
   return {
     lineId: `${item.id}-demo-${Math.random().toString(36).slice(2, 8)}`,
     itemId: item.id,
@@ -182,7 +194,13 @@ function demoLine(item: MenuItem, quantity: number, bacon = false, removed: stri
 
 function seedOrders(): ShopOrder[] {
   const now = Date.now();
-  const statuses: OrderStatus[] = ["neu", "zubereitung", "abholbereit", "abgeschlossen", "abgeschlossen"];
+  const statuses: OrderStatus[] = [
+    "neu",
+    "zubereitung",
+    "abholbereit",
+    "abgeschlossen",
+    "abgeschlossen",
+  ];
   return statuses.map((status, i) => {
     const items = [MENU[i % MENU.length]!, MENU[(i + 3) % MENU.length]!];
     const lines = [demoLine(items[0]!, 1 + (i % 2), i % 2 === 0), demoLine(items[1]!, 1)];
@@ -437,7 +455,10 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       deleteExtra: (id) =>
         patch((prev) => ({
           ...prev,
-          catalog: { ...prev.catalog, extras: reindex(prev.catalog.extras.filter((c) => c.id !== id)) },
+          catalog: {
+            ...prev.catalog,
+            extras: reindex(prev.catalog.extras.filter((c) => c.id !== id)),
+          },
           productRows: prev.productRows.map((r) => ({
             ...r,
             extraIds: r.extraIds.filter((x) => x !== id),
@@ -476,7 +497,11 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       simulateOrder: () => {
         const pool = orderable.length ? orderable : products;
         const lines = [
-          demoLine(pool[Math.floor(Math.random() * pool.length)]!, 1 + Math.floor(Math.random() * 2), Math.random() > 0.6),
+          demoLine(
+            pool[Math.floor(Math.random() * pool.length)]!,
+            1 + Math.floor(Math.random() * 2),
+            Math.random() > 0.6,
+          ),
           demoLine(pool[Math.floor(Math.random() * pool.length)]!, 1),
         ];
         const total = lines.reduce((s, l) => s + (l.basePrice + (l.bacon ? 1 : 0)) * l.quantity, 0);

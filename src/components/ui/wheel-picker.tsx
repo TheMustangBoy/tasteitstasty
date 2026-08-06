@@ -76,7 +76,8 @@ export function WheelPicker({
       className={cn("relative select-none", className)}
       style={{ height: ITEM_HEIGHT * VISIBLE }}
     >
-      <div className="pointer-events-none absolute inset-x-0 top-1/2 z-10 -translate-y-1/2 rounded-xl border border-primary/60 bg-primary/10"
+      <div
+        className="pointer-events-none absolute inset-x-0 top-1/2 z-10 -translate-y-1/2 rounded-xl border border-primary/60 bg-primary/10"
         style={{ height: ITEM_HEIGHT }}
       />
       <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-12 bg-gradient-to-b from-card to-transparent" />

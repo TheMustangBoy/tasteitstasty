@@ -115,9 +115,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           );
           if (existing) {
             return prev.map((l) =>
-              l.lineId === existing.lineId
-                ? { ...l, quantity: l.quantity + opts.quantity }
-                : l,
+              l.lineId === existing.lineId ? { ...l, quantity: l.quantity + opts.quantity } : l,
             );
           }
           return [

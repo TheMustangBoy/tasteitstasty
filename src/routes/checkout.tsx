@@ -90,7 +90,10 @@ function CheckoutPage() {
       <div className="mx-auto max-w-2xl px-4 py-20 text-center sm:px-6">
         <h1 className="text-3xl">Warenkorb leer</h1>
         <p className="mt-3 text-muted-foreground">Wähle zuerst deine Burger aus.</p>
-        <Button asChild className="mt-6 h-13 rounded-xl bg-flame px-8 font-bold uppercase text-primary-foreground">
+        <Button
+          asChild
+          className="mt-6 h-13 rounded-xl bg-flame px-8 font-bold uppercase text-primary-foreground"
+        >
           <Link to="/speisekarte">Zur Speisekarte</Link>
         </Button>
       </div>
@@ -180,7 +183,9 @@ function CheckoutPage() {
                     type="button"
                     onClick={() => setPayment(option.id)}
                     className={`flex items-center gap-3 rounded-xl border p-4 text-left transition-colors ${
-                      active ? "border-primary bg-primary/10" : "border-border bg-card hover:border-primary/50"
+                      active
+                        ? "border-primary bg-primary/10"
+                        : "border-border bg-card hover:border-primary/50"
                     }`}
                   >
                     <Icon className="h-5 w-5 shrink-0 text-primary" />
@@ -245,7 +250,10 @@ function CheckoutPage() {
                   )}
                   {(line.extras?.length || line.bacon) && (
                     <span className="block text-xs text-primary">
-                      + {(line.extras?.length ? line.extras.map((e) => e.name) : ["Bacon"]).join(", ")}
+                      +{" "}
+                      {(line.extras?.length ? line.extras.map((e) => e.name) : ["Bacon"]).join(
+                        ", ",
+                      )}
                     </span>
                   )}
                   {line.removed.length > 0 && (

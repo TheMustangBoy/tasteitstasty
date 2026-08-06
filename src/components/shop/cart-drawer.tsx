@@ -44,10 +44,17 @@ export function CartDrawer() {
                       {line.variant && (
                         <p className="text-xs text-muted-foreground">{line.variant.name}</p>
                       )}
-                      {(line.extras?.length ? line.extras.map((e) => e.name) : line.bacon ? ["Bacon"] : []).length >
-                        0 && (
+                      {(line.extras?.length
+                        ? line.extras.map((e) => e.name)
+                        : line.bacon
+                          ? ["Bacon"]
+                          : []
+                      ).length > 0 && (
                         <p className="text-xs text-primary">
-                          + {(line.extras?.length ? line.extras.map((e) => e.name) : ["Bacon"]).join(", ")}
+                          +{" "}
+                          {(line.extras?.length ? line.extras.map((e) => e.name) : ["Bacon"]).join(
+                            ", ",
+                          )}
                         </p>
                       )}
                       {line.removed.length > 0 && (

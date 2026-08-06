@@ -45,7 +45,8 @@ function HoursPage() {
       </ul>
       <p className="mt-6 text-sm text-muted-foreground">
         Bestellungen sind ausschließlich zur Abholung möglich – mit mindestens{" "}
-        {settings.minLeadMinutes} Minuten Vorlauf. Bestellbar {nextOpeningLabel(new Date(), settings.hours)}.
+        {settings.minLeadMinutes} Minuten Vorlauf. Bestellbar{" "}
+        {nextOpeningLabel(new Date(), settings.hours)}.
       </p>
     </div>
   );
