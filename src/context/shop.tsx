@@ -206,7 +206,7 @@ function seedOrders(): ShopOrder[] {
     const lines = [demoLine(items[0]!, 1 + (i % 2), i % 2 === 0), demoLine(items[1]!, 1)];
     const total = lines.reduce((s, l) => s + (l.basePrice + (l.bacon ? 1 : 0)) * l.quantity, 0);
     // Demo-Abholzeiten über den Tag verteilen, damit kein Slot künstlich voll wirkt.
-    const pickup = demoPickupDate(new Date(now + (i - 2) * 25 * 60_000 + i * 20 * 60_000));
+    const pickup = demoPickupDate(new Date(now + (i - 2) * 25 * 60_000), i * 20);
     return {
       id: `demo-${i}`,
       reference: `TIT-${1200 + i * 37}`,
