@@ -140,21 +140,21 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <ShopProvider>
-      <CartProvider>
-        <div className="flex min-h-screen flex-col">
-          <SiteHeader />
-          <main className="flex-1">
-            {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-            <Outlet />
-          </main>
-          <SiteFooter />
-          {/* Platz für die schwebende Warenkorb-Leiste, damit nichts verdeckt wird. */}
-          <CartBarSpacer />
-        </div>
-        <CartDrawer />
-        <CartBar />
-        <Toaster />
-      </CartProvider>
+        <CartProvider>
+          <div className="flex min-h-screen flex-col">
+            <SiteHeader />
+            <main className="flex-1">
+              {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+              <Outlet />
+            </main>
+            <SiteFooter />
+            {/* Platz für die schwebende Warenkorb-Leiste, damit nichts verdeckt wird. */}
+            <CartBarSpacer />
+          </div>
+          <CartDrawer />
+          <CartBar />
+          <Toaster />
+        </CartProvider>
       </ShopProvider>
     </QueryClientProvider>
   );

@@ -11,7 +11,8 @@ export const Route = createFileRoute("/speisekarte")({
       { title: "Speisekarte – Taste It's Tasty Food Truck Dachau" },
       {
         name: "description",
-        content: "Smash Burger und Beilagen zur Abholung: Tripple Smash, Chili Cheese, Trüffel Fries und mehr.",
+        content:
+          "Smash Burger und Beilagen zur Abholung: Tripple Smash, Chili Cheese, Trüffel Fries und mehr.",
       },
       { property: "og:title", content: "Speisekarte – Taste It's Tasty" },
       {

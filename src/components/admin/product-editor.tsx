@@ -154,7 +154,10 @@ export function ProductEditor({
                 Ausverkauft
               </label>
               <label className="flex items-center gap-2 text-sm">
-                <Switch checked={draft.vegetarian} onCheckedChange={(v) => set({ vegetarian: v })} />{" "}
+                <Switch
+                  checked={draft.vegetarian}
+                  onCheckedChange={(v) => set({ vegetarian: v })}
+                />{" "}
                 Vegetarisch
               </label>
             </div>
@@ -293,9 +296,7 @@ export function ProductEditor({
                     <Button
                       variant="ghost"
                       className="h-11 text-destructive"
-                      onClick={() =>
-                        set({ variants: draft.variants.filter((_, xi) => xi !== i) })
-                      }
+                      onClick={() => set({ variants: draft.variants.filter((_, xi) => xi !== i) })}
                     >
                       Entfernen
                     </Button>

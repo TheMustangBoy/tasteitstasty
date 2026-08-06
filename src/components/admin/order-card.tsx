@@ -156,7 +156,10 @@ export function OrderCard({
             </p>
             <Textarea
               value={note}
-              onChange={(e) => setNote(e.target.value)}
+              onChange={(e) => {
+                setNote(e.target.value);
+                onNote(e.target.value);
+              }}
               onBlur={() => note !== (order.internalNote ?? "") && onNote(note)}
               placeholder="Nur intern sichtbar, z. B. Sonderwunsch oder Rückruf"
               className="min-h-[132px]"

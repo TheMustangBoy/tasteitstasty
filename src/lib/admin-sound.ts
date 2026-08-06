@@ -1,7 +1,9 @@
 /** Kurzer Benachrichtigungston (WebAudio, ohne Asset-Datei). */
 export function playNotificationSound() {
   if (typeof window === "undefined") return;
-  const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  const Ctx =
+    window.AudioContext ??
+    (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!Ctx) return;
   try {
     const ctx = new Ctx();

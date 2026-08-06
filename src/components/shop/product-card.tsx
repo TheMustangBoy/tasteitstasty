@@ -36,10 +36,10 @@ export function ProductCard({
           {item.description
             ? item.description
             : item.ingredientsPlaceholder
-            ? "Zutaten folgen (Platzhalter)"
-            : item.ingredients.length
-              ? item.ingredients.join(" · ")
-              : "Frisch frittiert"}
+              ? "Zutaten folgen (Platzhalter)"
+              : item.ingredients.length
+                ? item.ingredients.join(" · ")
+                : "Frisch frittiert"}
         </p>
         {item.patties && (
           <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-primary">

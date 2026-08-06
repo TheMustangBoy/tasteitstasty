@@ -30,7 +30,11 @@ export function ordersToCsv(orders: ShopOrder[]) {
     o.internalNote ?? "",
     o.lines
       .map((l) => {
-        const extras = l.extras?.length ? ` +${l.extras.map((e) => e.name).join("+")}` : l.bacon ? " +Bacon" : "";
+        const extras = l.extras?.length
+          ? ` +${l.extras.map((e) => e.name).join("+")}`
+          : l.bacon
+            ? " +Bacon"
+            : "";
         const removed = l.removed.length ? ` ohne ${l.removed.join("/")}` : "";
         return `${l.quantity}x ${l.name}${extras}${removed} (${linePrice(l).toFixed(2)})`;
       })

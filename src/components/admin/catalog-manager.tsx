@@ -18,7 +18,12 @@ import { useShop } from "@/context/shop";
 type ListKey = "categories" | "ingredients" | "extras";
 
 const slug = (value: string) =>
-  value.toLowerCase().replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss")
+  value
+    .toLowerCase()
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/ß/g, "ss")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "") || `id-${Date.now().toString(36)}`;
 
@@ -66,10 +71,22 @@ export function CatalogManager() {
 
   const MoveButtons = ({ list, id }: { list: ListKey; id: string }) => (
     <span className="flex shrink-0 gap-1">
-      <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => move(list, id, -1)} aria-label="Nach oben">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-10 w-10"
+        onClick={() => move(list, id, -1)}
+        aria-label="Nach oben"
+      >
         <ArrowUp className="h-4 w-4" />
       </Button>
-      <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => move(list, id, 1)} aria-label="Nach unten">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-10 w-10"
+        onClick={() => move(list, id, 1)}
+        aria-label="Nach unten"
+      >
         <ArrowDown className="h-4 w-4" />
       </Button>
     </span>
@@ -202,7 +219,9 @@ export function CatalogManager() {
                   step="0.5"
                   min="0"
                   value={e.price}
-                  onChange={(ev) => upsertExtra({ ...e, price: Math.max(0, Number(ev.target.value) || 0) })}
+                  onChange={(ev) =>
+                    upsertExtra({ ...e, price: Math.max(0, Number(ev.target.value) || 0) })
+                  }
                   className="h-11"
                 />
               </div>
