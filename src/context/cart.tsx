@@ -1,5 +1,7 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { BACON_EXTRA, type Extra, type MenuItem, type Variant } from "@/data/menu";
+
+const STORAGE_KEY = "tit-cart-v1";
 
 export type CartLine = {
   lineId: string;
@@ -61,6 +63,31 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [lines, setLines] = useState<CartLine[]>([]);
   const [isOpen, setOpen] = useState(false);
   const [lastOrder, setLastOrder] = useState<PlacedOrder | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+
+  // Erst nach dem Mount lesen, damit SSR und erster Client-Render identisch sind.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { lines?: CartLine[]; lastOrder?: PlacedOrder | null };
+        if (Array.isArray(parsed.lines)) setLines(parsed.lines);
+        if (parsed.lastOrder) setLastOrder(parsed.lastOrder);
+      }
+    } catch {
+      /* ignore */
+    }
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ lines, lastOrder }));
+    } catch {
+      /* ignore */
+    }
+  }, [hydrated, lines, lastOrder]);
 
   const value = useMemo<CartContextValue>(() => {
     const total = lines.reduce((sum, line) => sum + linePrice(line), 0);
