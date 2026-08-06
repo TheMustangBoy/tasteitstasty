@@ -164,6 +164,7 @@ function seedProducts(): ProductRecord[] {
 }
 
 const DEMO_NAMES = ["Lena Fischer", "Tobias Reiter", "Marie Huber", "Jonas Weber", "Sara Klein"];
+
 const DEMO_PAYMENTS = ["Kreditkarte", "Apple Pay", "Barzahlung bei Abholung", "Google Pay"];
 
 function demoLine(item: MenuItem, quantity: number, bacon = false, removed: string[] = []): CartLine {
