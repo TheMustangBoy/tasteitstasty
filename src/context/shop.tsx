@@ -19,6 +19,7 @@ import {
   type Variant,
 } from "@/data/menu";
 import { DEFAULT_MAX_ORDERS_PER_SLOT, DEFAULT_MIN_LEAD_MINUTES } from "@/lib/pickup";
+import { demoPickupDate } from "@/lib/demo-pickup";
 import type { CartLine } from "@/context/cart";
 
 export const ORDER_STATUSES = [
