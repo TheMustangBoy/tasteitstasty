@@ -29,6 +29,7 @@ export const ORDER_STATUSES = [
   "abholbereit",
   "abgeschlossen",
   "abgelehnt",
+  "storniert",
 ] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
@@ -39,6 +40,37 @@ export const STATUS_LABEL: Record<OrderStatus, string> = {
   abholbereit: "Abholbereit",
   abgeschlossen: "Abgeschlossen",
   abgelehnt: "Abgelehnt",
+  storniert: "Storniert",
+};
+
+/** Statusübergänge, die nicht mehr zu den offenen Bestellungen zählen. */
+export const CLOSED_STATUSES: OrderStatus[] = ["abgeschlossen", "abgelehnt", "storniert"];
+
+export const CANCEL_REASONS = [
+  { value: "kunde", label: "Kunde hat storniert" },
+  { value: "nicht-verfuegbar", label: "Produkt nicht verfügbar" },
+  { value: "doppelt", label: "Doppelte Bestellung" },
+  { value: "sonstiges", label: "Sonstiges" },
+] as const;
+
+export type CancelReason = (typeof CANCEL_REASONS)[number]["value"];
+
+/** Zeitstempel je Statuswechsel – Basis für spätere Auswertungen. */
+export type OrderTimestamps = {
+  acceptedAt?: string;
+  preparingAt?: string;
+  readyAt?: string;
+  completedAt?: string;
+  cancelledAt?: string;
+};
+
+const STATUS_TIMESTAMP_KEY: Partial<Record<OrderStatus, keyof OrderTimestamps>> = {
+  angenommen: "acceptedAt",
+  zubereitung: "preparingAt",
+  abholbereit: "readyAt",
+  abgeschlossen: "completedAt",
+  abgelehnt: "cancelledAt",
+  storniert: "cancelledAt",
 };
 
 export type ShopOrder = {
@@ -56,6 +88,9 @@ export type ShopOrder = {
   payment: string;
   lines: CartLine[];
   total: number;
+  timestamps?: OrderTimestamps;
+  cancelReason?: CancelReason;
+  cancelNote?: string;
 };
 
 /* -------------------------------------------------------------------------
@@ -247,12 +282,22 @@ type ShopContextValue = ShopState & {
   moveEntry: (list: "categories" | "ingredients" | "extras", id: string, dir: -1 | 1) => void;
   addOrder: (order: Omit<ShopOrder, "id" | "status">) => ShopOrder;
   setOrderStatus: (id: string, status: OrderStatus) => void;
+  cancelOrder: (id: string, reason: CancelReason, cancelNote?: string) => void;
+  restoreOrder: (id: string, status: OrderStatus) => void;
   setOrderNote: (id: string, internalNote: string) => void;
   simulateOrder: () => ShopOrder;
   login: (user: string, password: string) => boolean;
   logout: () => void;
   setSoundOn: (on: boolean) => void;
 };
+
+/** Setzt den Status und schreibt den passenden Zeitstempel fort. */
+function withStatus(order: ShopOrder, status: OrderStatus): ShopOrder {
+  const key = STATUS_TIMESTAMP_KEY[status];
+  const timestamps: OrderTimestamps = { ...(order.timestamps ?? {}) };
+  if (key) timestamps[key] = new Date().toISOString();
+  return { ...order, status, timestamps };
+}
 
 const ShopContext = createContext<ShopContextValue | null>(null);
 
@@ -347,7 +392,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
 
     const bookings: Record<string, number> = {};
     for (const order of state.orders) {
-      if (order.status === "abgelehnt") continue;
+      if (CLOSED_STATUSES.includes(order.status) && order.status !== "abgeschlossen") continue;
       bookings[order.pickupISO] = (bookings[order.pickupISO] ?? 0) + 1;
     }
 
@@ -488,7 +533,35 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       setOrderStatus: (id, status) =>
         patch((prev) => ({
           ...prev,
-          orders: prev.orders.map((o) => (o.id === id ? { ...o, status } : o)),
+          orders: prev.orders.map((o) => (o.id === id ? withStatus(o, status) : o)),
+        })),
+      cancelOrder: (id, reason, cancelNote) =>
+        patch((prev) => ({
+          ...prev,
+          orders: prev.orders.map((o) =>
+            o.id === id
+              ? {
+                  ...withStatus(o, "storniert"),
+                  cancelReason: reason,
+                  cancelNote: cancelNote ?? "",
+                }
+              : o,
+          ),
+        })),
+      restoreOrder: (id, status) =>
+        patch((prev) => ({
+          ...prev,
+          orders: prev.orders.map((o) => {
+            if (o.id !== id) return o;
+            const next = withStatus(o, status);
+            const timestamps = { ...(next.timestamps ?? {}) };
+            delete timestamps.completedAt;
+            delete timestamps.cancelledAt;
+            const restored: ShopOrder = { ...next, timestamps };
+            delete restored.cancelReason;
+            delete restored.cancelNote;
+            return restored;
+          }),
         })),
       setOrderNote: (id, internalNote) =>
         patch((prev) => ({

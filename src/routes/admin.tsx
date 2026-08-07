@@ -41,6 +41,7 @@ import { ProductEditor } from "@/components/admin/product-editor";
 import { CatalogManager } from "@/components/admin/catalog-manager";
 import { formatPrice, WEEKDAYS } from "@/data/menu";
 import {
+  CLOSED_STATUSES,
   emptyProduct,
   ORDER_STATUSES,
   STATUS_LABEL,
@@ -146,6 +147,8 @@ function AdminConsole() {
     setDayHours,
     setOrderStatus,
     setOrderNote,
+    cancelOrder,
+    restoreOrder,
     duplicateProduct,
     deleteProduct,
     simulateOrder,
@@ -167,7 +170,7 @@ function AdminConsole() {
     [productRows],
   );
 
-  const live = orders.filter((o) => o.status !== "abgeschlossen" && o.status !== "abgelehnt");
+  const live = orders.filter((o) => !CLOSED_STATUSES.includes(o.status));
   const newCount = orders.filter((o) => o.status === "neu").length;
 
   const history = useMemo(() => {
@@ -186,7 +189,9 @@ function AdminConsole() {
   const metrics = useMemo(() => {
     const today = new Date().toDateString();
     const relevant = orders.filter(
-      (o) => new Date(o.createdAt).toDateString() === today && o.status !== "abgelehnt",
+      (o) =>
+        new Date(o.createdAt).toDateString() === today &&
+        !["abgelehnt", "storniert"].includes(o.status),
     );
     const revenue = relevant.reduce((s, o) => s + o.total, 0);
     const counter = new Map<string, number>();
@@ -294,6 +299,7 @@ function AdminConsole() {
                     order={order}
                     onStatus={(status) => setOrderStatus(order.id, status)}
                     onNote={(note) => setOrderNote(order.id, note)}
+                    onCancel={(reason, cancelNote) => cancelOrder(order.id, reason, cancelNote)}
                   />
                 ))}
               </div>
@@ -353,6 +359,11 @@ function AdminConsole() {
                   order={order}
                   onStatus={(status) => setOrderStatus(order.id, status)}
                   onNote={(note) => setOrderNote(order.id, note)}
+                  onCancel={(reason, cancelNote) => cancelOrder(order.id, reason, cancelNote)}
+                  onRestore={(status) => {
+                    restoreOrder(order.id, status);
+                    toast.success(`${order.reference} wieder aktiv`);
+                  }}
                 />
               ))}
             </div>
