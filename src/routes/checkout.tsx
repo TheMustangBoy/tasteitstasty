@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { WheelPicker } from "@/components/ui/wheel-picker";
+import { WheelField } from "@/components/ui/wheel-picker";
 import { formatPrice, BUSINESS } from "@/data/menu";
 import { linePrice, useCart } from "@/context/cart";
 import { useShop } from "@/context/shop";
@@ -17,6 +17,7 @@ import {
   nextAvailableSlot,
   nextOpeningLabel,
 } from "@/lib/pickup";
+import { isValidPhone, PHONE_ERROR, sanitizePhoneInput } from "@/lib/phone";
 
 const PAYMENTS = [
   { id: "card", label: "Kreditkarte", icon: CreditCard, hint: "Online bezahlen" },
@@ -79,11 +80,14 @@ function CheckoutPage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [note, setNote] = useState("");
+  const [phoneTouched, setPhoneTouched] = useState(false);
+  const phoneValid = isValidPhone(phone);
 
   const selectedSlot =
     slots.find((s) => s.key === slotKey && !s.full) ??
     (activeDay ? (activeDay.slots.find((s) => !s.full) ?? suggested) : suggested);
-  const canSubmit = lines.length > 0 && Boolean(selectedSlot) && name.trim().length > 1;
+  const canSubmit =
+    lines.length > 0 && Boolean(selectedSlot) && name.trim().length > 1 && phoneValid;
 
   if (lines.length === 0) {
     return (
@@ -139,13 +143,15 @@ function CheckoutPage() {
             )}
 
             {slotDays.length > 0 && (
-              <div className="mt-5 grid grid-cols-2 gap-3 rounded-2xl border border-border bg-card p-3 sm:max-w-md">
+              <div className="mt-5 grid gap-3 rounded-2xl border border-border bg-card p-4 sm:max-w-md sm:grid-cols-2">
                 <div>
-                  <p className="mb-1 text-center text-xs font-bold uppercase tracking-[0.15em] text-muted-foreground">
+                  <p className="mb-2 text-xs font-bold uppercase tracking-[0.15em] text-muted-foreground">
                     Tag
                   </p>
-                  <WheelPicker
+                  <WheelField
                     ariaLabel="Abholtag wählen"
+                    title="Abholtag wählen"
+                    placeholder="Tag auswählen"
                     value={activeDayKey}
                     options={slotDays.map((d) => ({ value: d.dayKey, label: d.dayLabel }))}
                     onChange={(next) => {
@@ -155,15 +161,17 @@ function CheckoutPage() {
                   />
                 </div>
                 <div>
-                  <p className="mb-1 text-center text-xs font-bold uppercase tracking-[0.15em] text-muted-foreground">
+                  <p className="mb-2 text-xs font-bold uppercase tracking-[0.15em] text-muted-foreground">
                     Uhrzeit
                   </p>
-                  <WheelPicker
+                  <WheelField
                     ariaLabel="Abholzeit wählen"
+                    title="Abholzeit wählen"
+                    placeholder="Abholzeit auswählen"
                     value={selectedSlot?.key ?? ""}
                     options={(activeDay?.slots ?? [])
                       .filter((slot) => !slot.full)
-                      .map((slot) => ({ value: slot.key, label: slot.label }))}
+                      .map((slot) => ({ value: slot.key, label: `${slot.label} Uhr` }))}
                     onChange={setSlotKey}
                   />
                 </div>
@@ -213,14 +221,26 @@ function CheckoutPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="phone">Telefon (optional)</Label>
+                <Label htmlFor="phone">Telefon *</Label>
                 <Input
                   id="phone"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  required
+                  aria-invalid={phoneTouched && !phoneValid}
+                  aria-describedby="phone-error"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="01234 567890"
+                  onChange={(e) => setPhone(sanitizePhoneInput(e.target.value))}
+                  onBlur={() => setPhoneTouched(true)}
+                  placeholder="+49 151 2345678"
                   className="mt-2 h-12"
                 />
+                {phoneTouched && !phoneValid && (
+                  <p id="phone-error" className="mt-2 text-sm text-destructive">
+                    {PHONE_ERROR}
+                  </p>
+                )}
               </div>
               <div className="sm:col-span-2">
                 <Label htmlFor="note">Anmerkung (optional)</Label>

@@ -1,5 +1,14 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export type WheelOption = {
   value: string;
@@ -14,6 +23,14 @@ const VISIBLE = 5;
 /**
  * Wheel Picker im iOS-/Android-Stil.
  * Scroll-Snap-basiert, funktioniert mit Touch, Maus und Tastatur.
+ *
+ * Layout-Regeln gegen seitliches Wandern der Labels:
+ * - Zeilen sind Blockelemente mit fester Breite (w-full) und text-center,
+ *   niemals scale/transform (Transform verschiebt Subpixel horizontal).
+ * - Der Scroll-Container blendet horizontales Overflow aus und versteckt
+ *   die Scrollbar, damit die Inhaltsbreite konstant bleibt.
+ * - Gewicht/Farbe statt Größe markieren die Auswahl, damit sich die
+ *   Textbreite beim Scrollen nicht ändert.
  */
 export function WheelPicker({
   options,
@@ -55,7 +72,6 @@ export function WheelPicker({
       if (!el) return;
       let next = Math.round(el.scrollTop / ITEM_HEIGHT);
       next = Math.max(0, Math.min(options.length - 1, next));
-      // Deaktivierte Einträge überspringen – nächsten freien Eintrag wählen.
       if (options[next]?.disabled) {
         const forward = options.findIndex((o, i) => i >= next && !o.disabled);
         const backward = [...options].reduce(
@@ -73,7 +89,7 @@ export function WheelPicker({
 
   return (
     <div
-      className={cn("relative select-none", className)}
+      className={cn("relative w-full select-none overflow-hidden", className)}
       style={{ height: ITEM_HEIGHT * VISIBLE }}
     >
       <div
@@ -100,37 +116,134 @@ export function WheelPicker({
             }
           }
         }}
-        className="h-full snap-y snap-mandatory overflow-y-auto overscroll-contain scrollbar-none focus:outline-none"
+        className="h-full w-full snap-y snap-mandatory overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-none focus:outline-none"
         style={{ scrollPaddingTop: ITEM_HEIGHT * 2 }}
       >
         <div style={{ height: ITEM_HEIGHT * ((VISIBLE - 1) / 2) }} />
         {options.map((option, i) => (
-          <button
+          <div
             key={option.value}
-            type="button"
             role="option"
             aria-selected={option.value === value}
-            disabled={option.disabled}
+            aria-disabled={option.disabled}
             onClick={() => {
               if (option.disabled) return;
               onChange(option.value);
               scrollToIndex(i, true);
             }}
             className={cn(
-              "flex w-full snap-center items-center justify-center text-base font-semibold transition-all",
+              "flex w-full snap-center items-center justify-center px-2 text-center text-base leading-none transition-colors duration-150",
               option.disabled
                 ? "cursor-not-allowed text-muted-foreground/35"
                 : option.value === value
-                  ? "scale-105 text-foreground"
-                  : "text-muted-foreground",
+                  ? "cursor-pointer font-bold text-foreground"
+                  : "cursor-pointer font-semibold text-muted-foreground",
             )}
             style={{ height: ITEM_HEIGHT }}
           >
-            {option.label}
-          </button>
+            <span className="block w-full truncate">{option.label}</span>
+          </div>
         ))}
         <div style={{ height: ITEM_HEIGHT * ((VISIBLE - 1) / 2) }} />
       </div>
     </div>
+  );
+}
+
+/**
+ * Kompaktes Auswahlfeld, das den Wheel Picker erst auf Tap in einem Dialog
+ * öffnet. Die Auswahl bleibt lokal, bis „Übernehmen“ gedrückt wird –
+ * Abbrechen lässt den Ausgangswert unverändert.
+ *
+ * Wird sowohl für die Abholzeit (Checkout) als auch für den Bestellstatus
+ * (Admin) genutzt, damit beide Stellen identisch funktionieren.
+ */
+export function WheelField({
+  options,
+  value,
+  onChange,
+  ariaLabel,
+  title,
+  placeholder = "Auswählen",
+  description,
+  confirmLabel = "Übernehmen",
+  disabled,
+  className,
+}: {
+  options: WheelOption[];
+  value: string;
+  onChange: (value: string) => void;
+  ariaLabel: string;
+  title: string;
+  placeholder?: string;
+  description?: string;
+  confirmLabel?: string;
+  disabled?: boolean;
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(value);
+
+  useEffect(() => {
+    if (open) setDraft(value);
+  }, [open, value]);
+
+  const current = options.find((o) => o.value === value);
+
+  return (
+    <>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen(true)}
+        aria-label={ariaLabel}
+        className={cn(
+          "flex h-12 w-full items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 text-left text-sm font-semibold transition-colors hover:border-primary/60 disabled:cursor-not-allowed disabled:opacity-50",
+          className,
+        )}
+      >
+        <span className={cn("min-w-0 truncate", !current && "text-muted-foreground")}>
+          {current?.label ?? placeholder}
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-primary" />
+      </button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{title}</DialogTitle>
+          </DialogHeader>
+          {description && <p className="text-sm text-muted-foreground">{description}</p>}
+          <WheelPicker
+            ariaLabel={ariaLabel}
+            options={options}
+            value={draft}
+            onChange={setDraft}
+            className="rounded-2xl border border-border bg-card"
+          />
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-12 flex-1 rounded-xl"
+              onClick={() => setOpen(false)}
+            >
+              Abbrechen
+            </Button>
+            <Button
+              type="button"
+              className="h-12 flex-1 rounded-xl bg-flame font-bold uppercase text-primary-foreground"
+              disabled={!draft}
+              onClick={() => {
+                if (draft && draft !== value) onChange(draft);
+                setOpen(false);
+              }}
+            >
+              {confirmLabel}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

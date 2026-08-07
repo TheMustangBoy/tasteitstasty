@@ -44,9 +44,17 @@ function OrderPage() {
         <CheckCircle2 className="h-12 w-12 text-primary" />
         <h1 className="mt-4 text-3xl sm:text-4xl">Bestellung bestätigt</h1>
         <p className="mt-2 text-muted-foreground">
-          Danke, {lastOrder.name || "Gast"}! Deine Bestellnummer ist{" "}
-          <strong className="text-foreground">{lastOrder.reference}</strong>.
+          Danke, {lastOrder.name || "Gast"}! Zeig diese Nummer bei der Abholung am Truck.
         </p>
+
+        <div className="mt-5 rounded-2xl border border-primary/50 bg-primary/10 p-5 text-center">
+          <p className="text-xs font-bold uppercase tracking-[0.25em] text-primary">
+            Bestellnummer
+          </p>
+          <p className="mt-1 font-display text-4xl leading-none sm:text-5xl">
+            {lastOrder.reference}
+          </p>
+        </div>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           <div className="rounded-xl border border-border p-4">
