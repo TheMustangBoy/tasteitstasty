@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { WheelField } from "@/components/ui/wheel-picker";
 import { formatPrice, BUSINESS } from "@/data/menu";
-import { linePrice, useCart } from "@/context/cart";
+import { lineOptions, linePrice, useCart } from "@/context/cart";
 import { useShop } from "@/context/shop";
 import {
   buildSlotDays,
@@ -45,7 +45,7 @@ export const Route = createFileRoute("/checkout")({
 function CheckoutPage() {
   const navigate = useNavigate();
   const { lines, total, placeOrder } = useCart();
-  const { settings, bookings, addOrder } = useShop();
+  const { settings, bookings, addOrder, orderableProducts } = useShop();
   const [now, setNow] = useState<Date | null>(null);
 
   // Slots erst im Browser berechnen, damit SSR und Client identisch starten.
@@ -83,11 +83,23 @@ function CheckoutPage() {
   const [phoneTouched, setPhoneTouched] = useState(false);
   const phoneValid = isValidPhone(phone);
 
+  // Verfügbarkeitsprüfung: Produkt aktiv, nicht ausverkauft, Kategorie nicht pausiert.
+  const orderableIds = useMemo(
+    () => new Set(orderableProducts.map((p) => p.id)),
+    [orderableProducts],
+  );
+  const unavailableLines = lines.filter((l) => !orderableIds.has(l.itemId));
+
   const selectedSlot =
     slots.find((s) => s.key === slotKey && !s.full) ??
     (activeDay ? (activeDay.slots.find((s) => !s.full) ?? suggested) : suggested);
   const canSubmit =
-    lines.length > 0 && Boolean(selectedSlot) && name.trim().length > 1 && phoneValid;
+    lines.length > 0 &&
+    Boolean(selectedSlot) &&
+    name.trim().length > 1 &&
+    phoneValid &&
+    unavailableLines.length === 0 &&
+    !settings.ordersPaused;
 
   if (lines.length === 0) {
     return (
@@ -265,8 +277,12 @@ function CheckoutPage() {
                   <span className="block truncate font-semibold">
                     {line.quantity}× {line.name}
                   </span>
-                  {line.variant && (
-                    <span className="block text-xs text-muted-foreground">{line.variant.name}</span>
+                  {lineOptions(line).length > 0 && (
+                    <span className="block text-xs text-muted-foreground">
+                      {lineOptions(line)
+                        .map((o) => o.name)
+                        .join(", ")}
+                    </span>
                   )}
                   {(line.extras?.length || line.bacon) && (
                     <span className="block text-xs text-primary">
@@ -297,12 +313,27 @@ function CheckoutPage() {
               ? `${selectedSlot.dayLabel}, ${selectedSlot.label} Uhr`
               : "kein Fenster verfügbar"}
           </p>
+          {settings.ordersPaused && (
+            <p className="mt-3 flex items-start gap-2 rounded-lg border border-destructive/60 bg-destructive/10 p-3 text-xs text-destructive">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              Online-Bestellungen sind aktuell pausiert. Bitte später erneut versuchen.
+            </p>
+          )}
+          {unavailableLines.length > 0 && (
+            <p className="mt-3 flex items-start gap-2 rounded-lg border border-destructive/60 bg-destructive/10 p-3 text-xs text-destructive">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              Nicht mehr verfügbar: {unavailableLines.map((l) => l.name).join(", ")}. Bitte im
+              Warenkorb entfernen.
+            </p>
+          )}
           <Button
             size="lg"
             disabled={!canSubmit}
             className="mt-5 h-14 w-full rounded-xl bg-flame text-base font-bold uppercase tracking-wide text-primary-foreground shadow-flame hover:opacity-90"
             onClick={() => {
-              if (!selectedSlot) return;
+              // Letzte Prüfung direkt vor dem Absenden.
+              if (!selectedSlot || selectedSlot.full) return;
+              if (settings.ordersPaused || unavailableLines.length > 0) return;
               const paymentLabel = PAYMENTS.find((p) => p.id === payment)?.label ?? "";
               const pickupLabel = `${selectedSlot.dayLabel}, ${selectedSlot.label} Uhr`;
               const order = placeOrder({
