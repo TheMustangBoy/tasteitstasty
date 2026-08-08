@@ -697,7 +697,7 @@ export function emptyProduct(categoryId: string, sortOrder: number): ProductReco
     ingredients: [],
     removable: [],
     extraIds: [],
-    variants: [],
+    options: [],
     tag: "",
     vegetarian: false,
     ingredientsPlaceholder: false,
