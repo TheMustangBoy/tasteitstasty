@@ -27,7 +27,7 @@ export const Route = createFileRoute("/speisekarte")({
 function MenuPage() {
   const [selected, setSelected] = useState<MenuItem | null>(null);
   const [open, setOpen] = useState(false);
-  const { products, overrides, catalog } = useShop();
+  const { products, overrides, catalog, settings } = useShop();
   const categories = [...catalog.categories].sort((a, b) => a.sortOrder - b.sortOrder);
 
   return (
@@ -37,6 +37,13 @@ function MenuPage() {
         Alles frisch auf Bestellung. Aktuell ausschließlich Abholung am Truck.
       </p>
 
+      {settings.ordersPaused && (
+        <p className="mt-6 rounded-xl border border-destructive/60 bg-destructive/10 p-4 text-sm font-semibold text-destructive">
+          Online-Bestellungen sind gerade pausiert. Du kannst dich umsehen, aber noch nicht
+          bestellen.
+        </p>
+      )}
+
       <div className="mt-10 space-y-14">
         {categories.map((category) => (
           <section key={category.id} id={category.id}>
@@ -44,7 +51,9 @@ function MenuPage() {
               <h2 className="text-2xl sm:text-3xl">
                 <span className="text-flame-gradient">{category.label}</span>
               </h2>
-              <p className="mt-2 text-sm text-muted-foreground">{category.note}</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {category.paused ? "Aktuell pausiert – Bestellung nicht möglich." : category.note}
+              </p>
             </div>
             <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {products
@@ -54,7 +63,7 @@ function MenuPage() {
                   <ProductCard
                     key={item.id}
                     item={item}
-                    soldOut={overrides[item.id]?.soldOut === true}
+                    soldOut={overrides[item.id]?.soldOut === true || category.paused === true}
                     onSelect={() => {
                       setSelected(item);
                       setOpen(true);

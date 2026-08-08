@@ -17,7 +17,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { formatPrice } from "@/data/menu";
-import { linePrice } from "@/context/cart";
+import { lineOptions, linePrice } from "@/context/cart";
 import {
   CANCEL_REASONS,
   ORDER_STATUSES,
@@ -152,8 +152,12 @@ export function OrderCard({
               <span className="block truncate font-semibold">
                 {line.quantity}× {line.name}
               </span>
-              {line.variant && (
-                <span className="block text-xs text-muted-foreground">{line.variant.name}</span>
+              {lineOptions(line).length > 0 && (
+                <span className="block text-xs text-muted-foreground">
+                  {lineOptions(line)
+                    .map((o) => o.name)
+                    .join(", ")}
+                </span>
               )}
               {(line.extras?.length || line.bacon) && (
                 <span className="block text-xs text-primary">

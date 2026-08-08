@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle } from "lucide-react";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -27,6 +28,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useShop, type ProductRecord } from "@/context/shop";
 import { formatPrice } from "@/data/menu";
 
+/** "8,50" und "8.50" akzeptieren; leere Eingabe ergibt 0. */
+function parsePrice(input: string): number {
+  const normalized = input.replace(",", ".").replace(/[^0-9.]/g, "");
+  const value = Number.parseFloat(normalized);
+  return Number.isFinite(value) && value >= 0 ? value : 0;
+}
+
 export function ProductEditor({
   product,
   open,
@@ -39,8 +47,14 @@ export function ProductEditor({
   const { catalog, upsertProduct } = useShop();
   const [draft, setDraft] = useState<ProductRecord | null>(product);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [priceText, setPriceText] = useState(product ? String(product.price).replace(".", ",") : "");
+  const [showErrors, setShowErrors] = useState(false);
 
-  useEffect(() => setDraft(product), [product]);
+  useEffect(() => {
+    setDraft(product);
+    setPriceText(product ? String(product.price).replace(".", ",") : "");
+    setShowErrors(false);
+  }, [product]);
 
   const dirty = useMemo(
     () => Boolean(draft && product && JSON.stringify(draft) !== JSON.stringify(product)),
@@ -53,6 +67,10 @@ export function ProductEditor({
   const categories = [...catalog.categories].sort((a, b) => a.sortOrder - b.sortOrder);
   const ingredients = [...catalog.ingredients].sort((a, b) => a.sortOrder - b.sortOrder);
   const extras = [...catalog.extras].sort((a, b) => a.sortOrder - b.sortOrder);
+
+  const nameError = !draft.name.trim() ? "Name ist ein Pflichtfeld." : "";
+  const priceError = priceText.trim() === "" ? "Preis ist ein Pflichtfeld." : "";
+  const invalid = Boolean(nameError || priceError);
 
   const close = () => {
     if (dirty) setConfirmDiscard(true);
@@ -73,7 +91,9 @@ export function ProductEditor({
           <div className="space-y-5">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <Label htmlFor="p-name">Name</Label>
+                <Label htmlFor="p-name">
+                  Name <span className="text-primary">*</span>
+                </Label>
                 <Input
                   id="p-name"
                   value={draft.name}
@@ -81,9 +101,14 @@ export function ProductEditor({
                   className="mt-2 h-12"
                   placeholder="z. B. Smash Burger"
                 />
+                {showErrors && nameError && (
+                  <p className="mt-1 text-xs text-destructive">{nameError}</p>
+                )}
               </div>
               <div>
-                <Label htmlFor="p-cat">Kategorie</Label>
+                <Label htmlFor="p-cat">
+                  Kategorie <span className="text-primary">*</span>
+                </Label>
                 <select
                   id="p-cat"
                   value={draft.categoryId}
@@ -98,16 +123,28 @@ export function ProductEditor({
                 </select>
               </div>
               <div>
-                <Label htmlFor="p-price">Preis (€)</Label>
+                <Label htmlFor="p-price">
+                  Preis (€) <span className="text-primary">*</span>
+                </Label>
                 <Input
                   id="p-price"
-                  type="number"
-                  step="0.5"
-                  min="0"
-                  value={draft.price}
-                  onChange={(e) => set({ price: Math.max(0, Number(e.target.value) || 0) })}
+                  inputMode="decimal"
+                  value={priceText}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setPriceText(next);
+                    set({ price: parsePrice(next) });
+                  }}
+                  onBlur={() => {
+                    if (priceText.trim() === "") return;
+                    setPriceText(parsePrice(priceText).toFixed(2).replace(".", ","));
+                  }}
                   className="mt-2 h-12"
+                  placeholder="z. B. 8,50"
                 />
+                {showErrors && priceError && (
+                  <p className="mt-1 text-xs text-destructive">{priceError}</p>
+                )}
               </div>
               <div>
                 <Label htmlFor="p-patties">Patty-Anzahl (leer = keine)</Label>
@@ -249,31 +286,39 @@ export function ProductEditor({
 
             <section>
               <div className="flex items-center justify-between">
-                <Label>Varianten</Label>
+                <Label>Auswahl-Optionen (optional, mehrfach wählbar)</Label>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() =>
                     set({
-                      variants: [
-                        ...draft.variants,
-                        { id: `var-${Date.now().toString(36)}`, name: "", priceDelta: 0 },
+                      options: [
+                        ...draft.options,
+                        {
+                          id: `opt-${Date.now().toString(36)}`,
+                          name: "",
+                          priceDelta: 0,
+                          active: true,
+                        },
                       ],
                     })
                   }
                 >
-                  Variante hinzufügen
+                  Option hinzufügen
                 </Button>
               </div>
               <div className="mt-2 space-y-2">
-                {draft.variants.map((v, i) => (
-                  <div key={v.id} className="grid grid-cols-[minmax(0,1fr)_110px_auto] gap-2">
+                {draft.options.map((v, i) => (
+                  <div
+                    key={v.id}
+                    className="grid grid-cols-[minmax(0,1fr)_110px_auto_auto] items-center gap-2"
+                  >
                     <Input
                       value={v.name}
                       placeholder="z. B. Menü mit Pommes"
                       onChange={(e) =>
                         set({
-                          variants: draft.variants.map((x, xi) =>
+                          options: draft.options.map((x, xi) =>
                             xi === i ? { ...x, name: e.target.value } : x,
                           ),
                         })
@@ -286,22 +331,38 @@ export function ProductEditor({
                       value={v.priceDelta}
                       onChange={(e) =>
                         set({
-                          variants: draft.variants.map((x, xi) =>
+                          options: draft.options.map((x, xi) =>
                             xi === i ? { ...x, priceDelta: Number(e.target.value) || 0 } : x,
                           ),
                         })
                       }
                       className="h-11"
                     />
+                    <Switch
+                      checked={v.active !== false}
+                      aria-label="Option aktiv"
+                      onCheckedChange={(c) =>
+                        set({
+                          options: draft.options.map((x, xi) =>
+                            xi === i ? { ...x, active: c } : x,
+                          ),
+                        })
+                      }
+                    />
                     <Button
                       variant="ghost"
                       className="h-11 text-destructive"
-                      onClick={() => set({ variants: draft.variants.filter((_, xi) => xi !== i) })}
+                      onClick={() => set({ options: draft.options.filter((_, xi) => xi !== i) })}
                     >
                       Entfernen
                     </Button>
                   </div>
                 ))}
+                {draft.options.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Noch keine Optionen – z. B. „Menü mit Pommes“ mit Aufpreis.
+                  </p>
+                )}
               </div>
             </section>
 
@@ -319,9 +380,17 @@ export function ProductEditor({
             </Button>
             <Button
               className="h-12 bg-flame font-bold uppercase text-primary-foreground"
-              disabled={!draft.name.trim()}
               onClick={() => {
-                upsertProduct({ ...draft, name: draft.name.trim() });
+                if (invalid) {
+                  setShowErrors(true);
+                  toast.error("Bitte Pflichtfelder ausfüllen");
+                  return;
+                }
+                const saved = { ...draft, name: draft.name.trim(), price: parsePrice(priceText) };
+                upsertProduct(saved);
+                toast.success("Produkt gespeichert", {
+                  description: `${saved.name} · ${formatPrice(saved.price)}`,
+                });
                 onOpenChange(false);
               }}
             >
