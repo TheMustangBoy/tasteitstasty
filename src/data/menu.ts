@@ -3,8 +3,19 @@ export type Category = string;
 /** Extra/Topping – zubuchbar pro Produkt. */
 export type Extra = { id: string; name: string; price: number };
 
-/** Variante (z. B. Größe) – Preisdifferenz zum Basispreis. */
-export type Variant = { id: string; name: string; priceDelta: number };
+/**
+ * Auswahl-Option (z. B. „Menü mit Pommes“) – optional und mehrfach wählbar.
+ * `priceDelta` ist der Aufpreis (oder Abschlag) zum Basispreis.
+ */
+export type SelectionOption = {
+  id: string;
+  name: string;
+  priceDelta: number;
+  active?: boolean;
+};
+
+/** @deprecated Alter Name – bleibt für gespeicherte Daten kompatibel. */
+export type Variant = SelectionOption;
 
 export type MenuItem = {
   id: string;
@@ -21,7 +32,8 @@ export type MenuItem = {
   /** Abwählbare Zutaten (Teilmenge von ingredients). */
   removable?: string[];
   extras?: Extra[];
-  variants?: Variant[];
+  /** Optionale Auswahl-Optionen (Mehrfachwahl möglich). */
+  options?: SelectionOption[];
 };
 
 /** Zutaten, die abgewählt werden können – sofern im Produkt enthalten. */
