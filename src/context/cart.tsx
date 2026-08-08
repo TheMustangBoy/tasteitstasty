@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { BACON_EXTRA, type Extra, type MenuItem, type Variant } from "@/data/menu";
+import { BACON_EXTRA, type Extra, type MenuItem, type SelectionOption } from "@/data/menu";
 
 const STORAGE_KEY = "tit-cart-v1";
 
@@ -13,7 +13,10 @@ export type CartLine = {
   bacon: boolean;
   /** Ausgewählte Extras (inkl. Bacon, falls gewählt). */
   extras?: Extra[];
-  variant?: Variant | null;
+  /** Gewählte Auswahl-Optionen (Mehrfachwahl). */
+  options?: SelectionOption[];
+  /** @deprecated Alte Einzel-Variante aus gespeicherten Warenkörben. */
+  variant?: SelectionOption | null;
 };
 
 export type PlacedOrder = {
@@ -30,9 +33,14 @@ export const linePrice = (line: CartLine) => {
   const extrasSum = extras.reduce((s, e) => s + e.price, 0);
   // Legacy-Zeilen ohne extras-Liste: Bacon separat verrechnen.
   const legacyBacon = extras.length === 0 && line.bacon ? BACON_EXTRA.price : 0;
-  const variantDelta = line.variant?.priceDelta ?? 0;
-  return (line.basePrice + variantDelta + extrasSum + legacyBacon) * line.quantity;
+  const optionsSum = (line.options ?? []).reduce((s, o) => s + o.priceDelta, 0);
+  const legacyVariant = (line.options ?? []).length === 0 ? (line.variant?.priceDelta ?? 0) : 0;
+  return (line.basePrice + optionsSum + legacyVariant + extrasSum + legacyBacon) * line.quantity;
 };
+
+/** Zeilen-Beschriftung der gewählten Optionen (inkl. Legacy-Variante). */
+export const lineOptions = (line: CartLine): SelectionOption[] =>
+  (line.options ?? []).length > 0 ? line.options! : line.variant ? [line.variant] : [];
 
 type CartContextValue = {
   lines: CartLine[];
@@ -47,7 +55,7 @@ type CartContextValue = {
       bacon: boolean;
       quantity: number;
       extras?: Extra[];
-      variant?: Variant | null;
+      options?: SelectionOption[];
     },
   ) => void;
   setQuantity: (lineId: string, quantity: number) => void;
@@ -103,15 +111,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
             id: string,
             removed: string[],
             extras: Extra[] | undefined,
-            variant: Variant | null | undefined,
+            options: SelectionOption[] | undefined,
           ) =>
             `${id}|${[...removed].sort().join(",")}|${(extras ?? [])
               .map((e) => e.id)
               .sort()
-              .join(",")}|${variant?.id ?? ""}`;
-          const signature = sig(item.id, opts.removed, opts.extras, opts.variant);
+              .join(",")}|${(options ?? [])
+              .map((o) => o.id)
+              .sort()
+              .join(",")}`;
+          const signature = sig(item.id, opts.removed, opts.extras, opts.options);
           const existing = prev.find(
-            (l) => sig(l.itemId, l.removed, l.extras, l.variant) === signature,
+            (l) => sig(l.itemId, l.removed, l.extras, lineOptions(l)) === signature,
           );
           if (existing) {
             return prev.map((l) =>
@@ -129,7 +140,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
               removed: opts.removed,
               bacon: opts.bacon,
               extras: opts.extras ?? [],
-              variant: opts.variant ?? null,
+              options: opts.options ?? [],
             },
           ];
         }),
