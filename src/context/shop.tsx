@@ -16,7 +16,7 @@ import {
   type DayHours,
   type Extra,
   type MenuItem,
-  type Variant,
+  type SelectionOption,
 } from "@/data/menu";
 import { DEFAULT_MAX_ORDERS_PER_SLOT, DEFAULT_MIN_LEAD_MINUTES } from "@/lib/pickup";
 import { demoPickupDate } from "@/lib/demo-pickup";
@@ -98,7 +98,14 @@ export type ShopOrder = {
  * Postgres/Supabase 1:1 möglich ist: jede Liste = eine Tabelle mit id + sortOrder)
  * ---------------------------------------------------------------------- */
 
-export type CategoryRecord = { id: string; label: string; note: string; sortOrder: number };
+export type CategoryRecord = {
+  id: string;
+  label: string;
+  note: string;
+  sortOrder: number;
+  /** Pausierte Kategorien sind in der Kundenansicht nicht bestellbar. */
+  paused?: boolean;
+};
 export type IngredientRecord = { id: string; name: string; sortOrder: number };
 export type ExtraRecord = { id: string; name: string; price: number; sortOrder: number };
 
@@ -118,7 +125,8 @@ export type ProductRecord = {
   removable: string[];
   /** IDs aus dem Extra-Katalog. */
   extraIds: string[];
-  variants: Variant[];
+  /** Optionale Auswahl-Optionen (Mehrfachwahl). */
+  options: SelectionOption[];
   tag: string;
   vegetarian: boolean;
   ingredientsPlaceholder: boolean;
@@ -143,6 +151,10 @@ export type ShopSettings = {
   hours: DayHours[];
   maxOrdersPerSlot: number;
   minLeadMinutes: number;
+  /** Globaler Not-Aus für Online-Bestellungen. */
+  ordersPaused: boolean;
+  /** Tick-Ton beim Scrollen im Wheel Picker. */
+  wheelSoundOn: boolean;
 };
 
 type ShopState = {
@@ -160,6 +172,8 @@ const DEFAULT_SETTINGS: ShopSettings = {
   hours: DEFAULT_HOURS,
   maxOrdersPerSlot: DEFAULT_MAX_ORDERS_PER_SLOT,
   minLeadMinutes: DEFAULT_MIN_LEAD_MINUTES,
+  ordersPaused: false,
+  wheelSoundOn: true,
 };
 
 function seedCatalog(): Catalog {
@@ -198,7 +212,7 @@ function seedProducts(): ProductRecord[] {
     ingredients: [...item.ingredients],
     removable: item.ingredients.filter((x) => (REMOVABLE as readonly string[]).includes(x)),
     extraIds: item.category === "burger" ? ["bacon", "extra-cheese", "extra-patty"] : [],
-    variants: [],
+    options: [],
     tag: item.tag ?? "",
     vegetarian: item.vegetarian === true,
     ingredientsPlaceholder: item.ingredientsPlaceholder === true,
@@ -280,6 +294,9 @@ type ShopContextValue = ShopState & {
   upsertExtra: (row: ExtraRecord) => void;
   deleteExtra: (id: string) => void;
   moveEntry: (list: "categories" | "ingredients" | "extras", id: string, dir: -1 | 1) => void;
+  moveProduct: (id: string, dir: -1 | 1) => void;
+  setProductSoldOut: (id: string, soldOut: boolean) => void;
+  setCategoryPaused: (id: string, paused: boolean) => void;
   addOrder: (order: Omit<ShopOrder, "id" | "status">) => ShopOrder;
   setOrderStatus: (id: string, status: OrderStatus) => void;
   cancelOrder: (id: string, reason: CancelReason, cancelNote?: string) => void;
@@ -323,7 +340,14 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         ...(parsed ?? {}),
         settings: { ...DEFAULT_SETTINGS, ...(parsed?.settings ?? {}) },
         catalog: { ...seedCatalog(), ...(parsed?.catalog ?? {}) },
-        productRows: parsed?.productRows?.length ? parsed.productRows : seedProducts(),
+        productRows: parsed?.productRows?.length
+          ? parsed.productRows.map((row) => ({
+              ...row,
+              options:
+                row.options ??
+                ((row as unknown as { variants?: SelectionOption[] }).variants || []),
+            }))
+          : seedProducts(),
         orders: parsed?.orders?.length ? parsed.orders : seedOrders(),
       });
     } catch {
@@ -366,7 +390,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         ingredients: row.ingredients,
         removable: row.removable,
         extras,
-        variants: row.variants,
+        options: row.options ?? [],
       };
       if (row.patties) item.patties = row.patties;
       if (row.description) item.description = row.description;
@@ -388,7 +412,12 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         soldOut: row.soldOut,
       };
     }
-    const orderable = rows.filter((r) => r.active && !r.soldOut).map(toMenuItem);
+    const pausedCategories = new Set(
+      state.catalog.categories.filter((c) => c.paused).map((c) => c.id),
+    );
+    const orderable = rows
+      .filter((r) => r.active && !r.soldOut && !pausedCategories.has(r.categoryId))
+      .map(toMenuItem);
 
     const bookings: Record<string, number> = {};
     for (const order of state.orders) {
