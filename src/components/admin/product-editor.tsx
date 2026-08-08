@@ -286,31 +286,39 @@ export function ProductEditor({
 
             <section>
               <div className="flex items-center justify-between">
-                <Label>Varianten</Label>
+                <Label>Auswahl-Optionen (optional, mehrfach wählbar)</Label>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() =>
                     set({
-                      variants: [
-                        ...draft.variants,
-                        { id: `var-${Date.now().toString(36)}`, name: "", priceDelta: 0 },
+                      options: [
+                        ...draft.options,
+                        {
+                          id: `opt-${Date.now().toString(36)}`,
+                          name: "",
+                          priceDelta: 0,
+                          active: true,
+                        },
                       ],
                     })
                   }
                 >
-                  Variante hinzufügen
+                  Option hinzufügen
                 </Button>
               </div>
               <div className="mt-2 space-y-2">
-                {draft.variants.map((v, i) => (
-                  <div key={v.id} className="grid grid-cols-[minmax(0,1fr)_110px_auto] gap-2">
+                {draft.options.map((v, i) => (
+                  <div
+                    key={v.id}
+                    className="grid grid-cols-[minmax(0,1fr)_110px_auto_auto] items-center gap-2"
+                  >
                     <Input
                       value={v.name}
                       placeholder="z. B. Menü mit Pommes"
                       onChange={(e) =>
                         set({
-                          variants: draft.variants.map((x, xi) =>
+                          options: draft.options.map((x, xi) =>
                             xi === i ? { ...x, name: e.target.value } : x,
                           ),
                         })
@@ -323,22 +331,38 @@ export function ProductEditor({
                       value={v.priceDelta}
                       onChange={(e) =>
                         set({
-                          variants: draft.variants.map((x, xi) =>
+                          options: draft.options.map((x, xi) =>
                             xi === i ? { ...x, priceDelta: Number(e.target.value) || 0 } : x,
                           ),
                         })
                       }
                       className="h-11"
                     />
+                    <Switch
+                      checked={v.active !== false}
+                      aria-label="Option aktiv"
+                      onCheckedChange={(c) =>
+                        set({
+                          options: draft.options.map((x, xi) =>
+                            xi === i ? { ...x, active: c } : x,
+                          ),
+                        })
+                      }
+                    />
                     <Button
                       variant="ghost"
                       className="h-11 text-destructive"
-                      onClick={() => set({ variants: draft.variants.filter((_, xi) => xi !== i) })}
+                      onClick={() => set({ options: draft.options.filter((_, xi) => xi !== i) })}
                     >
                       Entfernen
                     </Button>
                   </div>
                 ))}
+                {draft.options.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Noch keine Optionen – z. B. „Menü mit Pommes“ mit Aufpreis.
+                  </p>
+                )}
               </div>
             </section>
 
@@ -356,9 +380,17 @@ export function ProductEditor({
             </Button>
             <Button
               className="h-12 bg-flame font-bold uppercase text-primary-foreground"
-              disabled={!draft.name.trim()}
               onClick={() => {
-                upsertProduct({ ...draft, name: draft.name.trim() });
+                if (invalid) {
+                  setShowErrors(true);
+                  toast.error("Bitte Pflichtfelder ausfüllen");
+                  return;
+                }
+                const saved = { ...draft, name: draft.name.trim(), price: parsePrice(priceText) };
+                upsertProduct(saved);
+                toast.success("Produkt gespeichert", {
+                  description: `${saved.name} · ${formatPrice(saved.price)}`,
+                });
                 onOpenChange(false);
               }}
             >
