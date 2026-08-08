@@ -8,8 +8,11 @@ import {
   Download,
   Layers,
   LogOut,
+  ArrowDown,
+  ArrowUp,
   Pencil,
   Plus,
+  Power,
   Search,
   Settings,
   ShieldCheck,
@@ -151,11 +154,14 @@ function AdminConsole() {
     restoreOrder,
     duplicateProduct,
     deleteProduct,
+    moveProduct,
+    setCategoryPaused,
     simulateOrder,
     logout,
   } = useShop();
 
   const [query, setQuery] = useState("");
+  const [productQuery, setProductQuery] = useState("");
   const [filter, setFilter] = useState<OrderStatus | "alle">("alle");
   const [editing, setEditing] = useState<ProductRecord | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -169,6 +175,25 @@ function AdminConsole() {
       ),
     [productRows],
   );
+
+  // Admin-Suche über Produktnamen, Beschreibung, Zutaten und Kategorien.
+  const visibleProducts = useMemo(() => {
+    const q = productQuery.trim().toLowerCase();
+    if (!q) return sortedProducts;
+    return sortedProducts.filter((row) =>
+      [
+        row.name,
+        row.description,
+        categoryLabel(row.categoryId),
+        ...row.ingredients,
+        ...row.options.map((o) => o.name),
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(q),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortedProducts, productQuery, catalog.categories]);
 
   const live = orders.filter((o) => !CLOSED_STATUSES.includes(o.status));
   const newCount = orders.filter((o) => o.status === "neu").length;
@@ -371,17 +396,52 @@ function AdminConsole() {
         </TabsContent>
 
         <TabsContent value="produkte" className="mt-6 space-y-4">
-          <Button
-            className="h-12 w-full rounded-xl bg-flame font-bold uppercase text-primary-foreground sm:w-auto"
-            onClick={() => {
-              setEditing(emptyProduct(catalog.categories[0]?.id ?? "burger", productRows.length));
-              setEditorOpen(true);
-            }}
-          >
-            <Plus className="mr-2 h-4 w-4" /> Neues Produkt
-          </Button>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Input
+              value={productQuery}
+              onChange={(e) => setProductQuery(e.target.value)}
+              placeholder="Produkte oder Kategorien suchen"
+              className="h-12"
+            />
+            <Button
+              className="h-12 shrink-0 rounded-xl bg-flame font-bold uppercase text-primary-foreground"
+              onClick={() => {
+                setEditing(emptyProduct(catalog.categories[0]?.id ?? "burger", productRows.length));
+                setEditorOpen(true);
+              }}
+            >
+              <Plus className="mr-2 h-4 w-4" /> Neues Produkt
+            </Button>
+          </div>
 
-          {sortedProducts.map((row) => (
+          <section className="rounded-2xl border border-border bg-card p-4">
+            <h2 className="text-lg">Kategorien pausieren</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Pausierte Kategorien sind für Kund:innen nicht bestellbar.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-4">
+              {[...catalog.categories]
+                .sort((a, b) => a.sortOrder - b.sortOrder)
+                .map((c) => (
+                  <label key={c.id} className="flex items-center gap-2 text-sm">
+                    <Switch
+                      checked={c.paused !== true}
+                      onCheckedChange={(v) => setCategoryPaused(c.id, !v)}
+                    />
+                    {c.label}
+                    {c.paused && <Badge variant="destructive">Pausiert</Badge>}
+                  </label>
+                ))}
+            </div>
+          </section>
+
+          {visibleProducts.length === 0 && (
+            <p className="rounded-xl border border-dashed border-border p-6 text-sm text-muted-foreground">
+              Keine Treffer für „{productQuery}“.
+            </p>
+          )}
+
+          {visibleProducts.map((row) => (
             <div key={row.id} className="rounded-2xl border border-border bg-card p-4 sm:p-5">
               <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
                 <div className="min-w-0">
@@ -396,6 +456,24 @@ function AdminConsole() {
                   </p>
                 </div>
                 <span className="flex shrink-0 gap-1">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-11 w-11"
+                    aria-label="Nach oben schieben"
+                    onClick={() => moveProduct(row.id, -1)}
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-11 w-11"
+                    aria-label="Nach unten schieben"
+                    onClick={() => moveProduct(row.id, 1)}
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </Button>
                   <Button
                     variant="outline"
                     size="icon"
@@ -485,6 +563,31 @@ function AdminConsole() {
         </TabsContent>
 
         <TabsContent value="einstellungen" className="mt-6 space-y-6">
+          <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+            <h2 className="flex items-center gap-2 text-xl">
+              <Power className="h-5 w-5 text-primary" /> Shop-Status
+            </h2>
+            <div className="mt-4 flex flex-wrap gap-6">
+              <label className="flex items-center gap-3 text-sm">
+                <Switch
+                  checked={!settings.ordersPaused}
+                  onCheckedChange={(v) => {
+                    setSettings({ ordersPaused: !v });
+                    toast.success(v ? "Online-Bestellungen aktiv" : "Online-Bestellungen pausiert");
+                  }}
+                />
+                {settings.ordersPaused ? "Online-Bestellungen aus" : "Online-Bestellungen an"}
+              </label>
+              <label className="flex items-center gap-3 text-sm">
+                <Switch
+                  checked={settings.wheelSoundOn !== false}
+                  onCheckedChange={(v) => setSettings({ wheelSoundOn: v })}
+                />
+                Tick-Ton im Zeit-Picker
+              </label>
+            </div>
+          </section>
+
           <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
             <h2 className="text-xl">Öffnungszeiten</h2>
             <div className="mt-4 space-y-3">
