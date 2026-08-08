@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle } from "lucide-react";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -27,6 +28,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useShop, type ProductRecord } from "@/context/shop";
 import { formatPrice } from "@/data/menu";
 
+/** "8,50" und "8.50" akzeptieren; leere Eingabe ergibt 0. */
+function parsePrice(input: string): number {
+  const normalized = input.replace(",", ".").replace(/[^0-9.]/g, "");
+  const value = Number.parseFloat(normalized);
+  return Number.isFinite(value) && value >= 0 ? value : 0;
+}
+
 export function ProductEditor({
   product,
   open,
@@ -39,8 +47,14 @@ export function ProductEditor({
   const { catalog, upsertProduct } = useShop();
   const [draft, setDraft] = useState<ProductRecord | null>(product);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [priceText, setPriceText] = useState(product ? String(product.price).replace(".", ",") : "");
+  const [showErrors, setShowErrors] = useState(false);
 
-  useEffect(() => setDraft(product), [product]);
+  useEffect(() => {
+    setDraft(product);
+    setPriceText(product ? String(product.price).replace(".", ",") : "");
+    setShowErrors(false);
+  }, [product]);
 
   const dirty = useMemo(
     () => Boolean(draft && product && JSON.stringify(draft) !== JSON.stringify(product)),
@@ -53,6 +67,10 @@ export function ProductEditor({
   const categories = [...catalog.categories].sort((a, b) => a.sortOrder - b.sortOrder);
   const ingredients = [...catalog.ingredients].sort((a, b) => a.sortOrder - b.sortOrder);
   const extras = [...catalog.extras].sort((a, b) => a.sortOrder - b.sortOrder);
+
+  const nameError = !draft.name.trim() ? "Name ist ein Pflichtfeld." : "";
+  const priceError = priceText.trim() === "" ? "Preis ist ein Pflichtfeld." : "";
+  const invalid = Boolean(nameError || priceError);
 
   const close = () => {
     if (dirty) setConfirmDiscard(true);
@@ -73,7 +91,9 @@ export function ProductEditor({
           <div className="space-y-5">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <Label htmlFor="p-name">Name</Label>
+                <Label htmlFor="p-name">
+                  Name <span className="text-primary">*</span>
+                </Label>
                 <Input
                   id="p-name"
                   value={draft.name}
@@ -81,9 +101,14 @@ export function ProductEditor({
                   className="mt-2 h-12"
                   placeholder="z. B. Smash Burger"
                 />
+                {showErrors && nameError && (
+                  <p className="mt-1 text-xs text-destructive">{nameError}</p>
+                )}
               </div>
               <div>
-                <Label htmlFor="p-cat">Kategorie</Label>
+                <Label htmlFor="p-cat">
+                  Kategorie <span className="text-primary">*</span>
+                </Label>
                 <select
                   id="p-cat"
                   value={draft.categoryId}
@@ -98,16 +123,28 @@ export function ProductEditor({
                 </select>
               </div>
               <div>
-                <Label htmlFor="p-price">Preis (€)</Label>
+                <Label htmlFor="p-price">
+                  Preis (€) <span className="text-primary">*</span>
+                </Label>
                 <Input
                   id="p-price"
-                  type="number"
-                  step="0.5"
-                  min="0"
-                  value={draft.price}
-                  onChange={(e) => set({ price: Math.max(0, Number(e.target.value) || 0) })}
+                  inputMode="decimal"
+                  value={priceText}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setPriceText(next);
+                    set({ price: parsePrice(next) });
+                  }}
+                  onBlur={() => {
+                    if (priceText.trim() === "") return;
+                    setPriceText(parsePrice(priceText).toFixed(2).replace(".", ","));
+                  }}
                   className="mt-2 h-12"
+                  placeholder="z. B. 8,50"
                 />
+                {showErrors && priceError && (
+                  <p className="mt-1 text-xs text-destructive">{priceError}</p>
+                )}
               </div>
               <div>
                 <Label htmlFor="p-patties">Patty-Anzahl (leer = keine)</Label>
