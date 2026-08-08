@@ -26,14 +26,14 @@ export function ProductDialog({
   const { add } = useCart();
   const [removed, setRemoved] = useState<string[]>([]);
   const [extraIds, setExtraIds] = useState<string[]>([]);
-  const [variantId, setVariantId] = useState<string>("");
+  const [optionIds, setOptionIds] = useState<string[]>([]);
   const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
     if (open) {
       setRemoved([]);
       setExtraIds([]);
-      setVariantId(item?.variants?.[0]?.id ?? "");
+      setOptionIds([]);
       setQuantity(1);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -53,11 +53,13 @@ export function ProductDialog({
         ? [BACON_EXTRA]
         : [];
 
-  const variants = item.variants ?? [];
-  const variant = variants.find((v) => v.id === variantId) ?? null;
+  const selections = (item.options ?? []).filter((o) => o.active !== false);
+  const selectedOptions = selections.filter((o) => optionIds.includes(o.id));
   const selectedExtras = availableExtras.filter((e) => extraIds.includes(e.id));
   const unitPrice =
-    item.price + (variant?.priceDelta ?? 0) + selectedExtras.reduce((s, e) => s + e.price, 0);
+    item.price +
+    selectedOptions.reduce((s, o) => s + o.priceDelta, 0) +
+    selectedExtras.reduce((s, e) => s + e.price, 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -98,32 +100,43 @@ export function ProductDialog({
             )}
           </section>
 
-          {variants.length > 0 && (
+          {selections.length > 0 && (
             <section>
               <h4 className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                Variante
+                Auswahl (optional)
               </h4>
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                {variants.map((v) => (
-                  <button
-                    key={v.id}
-                    type="button"
-                    onClick={() => setVariantId(v.id)}
-                    className={`flex items-center justify-between rounded-lg border p-3 text-sm transition-colors ${
-                      v.id === variantId
-                        ? "border-primary bg-primary/10"
-                        : "border-border bg-secondary/40 hover:border-primary/50"
-                    }`}
-                  >
-                    <span>{v.name}</span>
-                    {v.priceDelta !== 0 && (
-                      <span className="font-semibold text-primary">
-                        {v.priceDelta > 0 ? "+" : "−"}
-                        {formatPrice(Math.abs(v.priceDelta))}
+                {selections.map((option) => {
+                  const checked = optionIds.includes(option.id);
+                  return (
+                    <label
+                      key={option.id}
+                      className={`flex cursor-pointer items-center justify-between gap-3 rounded-lg border p-3 text-sm transition-colors ${
+                        checked
+                          ? "border-primary bg-primary/10"
+                          : "border-border bg-secondary/40 hover:border-primary/50"
+                      }`}
+                    >
+                      <span className="flex items-center gap-3">
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(c) =>
+                            setOptionIds((prev) =>
+                              c ? [...prev, option.id] : prev.filter((id) => id !== option.id),
+                            )
+                          }
+                        />
+                        {option.name}
                       </span>
-                    )}
-                  </button>
-                ))}
+                      {option.priceDelta !== 0 && (
+                        <span className="font-semibold text-primary">
+                          {option.priceDelta > 0 ? "+" : "−"}
+                          {formatPrice(Math.abs(option.priceDelta))}
+                        </span>
+                      )}
+                    </label>
+                  );
+                })}
               </div>
             </section>
           )}
@@ -224,7 +237,7 @@ export function ProductDialog({
                 bacon: extraIds.includes(BACON_EXTRA.id),
                 quantity,
                 extras: selectedExtras,
-                variant,
+                options: selectedOptions,
               });
               onOpenChange(false);
               toast.success("Zum Warenkorb hinzugefügt", {
