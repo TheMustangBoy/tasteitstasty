@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { hapticTick, playWheelTick } from "@/lib/admin-sound";
+import { useShop } from "@/context/shop";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -48,29 +50,61 @@ export function WheelPicker({
   const ref = useRef<HTMLDivElement>(null);
   const settle = useRef<ReturnType<typeof setTimeout> | null>(null);
   const programmatic = useRef(false);
+  const { settings } = useShop();
+  const soundOn = settings.wheelSoundOn !== false;
+  const [activeIndex, setActiveIndex] = useState(0);
+  const lastTick = useRef(-1);
 
   const scrollToIndex = useCallback((index: number, smooth: boolean) => {
     const el = ref.current;
     if (!el || index < 0) return;
     programmatic.current = true;
-    el.scrollTo({ top: index * ITEM_HEIGHT, behavior: smooth ? "smooth" : "auto" });
+    const max = el.scrollHeight - el.clientHeight;
+    const top = Math.min(index * ITEM_HEIGHT, Math.max(0, max));
+    el.scrollTo({ top, behavior: smooth ? "smooth" : "auto" });
     setTimeout(() => (programmatic.current = false), smooth ? 350 : 60);
   }, []);
 
   const index = options.findIndex((o) => o.value === value);
 
   useEffect(() => {
-    if (index >= 0) scrollToIndex(index, false);
+    if (index >= 0) {
+      setActiveIndex(index);
+      lastTick.current = index;
+      scrollToIndex(index, false);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index, options.length]);
 
   const handleScroll = () => {
     if (programmatic.current) return;
+    const el = ref.current;
+    if (el) {
+      // Live-Hervorhebung: aktive Zeile schon während des Scrollens markieren.
+      const live = Math.max(
+        0,
+        Math.min(options.length - 1, Math.round(el.scrollTop / ITEM_HEIGHT)),
+      );
+      setActiveIndex(live);
+      if (live !== lastTick.current) {
+        lastTick.current = live;
+        if (soundOn) {
+          playWheelTick();
+          hapticTick();
+        }
+      }
+    }
     if (settle.current) clearTimeout(settle.current);
     settle.current = setTimeout(() => {
       const el = ref.current;
       if (!el) return;
-      let next = Math.round(el.scrollTop / ITEM_HEIGHT);
+      const max = el.scrollHeight - el.clientHeight;
+      // Am unteren Ende immer auf den letzten Eintrag rasten, damit die
+      // letzte Option nicht zurückspringt.
+      let next =
+        max > 0 && el.scrollTop >= max - 2
+          ? options.length - 1
+          : Math.round(el.scrollTop / ITEM_HEIGHT);
       next = Math.max(0, Math.min(options.length - 1, next));
       if (options[next]?.disabled) {
         const forward = options.findIndex((o, i) => i >= next && !o.disabled);
@@ -82,6 +116,8 @@ export function WheelPicker({
       }
       const option = options[next];
       if (!option) return;
+      setActiveIndex(next);
+      lastTick.current = next;
       scrollToIndex(next, true);
       if (option.value !== value) onChange(option.value);
     }, 120);
@@ -117,7 +153,6 @@ export function WheelPicker({
           }
         }}
         className="h-full w-full snap-y snap-mandatory overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-none focus:outline-none"
-        style={{ scrollPaddingTop: ITEM_HEIGHT * 2 }}
       >
         <div style={{ height: ITEM_HEIGHT * ((VISIBLE - 1) / 2) }} />
         {options.map((option, i) => (
@@ -135,9 +170,9 @@ export function WheelPicker({
               "flex w-full snap-center items-center justify-center px-2 text-center text-base leading-none transition-colors duration-150",
               option.disabled
                 ? "cursor-not-allowed text-muted-foreground/35"
-                : option.value === value
-                  ? "cursor-pointer font-bold text-foreground"
-                  : "cursor-pointer font-semibold text-muted-foreground",
+                : i === activeIndex
+                  ? "cursor-pointer font-extrabold tracking-tight text-primary"
+                  : "cursor-pointer font-semibold text-muted-foreground/80",
             )}
             style={{ height: ITEM_HEIGHT }}
           >
