@@ -554,6 +554,42 @@ export function ShopProvider({ children }: { children: ReactNode }) {
             catalog: { ...prev.catalog, [list]: reindex(swapped) } as Catalog,
           };
         }),
+      moveProduct: (id, dir) =>
+        patch((prev) => {
+          const row = prev.productRows.find((r) => r.id === id);
+          if (!row) return prev;
+          // Nur innerhalb derselben Kategorie sortieren.
+          const group = prev.productRows
+            .filter((r) => r.categoryId === row.categoryId)
+            .sort((a, b) => a.sortOrder - b.sortOrder);
+          const index = group.findIndex((r) => r.id === id);
+          const target = index + dir;
+          if (target < 0 || target >= group.length) return prev;
+          const swapped = [...group];
+          const a = swapped[index]!;
+          swapped[index] = swapped[target]!;
+          swapped[target] = a;
+          const orderById = new Map(swapped.map((r, i) => [r.id, i]));
+          return {
+            ...prev,
+            productRows: prev.productRows.map((r) =>
+              orderById.has(r.id) ? { ...r, sortOrder: orderById.get(r.id)! } : r,
+            ),
+          };
+        }),
+      setProductSoldOut: (id, soldOut) =>
+        patch((prev) => ({
+          ...prev,
+          productRows: prev.productRows.map((r) => (r.id === id ? { ...r, soldOut } : r)),
+        })),
+      setCategoryPaused: (id, paused) =>
+        patch((prev) => ({
+          ...prev,
+          catalog: {
+            ...prev.catalog,
+            categories: prev.catalog.categories.map((c) => (c.id === id ? { ...c, paused } : c)),
+          },
+        })),
       addOrder: (order) => {
         const full: ShopOrder = { internalNote: "", ...order, id: `${Date.now()}`, status: "neu" };
         patch((prev) => ({ ...prev, orders: [full, ...prev.orders] }));
