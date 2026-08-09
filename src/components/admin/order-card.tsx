@@ -313,6 +313,24 @@ export function OrderCard({
         </AlertDialogContent>
       </AlertDialog>
 
+      <AlertDialog open={rejectOpen} onOpenChange={setRejectOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bestellung wirklich ablehnen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {order.reference} wird abgelehnt und in die Historie verschoben. Die Kundschaft sollte
+              telefonisch informiert werden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zurück</AlertDialogCancel>
+            <AlertDialogAction onClick={() => onStatus("abgelehnt")}>
+              Bestellung ablehnen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={cancelOpen} onOpenChange={setCancelOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
