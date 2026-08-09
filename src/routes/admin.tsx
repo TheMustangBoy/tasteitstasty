@@ -531,7 +531,7 @@ function AdminConsole() {
                               {row.ingredients.length > 0 && ` · ${row.ingredients.join(", ")}`}
                             </p>
                           </div>
-                          <span className="flex flex-wrap gap-1 sm:shrink-0">
+                          <span className="flex basis-full flex-wrap gap-1 sm:basis-auto sm:shrink-0">
                             <Button
                               variant="outline"
                               size="icon"
