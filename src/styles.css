@@ -185,3 +185,25 @@
     display: none;
   }
 }
+
+/* Neue Bestellungen kurz hervorheben (6 s, danach normale Karte). */
+@keyframes order-fresh-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--primary) 35%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 6px color-mix(in oklab, var(--primary) 12%, transparent);
+  }
+}
+
+.order-card-fresh {
+  animation: order-fresh-pulse 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .order-card-fresh {
+    animation: none;
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 20%, transparent);
+  }
+}

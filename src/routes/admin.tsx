@@ -10,6 +10,9 @@ import {
   LogOut,
   ArrowDown,
   ArrowUp,
+  ChevronDown,
+  ChevronRight,
+  GripVertical,
   Pencil,
   Plus,
   Power,
@@ -155,6 +158,7 @@ function AdminConsole() {
     duplicateProduct,
     deleteProduct,
     moveProduct,
+    reorderProducts,
     setCategoryPaused,
     simulateOrder,
     logout,
@@ -166,6 +170,24 @@ function AdminConsole() {
   const [editing, setEditing] = useState<ProductRecord | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ProductRecord | null>(null);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [dragId, setDragId] = useState<string | null>(null);
+
+  /** Drag & Drop: gezogenes Produkt vor dem Ziel innerhalb der Kategorie einsortieren. */
+  const dropOn = (categoryId: string, targetId: string) => {
+    if (!dragId || dragId === targetId) return setDragId(null);
+    const ids = productRows
+      .filter((r) => r.categoryId === categoryId)
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((r) => r.id);
+    const from = ids.indexOf(dragId);
+    if (from < 0) return setDragId(null);
+    ids.splice(from, 1);
+    const to = ids.indexOf(targetId);
+    ids.splice(to < 0 ? ids.length : to, 0, dragId);
+    reorderProducts(categoryId, ids);
+    setDragId(null);
+  };
 
   const categoryLabel = (id: string) => catalog.categories.find((c) => c.id === id)?.label ?? id;
   const sortedProducts = useMemo(
@@ -441,92 +463,149 @@ function AdminConsole() {
             </p>
           )}
 
-          {visibleProducts.map((row) => (
-            <div key={row.id} className="rounded-2xl border border-border bg-card p-4 sm:p-5">
-              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="truncate text-lg">{row.name || "Ohne Namen"}</h3>
-                    {row.soldOut && <Badge variant="destructive">Ausverkauft</Badge>}
-                    {!row.active && <Badge variant="outline">Inaktiv</Badge>}
-                  </div>
-                  <p className="mt-1 truncate text-sm text-muted-foreground">
-                    {categoryLabel(row.categoryId)} · {formatPrice(row.price)}
-                    {row.ingredients.length > 0 && ` · ${row.ingredients.join(", ")}`}
-                  </p>
-                </div>
-                <span className="flex shrink-0 gap-1">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-11 w-11"
-                    aria-label="Nach oben schieben"
-                    onClick={() => moveProduct(row.id, -1)}
+          {[...catalog.categories]
+            .sort((a, b) => a.sortOrder - b.sortOrder)
+            .map((category) => {
+              const rows = visibleProducts
+                .filter((r) => r.categoryId === category.id)
+                .sort((a, b) => a.sortOrder - b.sortOrder);
+              // Bei aktiver Suche nur Kategorien mit Treffern zeigen.
+              if (rows.length === 0 && productQuery.trim()) return null;
+              const isOpen = collapsed[category.id] !== true;
+              return (
+                <section key={category.id} className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCollapsed((c) => ({ ...c, [category.id]: !(c[category.id] !== true) }))
+                    }
+                    className="flex w-full items-center gap-2 rounded-xl border border-border bg-card px-4 py-3 text-left"
                   >
-                    <ArrowUp className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-11 w-11"
-                    aria-label="Nach unten schieben"
-                    onClick={() => moveProduct(row.id, 1)}
-                  >
-                    <ArrowDown className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-11 w-11"
-                    aria-label="Produkt bearbeiten"
-                    onClick={() => {
-                      setEditing(row);
-                      setEditorOpen(true);
-                    }}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-11 w-11"
-                    aria-label="Produkt duplizieren"
-                    onClick={() => {
-                      const copy = duplicateProduct(row.id);
-                      if (copy) toast.success(`„${copy.name}“ angelegt (inaktiv)`);
-                    }}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-11 w-11 text-destructive"
-                    aria-label="Produkt löschen"
-                    onClick={() => setDeleteTarget(row)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </span>
-              </div>
-              <div className="mt-4 flex flex-wrap items-center gap-6">
-                <label className="flex items-center gap-2 text-sm">
-                  <Switch
-                    checked={row.active}
-                    onCheckedChange={(v) => setOverride(row.id, { available: v })}
-                  />
-                  Aktiv
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <Switch
-                    checked={row.soldOut}
-                    onCheckedChange={(v) => setOverride(row.id, { soldOut: v })}
-                  />
-                  Ausverkauft
-                </label>
-              </div>
-            </div>
-          ))}
+                    {isOpen ? (
+                      <ChevronDown className="h-4 w-4 text-primary" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-primary" />
+                    )}
+                    <span className="font-display text-lg">{category.label}</span>
+                    <span className="text-sm text-muted-foreground">({rows.length})</span>
+                    {category.paused && <Badge variant="destructive">Pausiert</Badge>}
+                  </button>
+
+                  {isOpen && rows.length === 0 && (
+                    <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
+                      Noch keine Produkte in dieser Kategorie.
+                    </p>
+                  )}
+
+                  {isOpen &&
+                    rows.map((row) => (
+                      <div
+                        key={row.id}
+                        draggable={!productQuery.trim()}
+                        onDragStart={() => setDragId(row.id)}
+                        onDragOver={(e) => dragId && e.preventDefault()}
+                        onDrop={() => dropOn(category.id, row.id)}
+                        onDragEnd={() => setDragId(null)}
+                        className={`rounded-2xl border bg-card p-4 sm:p-5 ${
+                          dragId === row.id ? "border-primary opacity-60" : "border-border"
+                        }`}
+                      >
+                        <div className="flex flex-wrap items-start gap-3 sm:flex-nowrap">
+                          <span
+                            className="mt-1 cursor-grab text-muted-foreground"
+                            aria-label="Zum Sortieren ziehen"
+                            title="Zum Sortieren ziehen"
+                          >
+                            <GripVertical className="h-5 w-5" />
+                          </span>
+                          <div className="min-w-0 flex-1 basis-[calc(100%-2.5rem)]">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="min-w-0 break-words text-lg">
+                                {row.name || "Ohne Namen"}
+                              </h3>
+                              {row.soldOut && <Badge variant="destructive">Ausverkauft</Badge>}
+                              {!row.active && <Badge variant="outline">Inaktiv</Badge>}
+                            </div>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              {categoryLabel(row.categoryId)} · {formatPrice(row.price)}
+                              {row.ingredients.length > 0 && ` · ${row.ingredients.join(", ")}`}
+                            </p>
+                          </div>
+                          <span className="flex basis-full flex-wrap gap-1 sm:basis-auto sm:shrink-0">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-11 w-11"
+                              aria-label="Nach oben schieben"
+                              onClick={() => moveProduct(row.id, -1)}
+                            >
+                              <ArrowUp className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-11 w-11"
+                              aria-label="Nach unten schieben"
+                              onClick={() => moveProduct(row.id, 1)}
+                            >
+                              <ArrowDown className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-11 w-11"
+                              aria-label="Produkt bearbeiten"
+                              onClick={() => {
+                                setEditing(row);
+                                setEditorOpen(true);
+                              }}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-11 w-11"
+                              aria-label="Produkt duplizieren"
+                              onClick={() => {
+                                const copy = duplicateProduct(row.id);
+                                if (copy) toast.success(`„${copy.name}“ angelegt (inaktiv)`);
+                              }}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-11 w-11 text-destructive"
+                              aria-label="Produkt löschen"
+                              onClick={() => setDeleteTarget(row)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </span>
+                        </div>
+                        <div className="mt-4 flex flex-wrap items-center gap-6">
+                          <label className="flex items-center gap-2 text-sm">
+                            <Switch
+                              checked={row.active}
+                              onCheckedChange={(v) => setOverride(row.id, { available: v })}
+                            />
+                            Aktiv
+                          </label>
+                          <label className="flex items-center gap-2 text-sm">
+                            <Switch
+                              checked={row.soldOut}
+                              onCheckedChange={(v) => setOverride(row.id, { soldOut: v })}
+                            />
+                            Ausverkauft
+                          </label>
+                        </div>
+                      </div>
+                    ))}
+                </section>
+              );
+            })}
 
           <ProductEditor product={editing} open={editorOpen} onOpenChange={setEditorOpen} />
 

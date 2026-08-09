@@ -54,12 +54,23 @@ export function playWheelTick() {
   }
 }
 
-/** Kurze Vibration, sofern das Gerät sie unterstützt. */
-export function hapticTick() {
-  if (typeof navigator === "undefined") return;
+/**
+ * Kurze Vibration, sofern das Gerät sie unterstützt.
+ *
+ * Plattform-Einschränkung: iOS/Safari unterstützt `navigator.vibrate` nicht
+ * (Stand 2026) – dort gibt es ohne native App keine Wheel-Haptik. Als Fallback
+ * dienen die visuelle Hervorhebung der aktiven Zeile und der optionale
+ * Tick-Ton. Rückgabewert sagt, ob eine Vibration ausgelöst wurde.
+ */
+export function hapticTick(): boolean {
+  if (typeof navigator === "undefined") return false;
   try {
-    navigator.vibrate?.(8);
+    return navigator.vibrate?.(8) ?? false;
   } catch {
-    /* Haptik nicht verfügbar */
+    return false;
   }
 }
+
+/** True, wenn die Vibrations-API grundsätzlich verfügbar ist (nicht iOS/Safari). */
+export const hapticsSupported = () =>
+  typeof navigator !== "undefined" && typeof navigator.vibrate === "function";
