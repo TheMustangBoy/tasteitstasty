@@ -510,7 +510,7 @@ function AdminConsole() {
                           dragId === row.id ? "border-primary opacity-60" : "border-border"
                         }`}
                       >
-                        <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3">
+                        <div className="flex flex-wrap items-start gap-3 sm:flex-nowrap">
                           <span
                             className="mt-1 cursor-grab text-muted-foreground"
                             aria-label="Zum Sortieren ziehen"
@@ -518,18 +518,20 @@ function AdminConsole() {
                           >
                             <GripVertical className="h-5 w-5" />
                           </span>
-                          <div className="min-w-0">
+                          <div className="min-w-0 flex-1 basis-[calc(100%-2.5rem)]">
                             <div className="flex flex-wrap items-center gap-2">
-                              <h3 className="truncate text-lg">{row.name || "Ohne Namen"}</h3>
+                              <h3 className="min-w-0 break-words text-lg">
+                                {row.name || "Ohne Namen"}
+                              </h3>
                               {row.soldOut && <Badge variant="destructive">Ausverkauft</Badge>}
                               {!row.active && <Badge variant="outline">Inaktiv</Badge>}
                             </div>
-                            <p className="mt-1 truncate text-sm text-muted-foreground">
+                            <p className="mt-1 text-sm text-muted-foreground">
                               {categoryLabel(row.categoryId)} · {formatPrice(row.price)}
                               {row.ingredients.length > 0 && ` · ${row.ingredients.join(", ")}`}
                             </p>
                           </div>
-                          <span className="flex shrink-0 gap-1">
+                          <span className="flex flex-wrap gap-1 sm:shrink-0">
                             <Button
                               variant="outline"
                               size="icon"
