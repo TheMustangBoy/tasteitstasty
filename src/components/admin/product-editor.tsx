@@ -35,6 +35,17 @@ function parsePrice(input: string): number {
   return Number.isFinite(value) && value >= 0 ? value : 0;
 }
 
+/** Auswahl-Eintrag um eine Position verschieben. */
+function moveOption<T>(list: T[], index: number, dir: -1 | 1): T[] {
+  const target = index + dir;
+  if (target < 0 || target >= list.length) return list;
+  const next = [...list];
+  const a = next[index]!;
+  next[index] = next[target]!;
+  next[target] = a;
+  return next;
+}
+
 export function ProductEditor({
   product,
   open,
