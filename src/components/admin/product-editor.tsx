@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -286,7 +286,7 @@ export function ProductEditor({
 
             <section>
               <div className="flex items-center justify-between">
-                <Label>Auswahl-Optionen (optional, mehrfach wählbar)</Label>
+                <Label>Auswahl (optional, mehrfach wählbar)</Label>
                 <Button
                   variant="outline"
                   size="sm"
@@ -304,14 +304,14 @@ export function ProductEditor({
                     })
                   }
                 >
-                  Option hinzufügen
+                  Auswahl hinzufügen
                 </Button>
               </div>
               <div className="mt-2 space-y-2">
                 {draft.options.map((v, i) => (
                   <div
                     key={v.id}
-                    className="grid grid-cols-[minmax(0,1fr)_110px_auto_auto] items-center gap-2"
+                    className="grid grid-cols-[minmax(0,1fr)_110px_auto_auto_auto_auto] items-center gap-2"
                   >
                     <Input
                       value={v.name}
@@ -340,7 +340,7 @@ export function ProductEditor({
                     />
                     <Switch
                       checked={v.active !== false}
-                      aria-label="Option aktiv"
+                      aria-label="Auswahl aktiv"
                       onCheckedChange={(c) =>
                         set({
                           options: draft.options.map((x, xi) =>
@@ -349,6 +349,26 @@ export function ProductEditor({
                         })
                       }
                     />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-11 w-11"
+                      aria-label="Auswahl nach oben"
+                      disabled={i === 0}
+                      onClick={() => set({ options: moveOption(draft.options, i, -1) })}
+                    >
+                      <ArrowUp className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-11 w-11"
+                      aria-label="Auswahl nach unten"
+                      disabled={i === draft.options.length - 1}
+                      onClick={() => set({ options: moveOption(draft.options, i, 1) })}
+                    >
+                      <ArrowDown className="h-4 w-4" />
+                    </Button>
                     <Button
                       variant="ghost"
                       className="h-11 text-destructive"
@@ -360,9 +380,63 @@ export function ProductEditor({
                 ))}
                 {draft.options.length === 0 && (
                   <p className="text-sm text-muted-foreground">
-                    Noch keine Optionen – z. B. „Menü mit Pommes“ mit Aufpreis.
+                    Noch keine Auswahl – z. B. „Menü mit Pommes“ mit Aufpreis.
                   </p>
                 )}
+              </div>
+            </section>
+
+            <section className="rounded-xl border border-border bg-secondary/20 p-4">
+              <Label>Vorschau (Kundenansicht)</Label>
+              <p className="mt-2 font-display text-xl">{draft.name || "Ohne Namen"}</p>
+              <p className="text-sm text-primary">{formatPrice(parsePrice(priceText))}</p>
+              {draft.description && (
+                <p className="mt-1 text-sm text-muted-foreground">{draft.description}</p>
+              )}
+              <div className="mt-3 space-y-3 text-sm">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                    Zutaten abwählen
+                  </p>
+                  <p className="text-muted-foreground">
+                    {draft.removable.length
+                      ? draft.removable.map((n) => `Ohne ${n}`).join(" · ")
+                      : "–"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                    Extras
+                  </p>
+                  <p className="text-muted-foreground">
+                    {draft.extraIds.length
+                      ? draft.extraIds
+                          .map((id) => {
+                            const e = extras.find((x) => x.id === id);
+                            return e ? `${e.name} +${formatPrice(e.price)}` : id;
+                          })
+                          .join(" · ")
+                      : "–"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                    Auswahl
+                  </p>
+                  <p className="text-muted-foreground">
+                    {draft.options.filter((o) => o.active !== false).length
+                      ? draft.options
+                          .filter((o) => o.active !== false)
+                          .map(
+                            (o) =>
+                              `${o.name || "Ohne Namen"}${
+                                o.priceDelta ? ` +${formatPrice(o.priceDelta)}` : ""
+                              }`,
+                          )
+                          .join(" · ")
+                      : "–"}
+                  </p>
+                </div>
               </div>
             </section>
 
@@ -388,7 +462,7 @@ export function ProductEditor({
                 }
                 const saved = { ...draft, name: draft.name.trim(), price: parsePrice(priceText) };
                 upsertProduct(saved);
-                toast.success("Produkt gespeichert", {
+                toast.success("✓ Gespeichert", {
                   description: `${saved.name} · ${formatPrice(saved.price)}`,
                 });
                 onOpenChange(false);
