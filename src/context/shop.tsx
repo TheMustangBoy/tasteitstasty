@@ -295,6 +295,8 @@ type ShopContextValue = ShopState & {
   deleteExtra: (id: string) => void;
   moveEntry: (list: "categories" | "ingredients" | "extras", id: string, dir: -1 | 1) => void;
   moveProduct: (id: string, dir: -1 | 1) => void;
+  /** Neue Reihenfolge innerhalb einer Kategorie (Drag & Drop). */
+  reorderProducts: (categoryId: string, orderedIds: string[]) => void;
   setProductSoldOut: (id: string, soldOut: boolean) => void;
   setCategoryPaused: (id: string, paused: boolean) => void;
   addOrder: (order: Omit<ShopOrder, "id" | "status">) => ShopOrder;
@@ -578,6 +580,23 @@ export function ShopProvider({ children }: { children: ReactNode }) {
           };
         }),
       setProductSoldOut: (id, soldOut) =>
+        patch((prev) => ({
+          ...prev,
+          productRows: prev.productRows.map((r) => (r.id === id ? { ...r, soldOut } : r)),
+        })),
+      reorderProducts: (categoryId, orderedIds) =>
+        patch((prev) => {
+          const rank = new Map(orderedIds.map((id, i) => [id, i]));
+          return {
+            ...prev,
+            productRows: prev.productRows.map((r) =>
+              r.categoryId === categoryId && rank.has(r.id)
+                ? { ...r, sortOrder: rank.get(r.id)! }
+                : r,
+            ),
+          };
+        }),
+      __unusedSoldOut: (id: string, soldOut: boolean) =>
         patch((prev) => ({
           ...prev,
           productRows: prev.productRows.map((r) => (r.id === id ? { ...r, soldOut } : r)),
