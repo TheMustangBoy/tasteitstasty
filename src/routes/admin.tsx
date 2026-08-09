@@ -10,6 +10,9 @@ import {
   LogOut,
   ArrowDown,
   ArrowUp,
+  ChevronDown,
+  ChevronRight,
+  GripVertical,
   Pencil,
   Plus,
   Power,
@@ -155,6 +158,7 @@ function AdminConsole() {
     duplicateProduct,
     deleteProduct,
     moveProduct,
+    reorderProducts,
     setCategoryPaused,
     simulateOrder,
     logout,
@@ -166,6 +170,8 @@ function AdminConsole() {
   const [editing, setEditing] = useState<ProductRecord | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ProductRecord | null>(null);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [dragId, setDragId] = useState<string | null>(null);
 
   const categoryLabel = (id: string) => catalog.categories.find((c) => c.id === id)?.label ?? id;
   const sortedProducts = useMemo(
