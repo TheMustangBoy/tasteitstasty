@@ -596,11 +596,6 @@ export function ShopProvider({ children }: { children: ReactNode }) {
             ),
           };
         }),
-      __unusedSoldOut: (id: string, soldOut: boolean) =>
-        patch((prev) => ({
-          ...prev,
-          productRows: prev.productRows.map((r) => (r.id === id ? { ...r, soldOut } : r)),
-        })),
       setCategoryPaused: (id, paused) =>
         patch((prev) => ({
           ...prev,
