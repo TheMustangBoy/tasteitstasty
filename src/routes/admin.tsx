@@ -447,9 +447,61 @@ function AdminConsole() {
             </p>
           )}
 
-          {visibleProducts.map((row) => (
-            <div key={row.id} className="rounded-2xl border border-border bg-card p-4 sm:p-5">
-              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+          {[...catalog.categories]
+            .sort((a, b) => a.sortOrder - b.sortOrder)
+            .map((category) => {
+              const rows = visibleProducts
+                .filter((r) => r.categoryId === category.id)
+                .sort((a, b) => a.sortOrder - b.sortOrder);
+              // Bei aktiver Suche nur Kategorien mit Treffern zeigen.
+              if (rows.length === 0 && productQuery.trim()) return null;
+              const isOpen = collapsed[category.id] !== true;
+              return (
+                <section key={category.id} className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCollapsed((c) => ({ ...c, [category.id]: !(c[category.id] !== true) }))
+                    }
+                    className="flex w-full items-center gap-2 rounded-xl border border-border bg-card px-4 py-3 text-left"
+                  >
+                    {isOpen ? (
+                      <ChevronDown className="h-4 w-4 text-primary" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-primary" />
+                    )}
+                    <span className="font-display text-lg">{category.label}</span>
+                    <span className="text-sm text-muted-foreground">({rows.length})</span>
+                    {category.paused && <Badge variant="destructive">Pausiert</Badge>}
+                  </button>
+
+                  {isOpen && rows.length === 0 && (
+                    <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
+                      Noch keine Produkte in dieser Kategorie.
+                    </p>
+                  )}
+
+                  {isOpen &&
+                    rows.map((row) => (
+            <div
+              key={row.id}
+              draggable={!productQuery.trim()}
+              onDragStart={() => setDragId(row.id)}
+              onDragOver={(e) => dragId && e.preventDefault()}
+              onDrop={() => dropOn(category.id, row.id)}
+              onDragEnd={() => setDragId(null)}
+              className={`rounded-2xl border bg-card p-4 sm:p-5 ${
+                dragId === row.id ? "border-primary opacity-60" : "border-border"
+              }`}
+            >
+              <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3">
+                <span
+                  className="mt-1 cursor-grab text-muted-foreground"
+                  aria-label="Zum Sortieren ziehen"
+                  title="Zum Sortieren ziehen"
+                >
+                  <GripVertical className="h-5 w-5" />
+                </span>
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="truncate text-lg">{row.name || "Ohne Namen"}</h3>
@@ -532,7 +584,10 @@ function AdminConsole() {
                 </label>
               </div>
             </div>
-          ))}
+                    ))}
+                </section>
+              );
+            })}
 
           <ProductEditor product={editing} open={editorOpen} onOpenChange={setEditorOpen} />
 
