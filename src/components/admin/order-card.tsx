@@ -74,6 +74,7 @@ export function OrderCard({
 
   const [completeOpen, setCompleteOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [rejectOpen, setRejectOpen] = useState(false);
   const [restoreOpen, setRestoreOpen] = useState(false);
   const [reason, setReason] = useState<CancelReason>("kunde");
   const [reasonNote, setReasonNote] = useState("");
@@ -87,11 +88,33 @@ export function OrderCard({
     order.status === "abgelehnt" ||
     order.status === "storniert";
 
+  // Neue Bestellungen kurz hervorheben, danach normale Darstellung.
+  const [fresh, setFresh] = useState(order.status === "neu");
+  useEffect(() => {
+    if (order.status !== "neu") {
+      setFresh(false);
+      return;
+    }
+    setFresh(true);
+    const t = setTimeout(() => setFresh(false), 6000);
+    return () => clearTimeout(t);
+  }, [order.status, order.id]);
+
+  const isReady = order.status === "abholbereit";
+
   return (
-    <article className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+    <article
+      className={`rounded-2xl border bg-card p-4 transition-shadow sm:p-5 ${
+        fresh ? "order-card-fresh border-primary/70" : "border-border"
+      }`}
+    >
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-display text-3xl leading-none tracking-wide sm:text-4xl">
+          <p
+            className={`font-display leading-none tracking-wide ${
+              isReady ? "text-5xl text-emerald-400 sm:text-6xl" : "text-3xl sm:text-4xl"
+            }`}
+          >
             {order.reference}
           </p>
           <p className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
