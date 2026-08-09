@@ -212,12 +212,12 @@ export function OrderCard({
               className="h-12 flex-1 rounded-xl bg-flame font-bold uppercase text-primary-foreground"
               onClick={() => onStatus("angenommen")}
             >
-              Annehmen
+              Bestellung annehmen
             </Button>
             <Button
               variant="outline"
               className="h-12 flex-1 rounded-xl border-destructive/50 font-bold uppercase text-destructive"
-              onClick={() => onStatus("abgelehnt")}
+              onClick={() => setRejectOpen(true)}
             >
               Ablehnen
             </Button>
@@ -234,12 +234,14 @@ export function OrderCard({
         )}
         {!isClosed && order.status !== "neu" && (
           <>
-            <Button
-              className="h-12 flex-1 rounded-xl bg-flame font-bold uppercase text-primary-foreground"
-              onClick={() => setCompleteOpen(true)}
-            >
-              Bestellung abschließen
-            </Button>
+            {isReady && (
+              <Button
+                className="h-12 flex-1 rounded-xl bg-flame font-bold uppercase text-primary-foreground"
+                onClick={() => setCompleteOpen(true)}
+              >
+                Bestellung abschließen
+              </Button>
+            )}
             <Button
               variant="outline"
               className="h-12 flex-1 rounded-xl border-destructive/50 font-bold uppercase text-destructive"
