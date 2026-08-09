@@ -86,12 +86,13 @@ export function WheelPicker({
         Math.min(options.length - 1, Math.round(el.scrollTop / ITEM_HEIGHT)),
       );
       setActiveIndex(live);
+      // Genau ein Impuls pro Rastwechsel – auch bei sehr schnellem Scrollen.
       if (live !== lastTick.current) {
         lastTick.current = live;
-        if (soundOn) {
-          playWheelTick();
-          hapticTick();
-        }
+        // Ton ist abschaltbar, Haptik läuft unabhängig davon (und ist auf
+        // iOS/Safari mangels navigator.vibrate schlicht nicht verfügbar).
+        if (soundOn) playWheelTick();
+        hapticTick();
       }
     }
     if (settle.current) clearTimeout(settle.current);
