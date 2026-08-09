@@ -58,7 +58,9 @@ export function ProductEditor({
   const { catalog, upsertProduct } = useShop();
   const [draft, setDraft] = useState<ProductRecord | null>(product);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
-  const [priceText, setPriceText] = useState(product ? String(product.price).replace(".", ",") : "");
+  const [priceText, setPriceText] = useState(
+    product ? String(product.price).replace(".", ",") : "",
+  );
   const [showErrors, setShowErrors] = useState(false);
 
   useEffect(() => {
