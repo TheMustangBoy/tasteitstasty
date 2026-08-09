@@ -173,6 +173,22 @@ function AdminConsole() {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [dragId, setDragId] = useState<string | null>(null);
 
+  /** Drag & Drop: gezogenes Produkt vor dem Ziel innerhalb der Kategorie einsortieren. */
+  const dropOn = (categoryId: string, targetId: string) => {
+    if (!dragId || dragId === targetId) return setDragId(null);
+    const ids = productRows
+      .filter((r) => r.categoryId === categoryId)
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((r) => r.id);
+    const from = ids.indexOf(dragId);
+    if (from < 0) return setDragId(null);
+    ids.splice(from, 1);
+    const to = ids.indexOf(targetId);
+    ids.splice(to < 0 ? ids.length : to, 0, dragId);
+    reorderProducts(categoryId, ids);
+    setDragId(null);
+  };
+
   const categoryLabel = (id: string) => catalog.categories.find((c) => c.id === id)?.label ?? id;
   const sortedProducts = useMemo(
     () =>
