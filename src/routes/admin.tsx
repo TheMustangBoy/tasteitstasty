@@ -58,6 +58,9 @@ import {
 import { playNotificationSound } from "@/lib/admin-sound";
 import { downloadCsv, ordersToCsv } from "@/lib/csv";
 
+/** Kompakte Statusfilter über den offenen Bestellungen. */
+const LIVE_FILTERS = ["alle", "neu", "angenommen", "zubereitung", "abholbereit"] as const;
+
 export const Route = createFileRoute("/admin")({
   head: () => ({
     meta: [
@@ -167,6 +170,8 @@ function AdminConsole() {
   const [query, setQuery] = useState("");
   const [productQuery, setProductQuery] = useState("");
   const [filter, setFilter] = useState<OrderStatus | "alle">("alle");
+  const [liveFilter, setLiveFilter] = useState<(typeof LIVE_FILTERS)[number]>("alle");
+
   const [editing, setEditing] = useState<ProductRecord | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ProductRecord | null>(null);
@@ -218,6 +223,7 @@ function AdminConsole() {
   }, [sortedProducts, productQuery, catalog.categories]);
 
   const live = orders.filter((o) => !CLOSED_STATUSES.includes(o.status));
+  const visibleLive = liveFilter === "alle" ? live : live.filter((o) => o.status === liveFilter);
   const newCount = orders.filter((o) => o.status === "neu").length;
 
   const history = useMemo(() => {
@@ -334,13 +340,38 @@ function AdminConsole() {
             <h2 className="flex items-center gap-2 text-xl">
               <BarChart3 className="h-5 w-5 text-primary" /> Offene Bestellungen
             </h2>
-            {live.length === 0 ? (
+            <div className="-mx-3 mt-3 overflow-x-auto px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="flex w-max gap-2">
+                {LIVE_FILTERS.map((status) => {
+                  const count =
+                    status === "alle"
+                      ? live.length
+                      : live.filter((o) => o.status === status).length;
+                  return (
+                    <button
+                      key={status}
+                      type="button"
+                      onClick={() => setLiveFilter(status)}
+                      className={`shrink-0 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+                        liveFilter === status
+                          ? "border-primary bg-primary/15 text-primary"
+                          : "border-border bg-card hover:border-primary/60"
+                      }`}
+                    >
+                      {status === "alle" ? "Alle" : STATUS_LABEL[status]}
+                      <span className="ml-2 text-xs text-muted-foreground">{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            {visibleLive.length === 0 ? (
               <p className="mt-3 rounded-xl border border-dashed border-border p-6 text-sm text-muted-foreground">
                 Keine offenen Bestellungen.
               </p>
             ) : (
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                {live.map((order) => (
+                {visibleLive.map((order) => (
                   <OrderCard
                     key={order.id}
                     order={order}
@@ -675,24 +706,35 @@ function AdminConsole() {
                 return (
                   <div
                     key={index}
-                    className="grid grid-cols-2 items-center gap-3 rounded-xl border border-border/70 p-3 sm:grid-cols-[140px_1fr_1fr_auto]"
+                    className="grid grid-cols-1 gap-3 rounded-xl border border-border/70 p-3 sm:grid-cols-[110px_minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-center"
                   >
-                    <span className="font-semibold">{WEEKDAYS[index]}</span>
-                    <Input
-                      type="time"
-                      value={day.open}
-                      disabled={day.closed}
-                      onChange={(e) => setDayHours(index, { open: e.target.value })}
-                      className="h-11"
-                    />
-                    <Input
-                      type="time"
-                      value={day.close}
-                      disabled={day.closed}
-                      onChange={(e) => setDayHours(index, { close: e.target.value })}
-                      className="h-11"
-                    />
-                    <label className="flex items-center gap-2 text-sm">
+                    <div className="flex items-center justify-between gap-3 sm:justify-start">
+                      <span className="font-semibold">{WEEKDAYS[index]}</span>
+                      <label className="flex shrink-0 items-center gap-2 text-sm sm:hidden">
+                        <Switch
+                          checked={!day.closed}
+                          onCheckedChange={(v) => setDayHours(index, { closed: !v })}
+                        />
+                        {day.closed ? "Geschlossen" : "Geöffnet"}
+                      </label>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 sm:contents">
+                      <Input
+                        type="time"
+                        value={day.open}
+                        disabled={day.closed}
+                        onChange={(e) => setDayHours(index, { open: e.target.value })}
+                        className="h-11 w-full"
+                      />
+                      <Input
+                        type="time"
+                        value={day.close}
+                        disabled={day.closed}
+                        onChange={(e) => setDayHours(index, { close: e.target.value })}
+                        className="h-11 w-full"
+                      />
+                    </div>
+                    <label className="hidden shrink-0 items-center gap-2 whitespace-nowrap text-sm sm:flex">
                       <Switch
                         checked={!day.closed}
                         onCheckedChange={(v) => setDayHours(index, { closed: !v })}

@@ -42,6 +42,12 @@ const NEXT_STATUS: Partial<Record<OrderStatus, { to: OrderStatus; label: string 
   zubereitung: { to: "abholbereit", label: "Abholbereit" },
 };
 
+/** Dezenter Rückschritt für versehentliche Statuswechsel. */
+const PREV_STATUS: Partial<Record<OrderStatus, { to: OrderStatus; label: string }>> = {
+  zubereitung: { to: "angenommen", label: "← Angenommen" },
+  abholbereit: { to: "zubereitung", label: "← In Zubereitung" },
+};
+
 /** Minuten seit einem ISO-Zeitstempel, gerundet. */
 function minutesSince(iso: string | undefined, now: number) {
   if (!iso) return null;
@@ -62,6 +68,8 @@ export function OrderCard({
   onRestore?: (status: OrderStatus) => void;
 }) {
   const next = NEXT_STATUS[order.status];
+  const prev = PREV_STATUS[order.status];
+
   const [note, setNote] = useState(order.internalNote ?? "");
   useEffect(() => setNote(order.internalNote ?? ""), [order.internalNote]);
 
@@ -121,7 +129,11 @@ export function OrderCard({
             <Clock className="h-4 w-4 text-primary" /> Abholung: {order.pickupLabel}
           </p>
         </div>
-        <Badge variant="outline" className={`shrink-0 ${STATUS_STYLE[order.status]}`}>
+        <Badge
+          variant="outline"
+          className={`shrink-0 border-2 px-3 py-1 text-sm font-bold uppercase tracking-wide ${STATUS_STYLE[order.status]}`}
+        >
+          <span className="mr-2 inline-block h-2 w-2 rounded-full bg-current" />
           {STATUS_LABEL[order.status]}
         </Badge>
       </header>
@@ -261,6 +273,18 @@ export function OrderCard({
           </Button>
         )}
       </div>
+
+      {prev && !isClosed && (
+        <div className="mt-2">
+          <button
+            type="button"
+            onClick={() => onStatus(prev.to)}
+            className="rounded-lg px-2 py-1 text-xs font-semibold text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
+          >
+            {prev.label}
+          </button>
+        </div>
+      )}
 
       <div className="mt-4 grid gap-4 rounded-xl border border-border/70 bg-background/40 p-3 sm:grid-cols-[minmax(0,220px)_minmax(0,1fr)]">
         <div>
