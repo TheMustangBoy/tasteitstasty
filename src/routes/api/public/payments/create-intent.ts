@@ -43,9 +43,47 @@ export const Route = createFileRoute("/api/public/payments/create-intent")({
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const token = createToken();
 
-        const { data: reservation, error } = await supabaseAdmin.rpc(
-          "create_payment_reservation",
-          {
+        /** Neuer, kryptografisch zufaelliger Checkout-Key ohne Personenbezug. */
+        const rotatedKey = () => {
+          const bytes = new Uint8Array(16);
+          crypto.getRandomValues(bytes);
+          return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+        };
+
+        let checkoutKey = input.checkoutKey;
+        let attempt = await supabaseAdmin.rpc("create_payment_reservation", {
+          p_token: token,
+          p_checkout_key: checkoutKey,
+          p_customer_name: input.name,
+          p_phone: input.phone,
+          p_pickup_at: input.pickupISO,
+          p_pickup_label: input.pickupLabel,
+          p_lines: input.lines as unknown as never,
+          p_total: input.total,
+          p_note: input.note,
+          p_ttl_minutes: 20,
+        });
+
+        // Verbrauchter Schluessel (expired/failed/cancelled/refunded) => genau ein Retry.
+        if (attempt.error?.message?.includes("CHECKOUT_KEY_STALE")) {
+          checkoutKey = rotatedKey();
+          attempt = await supabaseAdmin.rpc("create_payment_reservation", {
+            p_token: token,
+            p_checkout_key: checkoutKey,
+            p_customer_name: input.name,
+            p_phone: input.phone,
+            p_pickup_at: input.pickupISO,
+            p_pickup_label: input.pickupLabel,
+            p_lines: input.lines as unknown as never,
+            p_total: input.total,
+            p_note: input.note,
+            p_ttl_minutes: 20,
+          });
+        }
+
+        const { data: reservation, error } = attempt;
+
+        const _unusedLegacyCall = () => ({
             p_token: token,
             p_checkout_key: input.checkoutKey,
             p_customer_name: input.name,

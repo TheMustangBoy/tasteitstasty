@@ -90,9 +90,20 @@ export const Route = createFileRoute("/api/public/payments/stripe-webhook")({
         }
 
 
-        await supabaseAdmin.rpc("mark_payment_reservation", {
+        if (event.type === "payment_intent.canceled") {
+          // Abbruch => Slot wieder freigeben.
+          await supabaseAdmin.rpc("mark_payment_reservation", {
+            p_reservation_id: reservationId,
+            p_status: "cancelled",
+            p_error: event.type,
+          });
+          return Response.json({ received: true });
+        }
+
+        // Fehlgeschlagene Zahlung: Reservierung bleibt pending, Slot bleibt belegt,
+        // damit ein spaeterer erfolgreicher Versuch nicht ins Leere laeuft.
+        await supabaseAdmin.rpc("note_payment_failure", {
           p_reservation_id: reservationId,
-          p_status: event.type === "payment_intent.canceled" ? "cancelled" : "failed",
           p_error: event.type,
         });
         return Response.json({ received: true });
