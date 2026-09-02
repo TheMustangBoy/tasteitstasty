@@ -14,6 +14,21 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_users: {
+        Row: {
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
@@ -291,6 +306,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_slot_bookings: {
+        Args: never
+        Returns: {
+          bookings: number
+          pickup_at: string
+        }[]
+      }
+      is_admin: { Args: never; Returns: boolean }
       place_order: {
         Args: {
           p_customer_name: string

@@ -112,3 +112,15 @@ cd <repository-name>
 npm i
 npm run dev
 ```
+
+## Admin-Zugang (manuelle Einrichtung)
+
+Es gibt keine öffentliche Registrierung und keinen Demo-Login mehr.
+
+1. Im Backend (Auth → Users) ein Benutzerkonto mit E-Mail + Passwort anlegen.
+2. Die UUID dieses Benutzers in die Tabelle `public.admin_users` eintragen:
+   `insert into public.admin_users (user_id) values ('<uuid>');`
+3. Anschließend Login unter `/admin` mit E-Mail und Passwort.
+
+Nur Konten, die in `public.admin_users` stehen, dürfen Bestellungen sehen und
+Katalog-/Einstellungsdaten ändern (durchgesetzt per RLS und `public.is_admin()`).

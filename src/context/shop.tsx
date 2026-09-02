@@ -22,7 +22,10 @@ import { DEFAULT_MAX_ORDERS_PER_SLOT, DEFAULT_MIN_LEAD_MINUTES } from "@/lib/pic
 import { demoPickupDate } from "@/lib/demo-pickup";
 import { toast } from "sonner";
 import {
-  fetchSnapshot,
+  checkIsAdmin,
+  fetchAdminOrders,
+  fetchPublicSnapshot,
+  fetchSlotBookings,
   placeOrderRemote,
   removeCategory,
   removeExtra,
@@ -42,7 +45,9 @@ import {
   type OrderPatch,
   type ShopSnapshot,
 } from "@/lib/repository";
+import { supabase } from "@/integrations/supabase/client";
 import type { CartLine } from "@/context/cart";
+
 
 export const ORDER_STATUSES = [
   "neu",
@@ -183,12 +188,16 @@ type ShopState = {
   settings: ShopSettings;
   catalog: Catalog;
   productRows: ProductRecord[];
+  /** Vollständige Bestellungen – nur im Admin-Kontext befüllt, nie persistiert. */
   orders: ShopOrder[];
+  /** Slot-Auslastung ohne Kundendaten (Abholzeit → Anzahl). */
+  slotBookings: Record<string, number>;
   adminAuthed: boolean;
   soundOn: boolean;
 };
 
-const STORAGE_KEY = "tit-shop-state-v2";
+const STORAGE_KEY = "tit-shop-cache-v3";
+
 
 const DEFAULT_SETTINGS: ShopSettings = {
   hours: DEFAULT_HOURS,
@@ -294,13 +303,16 @@ type ShopContextValue = ShopState & {
   restoreOrder: (id: string, status: OrderStatus) => void;
   setOrderNote: (id: string, internalNote: string) => void;
   simulateOrder: () => Promise<ShopOrder>;
-  login: (user: string, password: string) => boolean;
-  logout: () => void;
+  login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  logout: () => Promise<void>;
   setSoundOn: (on: boolean) => void;
   /** Ladezustand des zentralen Datenstands. */
   loading: boolean;
+  /** Session-Prüfung läuft noch. */
+  authLoading: boolean;
   loadError: string | null;
   refresh: () => Promise<void>;
+
 };
 
 /** Setzt den Status und schreibt den passenden Zeitstempel fort. */
@@ -318,6 +330,7 @@ const initialState: ShopState = {
   catalog: seedCatalog(),
   productRows: seedProducts(),
   orders: [],
+  slotBookings: {},
   adminAuthed: false,
   soundOn: true,
 };
@@ -326,6 +339,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<ShopState>(initialState);
   const [hydrated, setHydrated] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const applySnapshot = useCallback((snap: ShopSnapshot) => {
@@ -338,24 +352,34 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         extras: snap.extras,
       },
       productRows: snap.products,
-      orders: snap.orders,
     }));
   }, []);
 
+  /** Öffentliche Daten + Slot-Auslastung; Bestellungen nur mit Adminrechten. */
   const refresh = useCallback(async () => {
     try {
-      const snap = await fetchSnapshot();
+      const [snap, slots] = await Promise.all([fetchPublicSnapshot(), fetchSlotBookings()]);
       applySnapshot(snap);
+      setState((prev) => ({ ...prev, slotBookings: slots }));
       setLoadError(null);
+      const admin = await checkIsAdmin();
+      setState((prev) => ({ ...prev, adminAuthed: admin }));
+      if (admin) {
+        const orders = await fetchAdminOrders();
+        setState((prev) => ({ ...prev, orders }));
+      } else {
+        setState((prev) => ({ ...prev, orders: [] }));
+      }
     } catch {
       setLoadError("Daten konnten nicht geladen werden. Bitte Seite neu laden.");
     } finally {
       setLoading(false);
+      setAuthLoading(false);
     }
   }, [applySnapshot]);
 
   useEffect(() => {
-    // LocalStorage nur als kurzlebiger Cache für den ersten Frame.
+    // LocalStorage nur als kurzlebiger Cache für öffentliche Stammdaten.
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       const parsed = raw ? (JSON.parse(raw) as Partial<ShopState>) : null;
@@ -365,7 +389,6 @@ export function ShopProvider({ children }: { children: ReactNode }) {
           settings: { ...DEFAULT_SETTINGS, ...(parsed.settings ?? {}) },
           catalog: { ...prev.catalog, ...(parsed.catalog ?? {}) },
           productRows: parsed.productRows?.length ? parsed.productRows : prev.productRows,
-          orders: parsed.orders ?? [],
         }));
     } catch {
       /* ignore */
@@ -375,15 +398,30 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
+      if (event === "SIGNED_OUT") {
+        setState((prev) => ({ ...prev, adminAuthed: false, orders: [] }));
+        return;
+      }
+      void refresh();
+    });
+    return () => data.subscription.unsubscribe();
+  }, [refresh]);
+
+  useEffect(() => {
     if (!hydrated) return;
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      // Nur öffentliche, unkritische Daten cachen – keine Bestellungen, kein Adminstatus.
+      const { settings, catalog, productRows } = state;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ settings, catalog, productRows }));
     } catch {
       /* ignore */
     }
   }, [state, hydrated]);
 
   const patch = useCallback((fn: (prev: ShopState) => ShopState) => setState(fn), []);
+
 
   /**
    * Optimistisches Update wurde bereits angewendet – hier folgt der Write-Through.
@@ -455,11 +493,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       .filter((r) => r.active && !r.soldOut && !pausedCategories.has(r.categoryId))
       .map(toMenuItem);
 
-    const bookings: Record<string, number> = {};
-    for (const order of state.orders) {
-      if (CLOSED_STATUSES.includes(order.status) && order.status !== "abgeschlossen") continue;
-      bookings[order.pickupISO] = (bookings[order.pickupISO] ?? 0) + 1;
-    }
+    // Auslastung stammt aus der datenschutzkonformen RPC (nur Zeit + Anzahl).
+    const bookings: Record<string, number> = { ...state.slotBookings };
+
 
     const reindex = <T extends { sortOrder: number }>(list: T[]) =>
       list.map((entry, i) => ({ ...entry, sortOrder: i }));
@@ -471,7 +507,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       overrides,
       bookings,
       loading,
+      authLoading,
       loadError,
+
       refresh,
       setSettings: (p) => {
         const next = { ...state.settings, ...p };
@@ -793,15 +831,31 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         patch((prev) => ({ ...prev, orders: [saved, ...prev.orders] }));
         return saved;
       },
-      login: (user, password) => {
-        const ok = user.trim().toLowerCase() === "admin" && password === "tasty2024";
-        if (ok) patch((prev) => ({ ...prev, adminAuthed: true }));
-        return ok;
+      login: async (email, password) => {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+        if (error) return { ok: false, error: "Anmeldung fehlgeschlagen. Bitte Daten prüfen." };
+        const admin = await checkIsAdmin();
+        if (!admin) {
+          await supabase.auth.signOut();
+          patch((prev) => ({ ...prev, adminAuthed: false, orders: [] }));
+          return { ok: false, error: "Kein Admin-Zugriff für dieses Konto." };
+        }
+        patch((prev) => ({ ...prev, adminAuthed: true }));
+        await refresh();
+        return { ok: true };
       },
-      logout: () => patch((prev) => ({ ...prev, adminAuthed: false })),
+      logout: async () => {
+        // Sensible Daten sofort verwerfen, dann Session beenden.
+        patch((prev) => ({ ...prev, adminAuthed: false, orders: [] }));
+        await supabase.auth.signOut();
+      },
       setSoundOn: (on) => patch((prev) => ({ ...prev, soundOn: on })),
     };
-  }, [state, patch, persist, refresh, loading, loadError]);
+  }, [state, patch, persist, refresh, loading, authLoading, loadError]);
+
 
   return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>;
 }
