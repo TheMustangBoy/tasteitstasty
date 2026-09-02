@@ -14,13 +14,321 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      categories: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          note: string
+          paused: boolean
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          label: string
+          note?: string
+          paused?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          note?: string
+          paused?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      extras: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          price: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          name: string
+          price?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          price?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ingredients: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      opening_hours: {
+        Row: {
+          close_time: string
+          closed: boolean
+          created_at: string
+          open_time: string
+          updated_at: string
+          weekday: number
+        }
+        Insert: {
+          close_time?: string
+          closed?: boolean
+          created_at?: string
+          open_time?: string
+          updated_at?: string
+          weekday: number
+        }
+        Update: {
+          close_time?: string
+          closed?: boolean
+          created_at?: string
+          open_time?: string
+          updated_at?: string
+          weekday?: number
+        }
+        Relationships: []
+      }
+      orders: {
+        Row: {
+          cancel_note: string | null
+          cancel_reason: string | null
+          created_at: string
+          customer_name: string
+          id: string
+          internal_note: string
+          lines: Json
+          note: string
+          payment: string
+          phone: string
+          pickup_at: string
+          pickup_label: string
+          reference: string
+          status: string
+          status_timestamps: Json
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          cancel_note?: string | null
+          cancel_reason?: string | null
+          created_at?: string
+          customer_name?: string
+          id?: string
+          internal_note?: string
+          lines?: Json
+          note?: string
+          payment?: string
+          phone?: string
+          pickup_at: string
+          pickup_label?: string
+          reference: string
+          status?: string
+          status_timestamps?: Json
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          cancel_note?: string | null
+          cancel_reason?: string | null
+          created_at?: string
+          customer_name?: string
+          id?: string
+          internal_note?: string
+          lines?: Json
+          note?: string
+          payment?: string
+          phone?: string
+          pickup_at?: string
+          pickup_label?: string
+          reference?: string
+          status?: string
+          status_timestamps?: Json
+          total?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          active: boolean
+          category_id: string
+          created_at: string
+          description: string
+          extra_ids: string[]
+          id: string
+          image_url: string
+          ingredients: string[]
+          ingredients_placeholder: boolean
+          name: string
+          options: Json
+          patties: number | null
+          price: number
+          removable: string[]
+          sold_out: boolean
+          sort_order: number
+          tag: string
+          updated_at: string
+          vegetarian: boolean
+        }
+        Insert: {
+          active?: boolean
+          category_id: string
+          created_at?: string
+          description?: string
+          extra_ids?: string[]
+          id: string
+          image_url?: string
+          ingredients?: string[]
+          ingredients_placeholder?: boolean
+          name: string
+          options?: Json
+          patties?: number | null
+          price?: number
+          removable?: string[]
+          sold_out?: boolean
+          sort_order?: number
+          tag?: string
+          updated_at?: string
+          vegetarian?: boolean
+        }
+        Update: {
+          active?: boolean
+          category_id?: string
+          created_at?: string
+          description?: string
+          extra_ids?: string[]
+          id?: string
+          image_url?: string
+          ingredients?: string[]
+          ingredients_placeholder?: boolean
+          name?: string
+          options?: Json
+          patties?: number | null
+          price?: number
+          removable?: string[]
+          sold_out?: boolean
+          sort_order?: number
+          tag?: string
+          updated_at?: string
+          vegetarian?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_settings: {
+        Row: {
+          created_at: string
+          id: number
+          max_orders_per_slot: number
+          min_lead_minutes: number
+          orders_paused: boolean
+          updated_at: string
+          wheel_sound_on: boolean
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          max_orders_per_slot?: number
+          min_lead_minutes?: number
+          orders_paused?: boolean
+          updated_at?: string
+          wheel_sound_on?: boolean
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          max_orders_per_slot?: number
+          min_lead_minutes?: number
+          orders_paused?: boolean
+          updated_at?: string
+          wheel_sound_on?: boolean
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      place_order: {
+        Args: {
+          p_customer_name: string
+          p_lines: Json
+          p_note?: string
+          p_payment: string
+          p_phone: string
+          p_pickup_at: string
+          p_pickup_label: string
+          p_reference: string
+          p_total: number
+        }
+        Returns: {
+          cancel_note: string | null
+          cancel_reason: string | null
+          created_at: string
+          customer_name: string
+          id: string
+          internal_note: string
+          lines: Json
+          note: string
+          payment: string
+          phone: string
+          pickup_at: string
+          pickup_label: string
+          reference: string
+          status: string
+          status_timestamps: Json
+          total: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "orders"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       [_ in never]: never
