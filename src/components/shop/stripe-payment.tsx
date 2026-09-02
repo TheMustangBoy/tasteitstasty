@@ -63,9 +63,9 @@ function PaymentForm({ returnUrl, amountLabel, onPaid, isTestMode }: PaymentForm
         <ExpressCheckoutElement
           options={{
             buttonTheme: { applePay: "black", googlePay: "black" },
-            paymentMethods: isTestMode
-              ? { applePay: "always", googlePay: "always" }
-              : "auto",
+            ...(isTestMode && {
+              paymentMethods: { applePay: "always", googlePay: "always" },
+            }),
           }}
           onReady={(event) => {
             setExpressAvailable(Object.keys(event.availablePaymentMethods ?? {}).length > 0);
