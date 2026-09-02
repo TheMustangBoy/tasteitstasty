@@ -6,5 +6,5 @@ import { Route as StripeWebhookRoute } from "./stripe-webhook";
  * Leitet alle Anfragen an den bestehenden Stripe-Webhook-Handler weiter.
  */
 export const Route = createFileRoute("/api/public/payments/webhook")({
-  server: StripeWebhookRoute.options.server,
+  server: StripeWebhookRoute.options.server as any,
 });
