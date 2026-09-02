@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-// UI-/Auth-Polish: Passwort-Recovery & Passwort-Änderung ohne Code-Secrets.
 import { createFileRoute } from "@tanstack/react-router";
 import {
   BarChart3,
@@ -999,6 +998,107 @@ function AdminConsole() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+/** Eingeloggte Admins können hier ihr eigenes Passwort ändern. */
+function SecuritySection() {
+  const [current, setCurrent] = useState("");
+  const [pw1, setPw1] = useState("");
+  const [pw2, setPw2] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  return (
+    <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+      <h2 className="flex items-center gap-2 text-xl">
+        <ShieldCheck className="h-5 w-5 text-primary" /> Sicherheit
+      </h2>
+      <p className="mt-1 text-sm text-muted-foreground">Eigenes Admin-Passwort ändern.</p>
+      <form
+        className="mt-4 grid gap-4 sm:grid-cols-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (busy) return;
+          if (pw1.length < 8) {
+            setError("Das neue Passwort muss mindestens 8 Zeichen lang sein.");
+            return;
+          }
+          if (pw1 !== pw2) {
+            setError("Die neuen Passwörter stimmen nicht überein.");
+            return;
+          }
+          setBusy(true);
+          setError(null);
+          void (async () => {
+            const { error: err } = await supabase.auth.updateUser({
+              password: pw1,
+              current_password: current,
+            });
+            setBusy(false);
+            if (err) {
+              setError(
+                "Passwort konnte nicht geändert werden. Bitte aktuelles Passwort prüfen und erneut versuchen.",
+              );
+              return;
+            }
+            toast.success("Passwort wurde geändert.");
+            setCurrent("");
+            setPw1("");
+            setPw2("");
+          })();
+        }}
+      >
+        <div>
+          <Label htmlFor="sec-current">Aktuelles Passwort</Label>
+          <Input
+            id="sec-current"
+            type="password"
+            required
+            value={current}
+            onChange={(e) => setCurrent(e.target.value)}
+            autoComplete="current-password"
+            className="mt-2 h-12"
+          />
+        </div>
+        <div>
+          <Label htmlFor="sec-new">Neues Passwort</Label>
+          <Input
+            id="sec-new"
+            type="password"
+            required
+            minLength={8}
+            value={pw1}
+            onChange={(e) => setPw1(e.target.value)}
+            autoComplete="new-password"
+            className="mt-2 h-12"
+          />
+        </div>
+        <div>
+          <Label htmlFor="sec-repeat">Neues Passwort wiederholen</Label>
+          <Input
+            id="sec-repeat"
+            type="password"
+            required
+            minLength={8}
+            value={pw2}
+            onChange={(e) => setPw2(e.target.value)}
+            autoComplete="new-password"
+            className="mt-2 h-12"
+          />
+        </div>
+        <div className="sm:col-span-3">
+          {error && <p className="mb-3 text-sm text-destructive">{error}</p>}
+          <Button
+            type="submit"
+            disabled={busy}
+            className="h-12 rounded-xl bg-flame px-6 font-bold uppercase tracking-wide text-primary-foreground"
+          >
+            {busy ? "Speichern läuft …" : "Passwort ändern"}
+          </Button>
+        </div>
+      </form>
+    </section>
   );
 }
 
