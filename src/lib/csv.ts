@@ -7,7 +7,7 @@ import { linePrice } from "@/context/cart";
  */
 export const neutralizeCsvCell = (value: string | number) => {
   const text = String(value);
-  const trimmed = text.replace(/^[\s\u00a0]+/, "");
+  const trimmed = text.replace(/^[ \u00a0]+/, "");
   return /^[=+\-@\t\r\n]/.test(trimmed) ? `'${text}` : text;
 };
 
