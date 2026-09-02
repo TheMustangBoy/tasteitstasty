@@ -493,11 +493,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       .filter((r) => r.active && !r.soldOut && !pausedCategories.has(r.categoryId))
       .map(toMenuItem);
 
-    const bookings: Record<string, number> = {};
-    for (const order of state.orders) {
-      if (CLOSED_STATUSES.includes(order.status) && order.status !== "abgeschlossen") continue;
-      bookings[order.pickupISO] = (bookings[order.pickupISO] ?? 0) + 1;
-    }
+    // Auslastung stammt aus der datenschutzkonformen RPC (nur Zeit + Anzahl).
+    const bookings: Record<string, number> = { ...state.slotBookings };
+
 
     const reindex = <T extends { sortOrder: number }>(list: T[]) =>
       list.map((entry, i) => ({ ...entry, sortOrder: i }));
