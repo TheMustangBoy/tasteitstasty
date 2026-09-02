@@ -388,6 +388,26 @@ export function ShopProvider({ children }: { children: ReactNode }) {
 
   const patch = useCallback((fn: (prev: ShopState) => ShopState) => setState(fn), []);
 
+  /**
+   * Optimistisches Update wurde bereits angewendet – hier folgt der Write-Through.
+   * Bei Fehler: verständliche Meldung + Rollback über den zentralen Datenstand.
+   */
+  const persist = useCallback(
+    (op: () => Promise<unknown>, message = "Änderung konnte nicht gespeichert werden.") => {
+      void (async () => {
+        try {
+          await op();
+        } catch {
+          toast.error(message, { description: "Der letzte Stand wurde wiederhergestellt." });
+          await refresh();
+        }
+      })();
+    },
+    [refresh],
+  );
+
+
+
 
   const value = useMemo<ShopContextValue>(() => {
     const extraById = new Map(state.catalog.extras.map((e) => [e.id, e]));
