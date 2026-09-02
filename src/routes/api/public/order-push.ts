@@ -97,7 +97,7 @@ export const Route = createFileRoute("/api/public/order-push")({
                 applicationServerKeys: keys,
                 payload: message,
                 target: { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-                adminContact: subject.replace(/^mailto:/, ""),
+                adminContact: subject,
                 ttl: 600,
                 urgency: "high",
               });
