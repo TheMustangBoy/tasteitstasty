@@ -355,26 +355,46 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const soundOnRef = useRef(state.soundOn);
   soundOnRef.current = state.soundOn;
 
+  /** Titel-Flash: ein einziger Timer + gemerkter Basistitel (kein Race). */
+  const titleBase = useRef<string | null>(null);
+  const titleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const restoreTitle = useCallback(() => {
+    if (titleTimer.current) {
+      clearTimeout(titleTimer.current);
+      titleTimer.current = null;
+    }
+    if (typeof document !== "undefined" && titleBase.current !== null) {
+      document.title = titleBase.current;
+    }
+    titleBase.current = null;
+  }, []);
+
+  useEffect(() => restoreTitle, [restoreTitle]);
+
   /** Bestellungen aus einem Vollabruf als „bekannt“ markieren – ohne Meldung. */
   const markKnown = useCallback((orders: ShopOrder[]) => {
     for (const o of orders) knownOrderIds.current.add(o.id);
   }, []);
 
   /** Zentrale Benachrichtigung: Toast, optional Ton, kurzer Titel-Hinweis. */
-  const notifyNewOrder = useCallback((order: ShopOrder) => {
-    toast.success("Neue Bestellung eingegangen", {
-      description: `${order.reference} · Abholung ${order.pickupLabel} · ${order.total.toFixed(2).replace(".", ",")} €`,
-      duration: 8000,
-    });
-    if (soundOnRef.current) playNotificationSound();
-    if (typeof document !== "undefined") {
-      const original = document.title;
-      document.title = "🔔 Neue Bestellung!";
-      setTimeout(() => {
-        document.title = original;
-      }, 5000);
-    }
-  }, []);
+  const notifyNewOrder = useCallback(
+    (order: ShopOrder) => {
+      toast.success("Neue Bestellung eingegangen", {
+        description: `${order.reference} · Abholung ${order.pickupLabel} · ${order.total.toFixed(2).replace(".", ",")} €`,
+        duration: 8000,
+      });
+      if (soundOnRef.current) void playNotificationSound();
+      if (typeof document !== "undefined") {
+        // Basistitel nur beim ersten Flash merken, Timer bei Folgemeldungen verlängern.
+        titleBase.current ??= document.title;
+        document.title = "🔔 Neue Bestellung!";
+        if (titleTimer.current) clearTimeout(titleTimer.current);
+        titleTimer.current = setTimeout(restoreTitle, 5000);
+      }
+    },
+    [restoreTitle],
+  );
 
   const applySnapshot = useCallback((snap: ShopSnapshot) => {
     setState((prev) => ({
