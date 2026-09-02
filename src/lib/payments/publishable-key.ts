@@ -14,7 +14,7 @@ const FALLBACK_SANDBOX_PUBLISHABLE_KEY =
 
 function fromImportMeta(): string {
   try {
-    return (import.meta.env?.VITE_PAYMENTS_CLIENT_TOKEN as string | undefined)?.trim() ?? "";
+    return (import.meta.env?.['VITE_PAYMENTS_CLIENT_TOKEN'] as string | undefined)?.trim() ?? "";
   } catch {
     return "";
   }
@@ -22,7 +22,7 @@ function fromImportMeta(): string {
 
 function fromProcessEnv(): string {
   try {
-    return process.env?.VITE_PAYMENTS_CLIENT_TOKEN?.trim() ?? "";
+    return process.env?.['VITE_PAYMENTS_CLIENT_TOKEN']?.trim() ?? "";
   } catch {
     return "";
   }
