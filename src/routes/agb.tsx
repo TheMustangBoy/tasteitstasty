@@ -3,7 +3,7 @@ import { PageShell } from "@/components/shop/page-shell";
 import { LEGAL } from "@/data/legal";
 
 /**
- * INTERNER HINWEIS: Betreiberangaben stammen aus src/data/legal.ts (Musterdaten).
+ * INTERNER HINWEIS: Betreiberangaben stammen aus src/data/legal.ts.
  * Kein EU-OS-Link, da die Plattform eingestellt ist.
  */
 export const Route = createFileRoute("/agb")({

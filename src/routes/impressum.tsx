@@ -3,7 +3,7 @@ import { PageShell } from "@/components/shop/page-shell";
 import { LEGAL } from "@/data/legal";
 
 /**
- * INTERNER HINWEIS: Alle Angaben stammen aus src/data/legal.ts (Musterdaten).
+ * INTERNER HINWEIS: Alle Angaben stammen aus src/data/legal.ts.
  * Optionale Blöcke werden nur gerendert, wenn dort ein Wert hinterlegt ist.
  */
 export const Route = createFileRoute("/impressum")({
@@ -22,9 +22,13 @@ export const Route = createFileRoute("/impressum")({
       <p>
         <strong>Anbieter gemäß § 5 DDG</strong>
         <br />
-        {LEGAL.operatorName}
+        {LEGAL.brand}
         <br />
-        {LEGAL.address}
+        Inhaber: {LEGAL.operatorName}
+        <br />
+        Rechtsform: {LEGAL.legalForm}
+        <br />
+        Geschäftsanschrift: {LEGAL.address}
       </p>
 
       {LEGAL.representative && (
