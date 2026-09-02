@@ -113,6 +113,16 @@ export async function enablePush(): Promise<{ ok: boolean; status: PushStatus; e
       applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as BufferSource,
     }));
 
+  const keys = readSubscriptionKeys(subscription);
+  if (!keys) {
+    await subscription.unsubscribe().catch(() => undefined);
+    return {
+      ok: false,
+      status: "inactive",
+      error: "Push-Schlüssel unvollständig – bitte erneut versuchen.",
+    };
+  }
+
   const { data: userData } = await supabase.auth.getUser();
   const userId = userData.user?.id;
   if (!userId) {
@@ -123,12 +133,13 @@ export async function enablePush(): Promise<{ ok: boolean; status: PushStatus; e
     {
       user_id: userId,
       endpoint: subscription.endpoint,
-      p256dh: encodeKey(subscription.getKey("p256dh")),
-      auth: encodeKey(subscription.getKey("auth")),
+      p256dh: keys.p256dh,
+      auth: keys.auth,
       user_agent: navigator.userAgent.slice(0, 180),
     },
     { onConflict: "endpoint" },
   );
+
 
   if (error) {
     return { ok: false, status: "inactive", error: "Gerät konnte nicht registriert werden." };
