@@ -831,15 +831,31 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         patch((prev) => ({ ...prev, orders: [saved, ...prev.orders] }));
         return saved;
       },
-      login: (user, password) => {
-        const ok = user.trim().toLowerCase() === "admin" && password === "tasty2024";
-        if (ok) patch((prev) => ({ ...prev, adminAuthed: true }));
-        return ok;
+      login: async (email, password) => {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+        if (error) return { ok: false, error: "Anmeldung fehlgeschlagen. Bitte Daten prüfen." };
+        const admin = await checkIsAdmin();
+        if (!admin) {
+          await supabase.auth.signOut();
+          patch((prev) => ({ ...prev, adminAuthed: false, orders: [] }));
+          return { ok: false, error: "Kein Admin-Zugriff für dieses Konto." };
+        }
+        patch((prev) => ({ ...prev, adminAuthed: true }));
+        await refresh();
+        return { ok: true };
       },
-      logout: () => patch((prev) => ({ ...prev, adminAuthed: false })),
+      logout: async () => {
+        // Sensible Daten sofort verwerfen, dann Session beenden.
+        patch((prev) => ({ ...prev, adminAuthed: false, orders: [] }));
+        await supabase.auth.signOut();
+      },
       setSoundOn: (on) => patch((prev) => ({ ...prev, soundOn: on })),
     };
-  }, [state, patch, persist, refresh, loading, loadError]);
+  }, [state, patch, persist, refresh, loading, authLoading, loadError]);
+
 
   return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>;
 }
