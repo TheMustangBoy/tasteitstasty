@@ -12,7 +12,9 @@ export const Route = createFileRoute("/api/public/payments/stripe-webhook")({
         const { readStripeEnv, createStripeClient, Stripe } = await import(
           "@/lib/payments/stripe.server"
         );
-        const env = readStripeEnv();
+        // Das Gateway liefert die Umgebung als Query-Parameter (?env=sandbox|live).
+        const envParam = new URL(request.url).searchParams.get("env");
+        const env = readStripeEnv(envParam === "live" ? "live" : envParam === "sandbox" ? "sandbox" : undefined);
         if (!env.configured || !env.secretKey || !env.webhookSecret) {
           return new Response("Not configured", { status: 503 });
         }
