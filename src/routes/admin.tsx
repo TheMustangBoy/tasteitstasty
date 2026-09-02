@@ -190,6 +190,78 @@ function AdminLogin() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [resetMode, setResetMode] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetBusy, setResetBusy] = useState(false);
+
+  const requestReset = () => {
+    if (resetBusy || !email) return;
+    setResetBusy(true);
+    void (async () => {
+      await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/admin`,
+      });
+      // Generische Rückmeldung – unabhängig davon, ob das Konto existiert.
+      setResetSent(true);
+      setResetBusy(false);
+    })();
+  };
+
+  if (resetMode) {
+    return (
+      <div className="mx-auto max-w-md px-4 py-16 sm:px-6">
+        <div className="rounded-3xl border border-border bg-card p-6 sm:p-8">
+          <ShieldCheck className="h-10 w-10 text-primary" />
+          <h1 className="mt-4 text-3xl">Passwort zurücksetzen</h1>
+          {resetSent ? (
+            <p className="mt-4 text-sm text-muted-foreground">
+              Wenn ein Konto mit dieser E-Mail-Adresse existiert, wurde eine E-Mail mit einem Link
+              zum Zurücksetzen des Passworts versendet.
+            </p>
+          ) : (
+            <form
+              className="mt-6 space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                requestReset();
+              }}
+            >
+              <div>
+                <Label htmlFor="reset-email">E-Mail</Label>
+                <Input
+                  id="reset-email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                  className="mt-2 h-12"
+                  placeholder="admin@example.com"
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={resetBusy}
+                className="h-13 w-full rounded-xl bg-flame py-4 font-bold uppercase tracking-wide text-primary-foreground"
+              >
+                {resetBusy ? "Wird gesendet …" : "Link zum Zurücksetzen senden"}
+              </Button>
+            </form>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              setResetMode(false);
+              setResetSent(false);
+            }}
+            className="mt-4 text-sm text-muted-foreground underline underline-offset-4 hover:text-primary"
+          >
+            Zurück zur Anmeldung
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-md px-4 py-16 sm:px-6">
