@@ -56,7 +56,7 @@ import {
   type OrderStatus,
   type ProductRecord,
 } from "@/context/shop";
-import { primeAudio } from "@/lib/admin-sound";
+import { primeAudio, playNotificationSound } from "@/lib/admin-sound";
 import { downloadCsv, ordersToCsv } from "@/lib/csv";
 
 /** Kompakte Statusfilter über den offenen Bestellungen. */
@@ -421,7 +421,7 @@ function AdminLogin() {
             if (busy) return;
             // Login ist eine Nutzergeste: Audio hier freischalten, damit spätere
             // Benachrichtigungstöne nicht vom Browser blockiert werden.
-            primeAudio();
+            void primeAudio();
             setBusy(true);
             setError(null);
 
