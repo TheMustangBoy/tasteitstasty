@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { loadStripe, type Stripe } from "@stripe/stripe-js";
 import {
   Elements,
@@ -30,17 +30,7 @@ type Props = {
   onPaid: () => void | Promise<void>;
 };
 
-/** Lokale, reine Darstellungs-Erkennung für Apple-Geräte (kein Logging/Speichern/Übertragen). */
-function isAppleDevice(): boolean {
-  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
-  const platform = navigator.platform?.toLowerCase() ?? "";
-  const userAgent = navigator.userAgent?.toLowerCase() ?? "";
-  const isIOS = /iphone|ipad|ipod/.test(userAgent);
-  const isMac = platform.includes("mac") || userAgent.includes("macintosh");
-  return isIOS || isMac;
-}
-
-/** Stripe Payment Element inkl. Apple Pay / Google Pay (geräteabhängig). */
+/** Stripe Payment Element inkl. Apple Pay / Google Pay. */
 export function StripePaymentSection(props: Props) {
   const stripePromise = useMemo(() => getStripe(props.publishableKey), [props.publishableKey]);
   const isTestMode = props.publishableKey.startsWith("pk_test_");
@@ -66,8 +56,6 @@ function PaymentForm({ returnUrl, amountLabel, onPaid, isTestMode }: PaymentForm
   const [error, setError] = useState<string | null>(null);
   // Apple Pay / Google Pay / Link – nur anzeigen, wenn der Browser sie anbietet.
   const [expressAvailable, setExpressAvailable] = useState(false);
-  const [isApple, setIsApple] = useState(false);
-  useEffect(() => setIsApple(isAppleDevice()), []);
 
   return (
     <div className="mt-4 space-y-4 rounded-2xl border border-border bg-card p-4">
@@ -77,7 +65,7 @@ function PaymentForm({ returnUrl, amountLabel, onPaid, isTestMode }: PaymentForm
             buttonTheme: { applePay: "black", googlePay: "black" },
             paymentMethods: {
               applePay: isTestMode ? "always" : "auto",
-              googlePay: isApple ? "never" : "auto",
+              googlePay: "auto",
             },
           }}
           onReady={(event) => {
