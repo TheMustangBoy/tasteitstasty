@@ -3,7 +3,7 @@ import { PageShell } from "@/components/shop/page-shell";
 import { LEGAL } from "@/data/legal";
 
 /**
- * INTERNER HINWEIS: Begründung bewusst über § 312g Abs. 2 Nr. 2 BGB
+ * INTERNER HINWEIS: Begründung bewusst nur über § 312g Abs. 2 Nr. 2 BGB
  * (schnell verderbliche Waren) und ergänzend Nr. 1 (individuell konfigurierte
  * Speisen). Nr. 9 wird nicht verwendet, da der Shop keine Lieferung anbietet.
  */
@@ -40,16 +40,7 @@ export const Route = createFileRoute("/widerruf")({
       </p>
 
       <p>
-        <strong>2. Individuell zusammengestellte Speisen</strong>
-        <br />
-        Soweit Speisen nach deiner Auswahl individuell konfiguriert werden – etwa durch das Abwählen
-        von Zutaten oder das Hinzubuchen von Extras – besteht zusätzlich nach § 312g Abs. 2 Nr. 1
-        BGB kein Widerrufsrecht, da die Ware nach Kundenspezifikation angefertigt und eindeutig auf
-        die persönlichen Bedürfnisse zugeschnitten wird.
-      </p>
-
-      <p>
-        <strong>3. Was das praktisch bedeutet</strong>
+        <strong>2. Was das praktisch bedeutet</strong>
         <br />
         Eine bestätigte Bestellung kann nicht einseitig innerhalb einer Widerrufsfrist rückgängig
         gemacht werden. Das gilt unabhängig davon, ob online im Voraus oder erst bei der Abholung
@@ -58,7 +49,7 @@ export const Route = createFileRoute("/widerruf")({
       </p>
 
       <p>
-        <strong>4. Widerruf ist nicht dasselbe wie eine Stornierung</strong>
+        <strong>3. Widerruf ist nicht dasselbe wie eine Stornierung</strong>
         <br />
         Ein Widerruf ist ein gesetzliches Recht, das hier nicht besteht. Eine Stornierung ist
         dagegen eine freiwillige Kulanzlösung: Wir können eine Bestellung aufheben, solange die
@@ -67,7 +58,7 @@ export const Route = createFileRoute("/widerruf")({
       </p>
 
       <p>
-        <strong>5. Stornowunsch mitteilen</strong>
+        <strong>4. Stornowunsch mitteilen</strong>
         <br />
         Bitte melde dich so früh wie möglich telefonisch unter {LEGAL.phone} oder per E-Mail an{" "}
         {LEGAL.email} und nenne dabei deine Bestellnummer. Wurde online bezahlt und stimmen wir der
@@ -75,7 +66,7 @@ export const Route = createFileRoute("/widerruf")({
       </p>
 
       <p>
-        <strong>6. Gesetzliche Rechte bleiben bestehen</strong>
+        <strong>5. Gesetzliche Rechte bleiben bestehen</strong>
         <br />
         Unabhängig vom Widerrufsrecht bleiben deine gesetzlichen Mängelrechte sowie Ansprüche bei
         nicht erbrachter Leistung vollständig bestehen.

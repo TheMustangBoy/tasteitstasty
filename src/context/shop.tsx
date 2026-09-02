@@ -21,7 +21,6 @@ import {
   type SelectionOption,
 } from "@/data/menu";
 import { DEFAULT_MAX_ORDERS_PER_SLOT, DEFAULT_MIN_LEAD_MINUTES } from "@/lib/pickup";
-import { demoPickupDate } from "@/lib/demo-pickup";
 import { toast } from "sonner";
 import {
   checkIsAdmin,
@@ -257,27 +256,6 @@ function seedProducts(): ProductRecord[] {
   }));
 }
 
-const DEMO_NAMES = ["Lena Fischer", "Tobias Reiter", "Marie Huber", "Jonas Weber", "Sara Klein"];
-
-const DEMO_PAYMENTS = ["Kreditkarte", "Apple Pay", "Barzahlung bei Abholung", "Google Pay"];
-
-function demoLine(
-  item: MenuItem,
-  quantity: number,
-  bacon = false,
-  removed: string[] = [],
-): CartLine {
-  return {
-    lineId: `${item.id}-demo-${Math.random().toString(36).slice(2, 8)}`,
-    itemId: item.id,
-    name: item.name,
-    basePrice: item.price,
-    quantity,
-    removed,
-    bacon,
-  };
-}
-
 type ShopContextValue = ShopState & {
   /** Für die Kundenansicht aufbereitete Produkte (aktiv + inaktiv). */
   products: MenuItem[];
@@ -308,7 +286,6 @@ type ShopContextValue = ShopState & {
   cancelOrder: (id: string, reason: CancelReason, cancelNote?: string) => void;
   restoreOrder: (id: string, status: OrderStatus) => void;
   setOrderNote: (id: string, internalNote: string) => void;
-  simulateOrder: () => Promise<ShopOrder>;
   login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => Promise<void>;
   setSoundOn: (on: boolean) => void;
@@ -967,32 +944,6 @@ export function ShopProvider({ children }: { children: ReactNode }) {
           () => saveOrderPatch(id, { internalNote }),
           "Notiz konnte nicht gespeichert werden.",
         );
-      },
-      simulateOrder: async () => {
-        const pool = orderable.length ? orderable : products;
-        const lines = [
-          demoLine(
-            pool[Math.floor(Math.random() * pool.length)]!,
-            1 + Math.floor(Math.random() * 2),
-            Math.random() > 0.6,
-          ),
-          demoLine(pool[Math.floor(Math.random() * pool.length)]!, 1),
-        ];
-        const total = lines.reduce((s, l) => s + (l.basePrice + (l.bacon ? 1 : 0)) * l.quantity, 0);
-        const pickup = demoPickupDate(new Date(Date.now() + 25 * 60_000));
-        const saved = await placeOrderRemote({
-          reference: `TIT-${Math.floor(1000 + Math.random() * 9000)}`,
-          name: DEMO_NAMES[Math.floor(Math.random() * DEMO_NAMES.length)]!,
-          phone: "0151 2345678",
-          pickupISO: pickup.toISOString(),
-          pickupLabel: `${String(pickup.getHours()).padStart(2, "0")}:${String(pickup.getMinutes()).padStart(2, "0")} Uhr`,
-          payment: DEMO_PAYMENTS[Math.floor(Math.random() * DEMO_PAYMENTS.length)]!,
-          lines,
-          total,
-          note: "",
-        });
-        patch((prev) => ({ ...prev, orders: [saved, ...prev.orders] }));
-        return saved;
       },
       login: async (email, password) => {
         const { error } = await supabase.auth.signInWithPassword({

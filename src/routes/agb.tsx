@@ -63,11 +63,12 @@ export const Route = createFileRoute("/agb")({
       </p>
 
       <p>
-        <strong>5. Preise und Umsatzsteuer</strong>
+        <strong>5. Preise</strong>
         <br />
-        Alle angegebenen Preise sind Endpreise in Euro und enthalten die gesetzliche Umsatzsteuer.
-        Maßgeblich ist der zum Zeitpunkt des Bestellabschlusses serverseitig berechnete Preis.
+        Alle angegebenen Preise sind Endpreise in Euro. {LEGAL.taxNote} Maßgeblich ist der zum
+        Zeitpunkt des Bestellabschlusses serverseitig berechnete Preis.
       </p>
+
 
       <p>
         <strong>6. Zahlung</strong>
@@ -104,8 +105,8 @@ export const Route = createFileRoute("/agb")({
         <strong>9. Kein Widerrufsrecht</strong>
         <br />
         Bei schnell verderblichen Waren besteht nach § 312g Abs. 2 Nr. 2 BGB kein gesetzliches
-        Widerrufsrecht; bei individuell nach deiner Auswahl zusammengestellten Speisen gilt dies
-        zusätzlich nach § 312g Abs. 2 Nr. 1 BGB. Einzelheiten erklären wir auf der Seite{" "}
+        Widerrufsrecht. Einzelheiten erklären wir auf der Seite{" "}
+
         <Link to="/widerruf" className="text-primary hover:underline">
           Widerrufsrecht
         </Link>

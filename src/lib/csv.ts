@@ -3,7 +3,7 @@ import { linePrice } from "@/context/cart";
 
 const escape = (value: string | number) => `"${String(value).replace(/"/g, '""')}"`;
 
-/** Bestellhistorie als CSV (Demo-Export, rein clientseitig). */
+/** Bestellhistorie als CSV (rein clientseitig). */
 export function ordersToCsv(orders: ShopOrder[]) {
   const header = [
     "Bestellnummer",
