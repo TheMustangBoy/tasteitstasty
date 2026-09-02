@@ -3,9 +3,8 @@
  * und Allergene.
  *
  * INTERNER HINWEIS (nicht sichtbar im UI):
- * Die hier hinterlegten Angaben sind bewusst neutrale Musterdaten und enthalten
- * keine echten personenbezogenen Daten. Vor dem Livebetrieb müssen sämtliche
- * Werte durch die tatsächlichen Betreiberangaben ersetzt werden.
+ * Die hier hinterlegten Angaben sind die echten Betreiberdaten. Änderungen
+ * an Adresse, Kontakt oder Rechtsform müssen zentral in dieser Datei erfolgen.
  *
  * Optionale Felder (representative, register, vatId, supervisoryAuthority)
  * können leer bleiben – die Rechtstexte blenden leere Angaben automatisch aus.
@@ -15,12 +14,13 @@
 
 export const LEGAL = {
   /** Betreiber / verantwortliche Stelle */
-  operatorName: "Muster Betreiber",
-  address: "Musterstraße 1, 00000 Musterstadt",
+  operatorName: "Matthias Stanikowski",
+  legalForm: "Einzelunternehmen",
+  address: "Dr.-Lagai-Str. 24, 86159 Augsburg",
 
   /** Kontakt */
-  email: "kontakt@beispiel.de",
-  phone: "01234 567890",
+  email: "Tasteitstasty@web.de",
+  phone: "017623523416",
 
   /** Optional – nur ausfüllen, wenn zutreffend. Leer = wird nicht angezeigt. */
   representative: "",
@@ -29,7 +29,7 @@ export const LEGAL = {
   supervisoryAuthority: "",
 
   /** Datenschutz */
-  dataProtectionContact: "kontakt@beispiel.de",
+  dataProtectionContact: "Tasteitstasty@web.de",
   supervisoryDataAuthority: "Zuständige Datenschutzaufsichtsbehörde des Betreibersitzes",
 
   /** Streitbeilegung (Stand 2026: kein EU-OS-Link mehr, Plattform eingestellt) */
@@ -38,9 +38,8 @@ export const LEGAL = {
 
   /**
    * Steuerhinweis für die Preisangaben (AGB).
-   * Vor dem Livebetrieb an den tatsächlichen Steuerstatus anpassen, z. B.
-   * "Die gesetzliche Umsatzsteuer ist enthalten." oder den Kleinunternehmer-Hinweis
-   * nach § 19 UStG.
+   * Der tatsächliche Steuerstatus ist noch offen; daher wird keine definitive
+   * Umsatzsteuer- oder Kleinunternehmer-Aussage getroffen.
    */
   taxNote:
     "Ein etwaig anfallender gesetzlicher Umsatzsteueranteil ist im angegebenen Preis enthalten.",
