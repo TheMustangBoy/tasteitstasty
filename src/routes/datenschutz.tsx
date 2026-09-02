@@ -90,11 +90,15 @@ export const Route = createFileRoute("/datenschutz")({
       </p>
 
       <p>
-        <strong>7. Keine Analyse-, Tracking- oder Marketing-Dienste</strong>
+        <strong>7. Keine eigenen Analyse-, Tracking- oder Marketing-Dienste</strong>
         <br />
-        Diese Website setzt keine Analyse-, Tracking-, Profiling- oder Werbedienste ein. Es findet
-        keine Reichweitenmessung und keine Weitergabe zu Werbezwecken statt.
+        Wir setzen auf dieser Website keine eigenen Analyse-, Tracking-, Profiling- oder
+        Werbedienste ein. Es findet keine eigene Reichweitenmessung und keine Weitergabe zu
+        Werbezwecken statt. Unabhängig davon können bei den eingesetzten Plattform- und
+        Hosting-Diensten technisch bedingte Betriebs- und Sicherheitsdaten (z. B. Server-Logs)
+        anfallen; siehe Ziffer 2.
       </p>
+
 
       <p>
         <strong>8. Push-Benachrichtigungen (nur interner Adminbereich)</strong>
