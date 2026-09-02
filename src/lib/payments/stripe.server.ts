@@ -26,7 +26,7 @@ function readEnv(key: string): string {
 
 /** Umgebung anhand des Client-Token-Präfixes bestimmen. */
 export function resolveStripeEnvName(): StripeEnvName | null {
-  const token = readEnv("VITE_PAYMENTS_CLIENT_TOKEN");
+  const token = getPaymentsClientToken();
   if (token.startsWith("pk_test_")) return "sandbox";
   if (token.startsWith("pk_live_")) return "live";
   return null;
@@ -34,7 +34,8 @@ export function resolveStripeEnvName(): StripeEnvName | null {
 
 export function readStripeEnv(envName?: StripeEnvName): StripeEnv {
   const resolved = envName ?? resolveStripeEnvName();
-  const publishable = readEnv("VITE_PAYMENTS_CLIENT_TOKEN");
+  const publishable = getPaymentsClientToken();
+
 
   if (!resolved) {
     return {
