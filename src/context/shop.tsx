@@ -4,9 +4,11 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
+
 import {
   CATEGORIES,
   DEFAULT_EXTRAS,
