@@ -210,5 +210,47 @@ export const DEFAULT_HOURS: DayHours[] = [
 export const formatDayHours = (h: DayHours) =>
   h.closed ? "Geschlossen" : `${h.open} – ${h.close}`;
 
+/** Kurznamen der Wochentage – Index wie Date.getDay(). */
+export const WEEKDAYS_SHORT = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"] as const;
+
+export type HoursGroup = { label: string; value: string };
+
+/**
+ * Fasst aufeinanderfolgende Tage (Mo–So) mit identischen Zeiten zusammen,
+ * damit die Anzeige kompakt bleibt (z. B. „Mo – Sa: 11:00 – 18:00 Uhr“).
+ */
+export function groupHours(hours: DayHours[]): HoursGroup[] {
+  const order = [1, 2, 3, 4, 5, 6, 0];
+  const sig = (h: DayHours) => (h.closed ? "closed" : `${h.open}-${h.close}`);
+  const groups: HoursGroup[] = [];
+  let start = 0;
+
+  for (let i = 0; i < order.length; i++) {
+    const current = hours[order[i]!] ?? DEFAULT_HOURS[order[i]!]!;
+    const next = i + 1 < order.length ? (hours[order[i + 1]!] ?? DEFAULT_HOURS[order[i + 1]!]!) : null;
+    if (next && sig(current) === sig(next)) continue;
+
+    const first = order[start]!;
+    const last = order[i]!;
+    const label =
+      start === i
+        ? WEEKDAYS[first]!
+        : `${WEEKDAYS_SHORT[first]} – ${WEEKDAYS_SHORT[last]}`;
+    groups.push({
+      label,
+      value: current.closed ? "geschlossen" : `${current.open} – ${current.close} Uhr`,
+    });
+    start = i + 1;
+  }
+  return groups;
+}
+
+/** Einzeiliger Satz, z. B. „Mo – Sa: 11:00 – 18:00 Uhr, Sonntag: geschlossen“. */
+export const formatHoursSentence = (hours: DayHours[]) =>
+  groupHours(hours)
+    .map((g) => `${g.label}: ${g.value}`)
+    .join(", ");
+
+
 export const formatPrice = (value: number) =>
   new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(value);
