@@ -424,8 +424,12 @@ function AdminLogin() {
           onSubmit={(e) => {
             e.preventDefault();
             if (busy) return;
+            // Login ist eine Nutzergeste: Audio hier freischalten, damit spätere
+            // Benachrichtigungstöne nicht vom Browser blockiert werden.
+            primeAudio();
             setBusy(true);
             setError(null);
+
             void (async () => {
               const res = await login(email, password);
               if (!res.ok) setError(res.error ?? "Anmeldung fehlgeschlagen.");
