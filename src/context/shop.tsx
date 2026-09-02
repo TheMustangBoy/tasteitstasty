@@ -1007,6 +1007,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         return { ok: true };
       },
       logout: async () => {
+        // Push-Registrierung dieses Geräts entfernen, solange die Session noch gültig ist.
+        const { disablePush } = await import("@/lib/push");
+        await disablePush();
         // Sensible Daten sofort verwerfen, dann Session beenden.
         knownOrderIds.current.clear();
         patch((prev) => ({ ...prev, adminAuthed: false, orders: [] }));
