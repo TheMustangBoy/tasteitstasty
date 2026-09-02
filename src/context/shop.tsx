@@ -332,31 +332,54 @@ const initialState: ShopState = {
 export function ShopProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<ShopState>(initialState);
   const [hydrated, setHydrated] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const applySnapshot = useCallback((snap: ShopSnapshot) => {
+    setState((prev) => ({
+      ...prev,
+      settings: snap.settings,
+      catalog: {
+        categories: snap.categories,
+        ingredients: snap.ingredients,
+        extras: snap.extras,
+      },
+      productRows: snap.products,
+      orders: snap.orders,
+    }));
+  }, []);
+
+  const refresh = useCallback(async () => {
+    try {
+      const snap = await fetchSnapshot();
+      applySnapshot(snap);
+      setLoadError(null);
+    } catch {
+      setLoadError("Daten konnten nicht geladen werden. Bitte Seite neu laden.");
+    } finally {
+      setLoading(false);
+    }
+  }, [applySnapshot]);
 
   useEffect(() => {
+    // LocalStorage nur als kurzlebiger Cache für den ersten Frame.
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       const parsed = raw ? (JSON.parse(raw) as Partial<ShopState>) : null;
-      setState({
-        ...initialState,
-        ...(parsed ?? {}),
-        settings: { ...DEFAULT_SETTINGS, ...(parsed?.settings ?? {}) },
-        catalog: { ...seedCatalog(), ...(parsed?.catalog ?? {}) },
-        productRows: parsed?.productRows?.length
-          ? parsed.productRows.map((row) => ({
-              ...row,
-              options:
-                row.options ??
-                ((row as unknown as { variants?: SelectionOption[] }).variants || []),
-            }))
-          : seedProducts(),
-        orders: parsed?.orders?.length ? parsed.orders : seedOrders(),
-      });
+      if (parsed)
+        setState((prev) => ({
+          ...prev,
+          settings: { ...DEFAULT_SETTINGS, ...(parsed.settings ?? {}) },
+          catalog: { ...prev.catalog, ...(parsed.catalog ?? {}) },
+          productRows: parsed.productRows?.length ? parsed.productRows : prev.productRows,
+          orders: parsed.orders ?? [],
+        }));
     } catch {
-      setState({ ...initialState, orders: seedOrders() });
+      /* ignore */
     }
     setHydrated(true);
-  }, []);
+    void refresh();
+  }, [refresh]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -368,6 +391,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   }, [state, hydrated]);
 
   const patch = useCallback((fn: (prev: ShopState) => ShopState) => setState(fn), []);
+
 
   const value = useMemo<ShopContextValue>(() => {
     const extraById = new Map(state.catalog.extras.map((e) => [e.id, e]));
