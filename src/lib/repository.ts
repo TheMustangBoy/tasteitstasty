@@ -3,6 +3,7 @@
  * UI-Komponenten greifen ausschließlich über den ShopProvider hierauf zu.
  */
 import { supabase } from "@/integrations/supabase/client";
+import { orderErrorMessage } from "@/lib/payments/errors";
 import type { DayHours, SelectionOption } from "@/data/menu";
 import type { CartLine } from "@/context/cart";
 import type {
@@ -98,6 +99,9 @@ type OrderRow = {
   cancel_note: string | null;
   status_timestamps: unknown;
   created_at: string;
+  payment_provider?: string | null;
+  payment_status?: string | null;
+  paid_at?: string | null;
 };
 
 export function toOrder(row: OrderRow): ShopOrder {
@@ -117,6 +121,9 @@ export function toOrder(row: OrderRow): ShopOrder {
     lines: ((row.lines as CartLine[] | null) ?? []) as CartLine[],
     total: num(row.total),
     timestamps: ((row.status_timestamps as OrderTimestamps | null) ?? {}) as OrderTimestamps,
+    paymentProvider: (row.payment_provider ?? null) as ShopOrder["paymentProvider"],
+    paymentStatus: (row.payment_status ?? null) as ShopOrder["paymentStatus"],
+    paidAt: row.paid_at ?? null,
   };
   if (row.cancel_reason) order.cancelReason = row.cancel_reason as CancelReason;
   if (row.cancel_note) order.cancelNote = row.cancel_note;
@@ -341,7 +348,7 @@ export async function saveHours(hours: DayHours[]) {
  * Fehlerübersetzung liegt zentral in `@/lib/payments/errors`, damit Client und
  * Server (Reservierungen) dieselben Meldungen verwenden.
  */
-export { orderErrorMessage } from "@/lib/payments/errors";
+export { orderErrorMessage };
 
 
 /** Bestellung anlegen – Validierung und Kapazitätsprüfung passieren atomar in der Datenbank. */
