@@ -30,6 +30,12 @@ function randomKey(): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+function storageKeyFor(signature: string): string {
+  let hash = 0;
+  for (let i = 0; i < signature.length; i += 1) hash = (hash * 31 + signature.charCodeAt(i)) | 0;
+  return `${CHECKOUT_KEY_PREFIX}${hash >>> 0}`;
+}
+
 /**
  * Liefert je Checkout-Snapshot denselben kryptografisch zufälligen Schlüssel.
  * Reload/Retry mit identischem Snapshot ⇒ gleicher Key ⇒ gleiche Reservierung.
@@ -38,9 +44,7 @@ function randomKey(): string {
 export function checkoutKeyFor(snapshot: unknown): string {
   const signature = checkoutSnapshotSignature(snapshot);
   if (typeof sessionStorage === "undefined") return randomKey();
-  let hash = 0;
-  for (let i = 0; i < signature.length; i += 1) hash = (hash * 31 + signature.charCodeAt(i)) | 0;
-  const storageKey = `${CHECKOUT_KEY_PREFIX}${hash >>> 0}`;
+  const storageKey = storageKeyFor(signature);
   try {
     const cached = sessionStorage.getItem(storageKey);
     if (cached) {
@@ -55,6 +59,21 @@ export function checkoutKeyFor(snapshot: unknown): string {
   }
 }
 
+/**
+ * Ersetzt den gespeicherten Key desselben Snapshots durch einen neuen
+ * Zufallsschlüssel (ohne Personenbezug). Reload nutzt danach den neuen Key.
+ */
+export function rotateCheckoutKey(snapshot: unknown): string {
+  const signature = checkoutSnapshotSignature(snapshot);
+  const key = randomKey();
+  if (typeof sessionStorage === "undefined") return key;
+  try {
+    sessionStorage.setItem(storageKeyFor(signature), JSON.stringify({ signature, key }));
+  } catch {
+    /* sessionStorage nicht verfügbar – Key gilt nur für diesen Versuch. */
+  }
+  return key;
+}
 
 export async function fetchPaymentConfig(): Promise<PaymentConfig> {
   try {
@@ -70,20 +89,38 @@ export async function fetchPaymentConfig(): Promise<PaymentConfig> {
   }
 }
 
-export async function createPaymentIntent(input: CreateIntentInput): Promise<CreateIntentResponse> {
+type IntentSnapshot = Omit<CreateIntentInput, "checkoutKey">;
+
+async function postIntent(input: CreateIntentInput) {
   const res = await fetch("/api/public/payments/create-intent", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(input),
   });
   const body = (await res.json().catch(() => null)) as
-    | (CreateIntentResponse & { error?: string })
+    | (CreateIntentResponse & { error?: string; code?: string })
     | null;
+  return { res, body };
+}
+
+/**
+ * Startet die Zahlung für einen Checkout-Snapshot. Der Idempotenzschlüssel
+ * wird lokal ermittelt; bei `CHECKOUT_KEY_STALE` genau einmal rotiert.
+ */
+export async function createPaymentIntent(snapshot: IntentSnapshot): Promise<CreateIntentResponse> {
+  let attempt = await postIntent({ ...snapshot, checkoutKey: checkoutKeyFor(snapshot) });
+
+  if (attempt.body?.code === "CHECKOUT_KEY_STALE") {
+    attempt = await postIntent({ ...snapshot, checkoutKey: rotateCheckoutKey(snapshot) });
+  }
+
+  const { res, body } = attempt;
   if (!res.ok || !body || !("clientSecret" in body)) {
     throw new Error(body?.error ?? "Die Zahlung konnte nicht gestartet werden.");
   }
   return body;
 }
+
 
 export async function fetchReservationStatus(
   reservationId: string,
