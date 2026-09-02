@@ -308,6 +308,18 @@ function AdminConsole() {
         </div>
       </header>
 
+      {loading && (
+        <p className="mt-4 text-sm text-muted-foreground">Daten werden geladen …</p>
+      )}
+      {loadError && (
+        <p
+          role="alert"
+          className="mt-4 rounded-lg border border-destructive/60 bg-destructive/10 p-3 text-sm text-destructive"
+        >
+          {loadError}
+        </p>
+      )}
+
       <Tabs defaultValue="live" className="mt-8">
         <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-5">
           <TabsTrigger value="live" className="py-3">
