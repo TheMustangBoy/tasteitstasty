@@ -105,8 +105,8 @@ export const Route = createFileRoute("/agb")({
         <strong>9. Kein Widerrufsrecht</strong>
         <br />
         Bei schnell verderblichen Waren besteht nach § 312g Abs. 2 Nr. 2 BGB kein gesetzliches
-        Widerrufsrecht; bei individuell nach deiner Auswahl zusammengestellten Speisen gilt dies
-        zusätzlich nach § 312g Abs. 2 Nr. 1 BGB. Einzelheiten erklären wir auf der Seite{" "}
+        Widerrufsrecht. Einzelheiten erklären wir auf der Seite{" "}
+
         <Link to="/widerruf" className="text-primary hover:underline">
           Widerrufsrecht
         </Link>
