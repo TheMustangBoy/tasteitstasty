@@ -52,7 +52,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { playNotificationSound } from "@/lib/admin-sound";
 import type { CartLine } from "@/context/cart";
 
-
 export const ORDER_STATUSES = [
   "neu",
   "angenommen",
@@ -202,7 +201,6 @@ type ShopState = {
 
 const STORAGE_KEY = "tit-shop-cache-v3";
 
-
 const DEFAULT_SETTINGS: ShopSettings = {
   hours: DEFAULT_HOURS,
   maxOrdersPerSlot: DEFAULT_MAX_ORDERS_PER_SLOT,
@@ -316,7 +314,6 @@ type ShopContextValue = ShopState & {
   authLoading: boolean;
   loadError: string | null;
   refresh: () => Promise<void>;
-
 };
 
 /** Setzt den Status und schreibt den passenden Zeitstempel fort. */
@@ -378,7 +375,6 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       }, 5000);
     }
   }, []);
-
 
   const applySnapshot = useCallback((snap: ShopSnapshot) => {
     setState((prev) => ({
@@ -554,7 +550,6 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     };
   }, [state.adminAuthed, markKnown, notifyNewOrder]);
 
-
   useEffect(() => {
     if (!hydrated) return;
     try {
@@ -567,7 +562,6 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   }, [state, hydrated]);
 
   const patch = useCallback((fn: (prev: ShopState) => ShopState) => setState(fn), []);
-
 
   /**
    * Optimistisches Update wurde bereits angewendet – hier folgt der Write-Through.
@@ -641,7 +635,6 @@ export function ShopProvider({ children }: { children: ReactNode }) {
 
     // Auslastung stammt aus der datenschutzkonformen RPC (nur Zeit + Anzahl).
     const bookings: Record<string, number> = { ...state.slotBookings };
-
 
     const reindex = <T extends { sortOrder: number }>(list: T[]) =>
       list.map((entry, i) => ({ ...entry, sortOrder: i }));
@@ -1009,7 +1002,6 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       },
     };
   }, [state, patch, persist, refresh, loading, authLoading, loadError]);
-
 
   return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>;
 }

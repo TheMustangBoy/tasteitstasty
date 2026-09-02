@@ -57,13 +57,11 @@ export function playNotificationSound() {
   }
 }
 
-
 /** Sehr kurzer Tick beim Weiterrasten des Wheel Pickers (gleicher AudioContext). */
 export function playWheelTick() {
   const ctx = getCtx();
   if (!ctx) return;
   try {
-
     const now = ctx.currentTime;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();

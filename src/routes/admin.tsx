@@ -84,11 +84,7 @@ const PASSWORD_POLICY_ERROR =
   "Dieses Passwort ist zu schwach oder als leicht zu erraten bekannt. Bitte wähle ein anderes Passwort mit mindestens 8 Zeichen, Groß- und Kleinbuchstaben, Zahl und Sonderzeichen.";
 
 /** Übersetzt Auth-Fehler in sichere, hilfreiche Meldungen ohne Backend-Details offenzulegen. */
-function recoveryErrorMessage(error: {
-  code?: unknown;
-  message?: unknown;
-  status?: unknown;
-}) {
+function recoveryErrorMessage(error: { code?: unknown; message?: unknown; status?: unknown }) {
   const code = typeof error.code === "string" ? error.code.toLowerCase() : "";
   const message = typeof error.message === "string" ? error.message.toLowerCase() : "";
 
@@ -331,7 +327,6 @@ function ResetPasswordForm({ onDone }: { onDone: () => void }) {
   );
 }
 
-
 function AdminLogin() {
   const { login } = useShop();
   const [email, setEmail] = useState("");
@@ -482,7 +477,6 @@ function AdminLogin() {
     </div>
   );
 }
-
 
 function AdminConsole() {
   const {
