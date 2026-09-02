@@ -324,71 +324,82 @@ export function ProductEditor({
                 {draft.options.map((v, i) => (
                   <div
                     key={v.id}
-                    className="grid grid-cols-[minmax(0,1fr)_110px_auto_auto_auto_auto] items-center gap-2"
+                    className="flex flex-col gap-3 rounded-lg border border-border bg-secondary/20 p-3 md:grid md:grid-cols-[minmax(0,1fr)_110px_auto_auto_auto_auto] md:items-center md:gap-2 md:bg-transparent md:p-0 md:rounded-none"
                   >
-                    <Input
-                      value={v.name}
-                      placeholder="z. B. Menü mit Pommes"
-                      onChange={(e) =>
-                        set({
-                          options: draft.options.map((x, xi) =>
-                            xi === i ? { ...x, name: e.target.value } : x,
-                          ),
-                        })
-                      }
-                      className="h-11"
-                    />
-                    <Input
-                      type="number"
-                      step="0.5"
-                      value={v.priceDelta}
-                      onChange={(e) =>
-                        set({
-                          options: draft.options.map((x, xi) =>
-                            xi === i ? { ...x, priceDelta: Number(e.target.value) || 0 } : x,
-                          ),
-                        })
-                      }
-                      className="h-11"
-                    />
-                    <Switch
-                      checked={v.active !== false}
-                      aria-label="Auswahl aktiv"
-                      onCheckedChange={(c) =>
-                        set({
-                          options: draft.options.map((x, xi) =>
-                            xi === i ? { ...x, active: c } : x,
-                          ),
-                        })
-                      }
-                    />
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-11 w-11"
-                      aria-label="Auswahl nach oben"
-                      disabled={i === 0}
-                      onClick={() => set({ options: moveOption(draft.options, i, -1) })}
-                    >
-                      <ArrowUp className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-11 w-11"
-                      aria-label="Auswahl nach unten"
-                      disabled={i === draft.options.length - 1}
-                      onClick={() => set({ options: moveOption(draft.options, i, 1) })}
-                    >
-                      <ArrowDown className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="h-11 text-destructive"
-                      onClick={() => set({ options: draft.options.filter((_, xi) => xi !== i) })}
-                    >
-                      Entfernen
-                    </Button>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground md:hidden">Bezeichnung</span>
+                      <Input
+                        value={v.name}
+                        placeholder="z. B. Menü mit Pommes"
+                        onChange={(e) =>
+                          set({
+                            options: draft.options.map((x, xi) =>
+                              xi === i ? { ...x, name: e.target.value } : x,
+                            ),
+                          })
+                        }
+                        className="h-11"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground md:hidden">Aufpreis (€)</span>
+                      <Input
+                        type="number"
+                        step="0.5"
+                        value={v.priceDelta}
+                        onChange={(e) =>
+                          set({
+                            options: draft.options.map((x, xi) =>
+                              xi === i ? { ...x, priceDelta: Number(e.target.value) || 0 } : x,
+                            ),
+                          })
+                        }
+                        className="h-11"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 md:justify-self-center">
+                      <span className="text-xs text-muted-foreground md:hidden">Aktiv</span>
+                      <Switch
+                        checked={v.active !== false}
+                        aria-label="Auswahl aktiv"
+                        onCheckedChange={(c) =>
+                          set({
+                            options: draft.options.map((x, xi) =>
+                              xi === i ? { ...x, active: c } : x,
+                            ),
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-2 md:contents">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-11 w-11"
+                        aria-label="Auswahl nach oben"
+                        disabled={i === 0}
+                        onClick={() => set({ options: moveOption(draft.options, i, -1) })}
+                      >
+                        <ArrowUp className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-11 w-11"
+                        aria-label="Auswahl nach unten"
+                        disabled={i === draft.options.length - 1}
+                        onClick={() => set({ options: moveOption(draft.options, i, 1) })}
+                      >
+                        <ArrowDown className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="h-11 text-destructive"
+                        onClick={() => set({ options: draft.options.filter((_, xi) => xi !== i) })}
+                      >
+                        Entfernen
+                      </Button>
+                    </div>
                   </div>
                 ))}
                 {draft.options.length === 0 && (
