@@ -45,7 +45,10 @@ export const Route = createFileRoute("/checkout")({
 function CheckoutPage() {
   const navigate = useNavigate();
   const { lines, total, placeOrder } = useCart();
-  const { settings, bookings, addOrder, orderableProducts } = useShop();
+  const { settings, bookings, addOrder, orderableProducts, refresh } = useShop();
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
   const [now, setNow] = useState<Date | null>(null);
 
   // Slots erst im Browser berechnen, damit SSR und Client identisch starten.
