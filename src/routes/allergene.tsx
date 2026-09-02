@@ -28,7 +28,7 @@ function AllergenePage() {
   return (
     <PageShell
       title="Allergene"
-      intro="Übersicht der allergenen Zutaten je Produkt. Die Angaben werden zentral gepflegt und vor Vertragsschluss bereitgestellt."
+      intro="Hier findest du die bestätigten Allergenangaben je Produkt. Einzelne Bestandteile sind ausdrücklich als noch in Prüfung markiert – frage in diesen Fällen bitte vor der Bestellung beim Personal nach."
     >
       {CATEGORIES.map((category) => {
         const items = MENU.filter((item) => item.category === category.id);
@@ -49,7 +49,8 @@ function AllergenePage() {
       })}
 
       <section>
-        <h2 className="text-xl font-semibold">Gesetzliche Allergengruppen (Ausfüllhilfe)</h2>
+        <h2 className="text-xl font-semibold">Legende der Allergengruppen</h2>
+
         <ul className="mt-3 grid gap-1 text-sm text-muted-foreground sm:grid-cols-2">
           {ALLERGEN_GROUPS.map((group) => (
             <li key={group}>{group}</li>
