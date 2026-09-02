@@ -100,8 +100,6 @@ function Index() {
                   </span>
                 ))}
               </dd>
-
-
             </div>
             <div className="rounded-2xl border border-border bg-card/80 p-5">
               <dt className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-primary">
