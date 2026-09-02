@@ -3,10 +3,11 @@ import { PageShell } from "@/components/shop/page-shell";
 import { LEGAL } from "@/data/legal";
 
 /**
- * INTERNER HINWEIS: Begründung bewusst nur über § 312g Abs. 2 Nr. 2 BGB
- * (schnell verderbliche Waren) und ergänzend Nr. 1 (individuell konfigurierte
- * Speisen). Nr. 9 wird nicht verwendet, da der Shop keine Lieferung anbietet.
+ * INTERNER HINWEIS: Begründung bewusst ausschließlich über § 312g Abs. 2 Nr. 2 BGB
+ * (schnell verderbliche Waren). Nr. 1 wird nicht herangezogen. Nr. 9 wird nicht
+ * verwendet, da der Shop keine Lieferung anbietet.
  */
+
 export const Route = createFileRoute("/widerruf")({
   head: () => ({
     meta: [
