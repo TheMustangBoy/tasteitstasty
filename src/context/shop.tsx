@@ -188,12 +188,16 @@ type ShopState = {
   settings: ShopSettings;
   catalog: Catalog;
   productRows: ProductRecord[];
+  /** Vollständige Bestellungen – nur im Admin-Kontext befüllt, nie persistiert. */
   orders: ShopOrder[];
+  /** Slot-Auslastung ohne Kundendaten (Abholzeit → Anzahl). */
+  slotBookings: Record<string, number>;
   adminAuthed: boolean;
   soundOn: boolean;
 };
 
-const STORAGE_KEY = "tit-shop-state-v2";
+const STORAGE_KEY = "tit-shop-cache-v3";
+
 
 const DEFAULT_SETTINGS: ShopSettings = {
   hours: DEFAULT_HOURS,
