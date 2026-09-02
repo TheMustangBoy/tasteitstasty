@@ -73,6 +73,11 @@ function OrderPage() {
             ? "Deine Bestellung ist beim Truck eingegangen. Die Bestellnummer nennen wir dir per Bestätigung am Truck."
             : "Es wurde keine Zahlung gebucht. Du kannst die Bestellung erneut starten."}
         </p>
+        {redirectState.paid && redirectState.reference && (
+          <p className="mt-5 font-display text-4xl">{redirectState.reference}</p>
+        )}
+        <p className="sr-only">
+        </p>
         <Button
           asChild
           className="mt-6 h-14 rounded-xl bg-flame px-8 font-bold uppercase text-primary-foreground"

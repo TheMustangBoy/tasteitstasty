@@ -436,7 +436,7 @@ function CheckoutPage() {
               publishableKey={paymentConfig.publishableKey}
               clientSecret={intent.clientSecret}
               amountLabel={formatPrice(total)}
-              returnUrl={`${typeof window === "undefined" ? "" : window.location.origin}/bestellung?reservation=${intent.reservationId}&token=${intent.token}`}
+              returnUrl={`${typeof window === "undefined" ? "" : window.location.origin}/bestellung?reservation=${intent.reservationId}&token=${intent.token}&ref=${intent.reference}`}
               onPaid={async () => {
                 setSubmitError(null);
                 const status = await waitForPaidReservation(intent.reservationId, intent.token);
