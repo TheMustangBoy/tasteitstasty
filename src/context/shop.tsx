@@ -121,6 +121,10 @@ export type ShopOrder = {
   timestamps?: OrderTimestamps;
   cancelReason?: CancelReason;
   cancelNote?: string;
+  /** Zahlungsanbieter: "manual" (vor Ort), "stripe" (online) oder null = Altbestand. */
+  paymentProvider?: "manual" | "stripe" | null;
+  paymentStatus?: "pay_on_pickup" | "paid" | "refunded" | null;
+  paidAt?: string | null;
 };
 
 /* -------------------------------------------------------------------------

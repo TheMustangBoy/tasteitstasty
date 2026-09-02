@@ -27,6 +27,23 @@ import {
   type ShopOrder,
 } from "@/context/shop";
 
+/** Zahlungs-Badge: online bezahlt, Zahlung bei Abholung oder Altbestand. */
+const PAYMENT_BADGE = (order: ShopOrder): { label: string; className: string } => {
+  if (order.paymentStatus === "paid")
+    return {
+      label: "Online bezahlt",
+      className: "border-emerald-500/50 bg-emerald-500/15 text-emerald-400",
+    };
+  if (order.paymentStatus === "refunded")
+    return { label: "Erstattet", className: "border-border bg-muted text-muted-foreground" };
+  if (order.paymentStatus === "pay_on_pickup")
+    return {
+      label: "Zahlung bei Abholung",
+      className: "border-primary/50 bg-primary/10 text-primary",
+    };
+  return { label: "Altbestand", className: "border-border bg-muted text-muted-foreground" };
+};
+
 const STATUS_STYLE: Record<OrderStatus, string> = {
   neu: "bg-primary/20 text-primary border-primary/50",
   angenommen: "bg-accent/15 text-accent border-accent/40",
@@ -211,8 +228,13 @@ export function OrderCard({
       </ul>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-        <span className="text-xs uppercase tracking-wide text-muted-foreground">
-          {order.payment}
+        <span className="flex flex-wrap items-center gap-2">
+          <Badge variant="outline" className={`text-[11px] ${PAYMENT_BADGE(order).className}`}>
+            {PAYMENT_BADGE(order).label}
+          </Badge>
+          <span className="text-xs uppercase tracking-wide text-muted-foreground">
+            {order.payment}
+          </span>
         </span>
         <span className="font-display text-2xl">{formatPrice(order.total)}</span>
       </div>
