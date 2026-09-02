@@ -4,6 +4,7 @@
  * Gateway-Verbindungsschlüssel, die niemals an den Browser gelangen.
  */
 import Stripe from "stripe";
+import { getPaymentsClientToken } from "./publishable-key";
 
 export type StripeEnvName = "sandbox" | "live";
 
