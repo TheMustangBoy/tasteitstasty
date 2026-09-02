@@ -42,6 +42,7 @@ import {
   saveProduct,
   saveProductOrder,
   saveSettings,
+  toOrder,
   type OrderPatch,
   type ShopSnapshot,
 } from "@/lib/repository";
