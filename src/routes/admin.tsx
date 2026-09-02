@@ -515,6 +515,27 @@ function AdminConsole() {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [dragId, setDragId] = useState<string | null>(null);
 
+  /**
+   * Wiederhergestellte Session (kein Login-Submit): Audio bei der ersten
+   * Nutzergeste freischalten, danach Listener wieder entfernen.
+   */
+  useEffect(() => {
+    if (!soundOn) return;
+    const onGesture = () => {
+      void primeAudio();
+      window.removeEventListener("pointerdown", onGesture);
+      window.removeEventListener("keydown", onGesture);
+    };
+    window.addEventListener("pointerdown", onGesture);
+    window.addEventListener("keydown", onGesture);
+    return () => {
+      window.removeEventListener("pointerdown", onGesture);
+      window.removeEventListener("keydown", onGesture);
+    };
+  }, [soundOn]);
+
+
+
   /** Drag & Drop: gezogenes Produkt vor dem Ziel innerhalb der Kategorie einsortieren. */
   const dropOn = (categoryId: string, targetId: string) => {
     if (!dragId || dragId === targetId) return setDragId(null);
