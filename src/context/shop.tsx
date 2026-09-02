@@ -362,7 +362,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       applySnapshot(snap);
       setState((prev) => ({ ...prev, slotBookings: slots }));
       setLoadError(null);
-      const admin = await checkIsAdmin();
+      // Adminstatus nur prüfen, wenn überhaupt eine Session existiert.
+      const { data: sessionData } = await supabase.auth.getSession();
+      const admin = sessionData.session ? await checkIsAdmin() : false;
       setState((prev) => ({ ...prev, adminAuthed: admin }));
       if (admin) {
         const orders = await fetchAdminOrders();
@@ -379,6 +381,12 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   }, [applySnapshot]);
 
   useEffect(() => {
+    // Altlast entfernen: v2 enthielt Bestellungen, Kundendaten und adminAuthed.
+    try {
+      localStorage.removeItem("tit-shop-state-v2");
+    } catch {
+      /* ignore */
+    }
     // LocalStorage nur als kurzlebiger Cache für öffentliche Stammdaten.
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -394,20 +402,33 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       /* ignore */
     }
     setHydrated(true);
-    void refresh();
-  }, [refresh]);
+  }, []);
 
   useEffect(() => {
+    let active = true;
+    // Erst die gespeicherte Session auflösen, dann laden – vermeidet Race-Conditions,
+    // bei denen ein Admin nach Reload kurzzeitig als Gast behandelt wird.
+    void (async () => {
+      await supabase.auth.getSession();
+      if (active) await refresh();
+    })();
+
     const { data } = supabase.auth.onAuthStateChange((event) => {
+      // INITIAL_SESSION wird vom obigen getSession()-Pfad abgedeckt.
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
       if (event === "SIGNED_OUT") {
         setState((prev) => ({ ...prev, adminAuthed: false, orders: [] }));
+        setAuthLoading(false);
         return;
       }
       void refresh();
     });
-    return () => data.subscription.unsubscribe();
+    return () => {
+      active = false;
+      data.subscription.unsubscribe();
+    };
   }, [refresh]);
+
 
   useEffect(() => {
     if (!hydrated) return;
