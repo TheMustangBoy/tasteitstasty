@@ -22,6 +22,7 @@ import { Route as StandortRouteImport } from './routes/standort'
 import { Route as ApiPublicOrderPushRouteImport } from './routes/api/public/order-push'
 import { Route as ApiPublicPaymentsConfigRouteImport } from './routes/api/public/payments/config'
 import { Route as ApiPublicPaymentsCreateIntentRouteImport } from './routes/api/public/payments/create-intent'
+import { Route as ApiPublicPaymentsStatusRouteImport } from './routes/api/public/payments/status'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -89,6 +90,11 @@ const ApiPublicPaymentsCreateIntentRoute =
     path: '/api/public/payments/create-intent',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicPaymentsStatusRoute = ApiPublicPaymentsStatusRouteImport.update({
+  id: '/api/public/payments/status',
+  path: '/api/public/payments/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -104,6 +110,7 @@ export interface FileRoutesByFullPath {
   '/api/public/order-push': typeof ApiPublicOrderPushRoute
   '/api/public/payments/config': typeof ApiPublicPaymentsConfigRoute
   '/api/public/payments/create-intent': typeof ApiPublicPaymentsCreateIntentRoute
+  '/api/public/payments/status': typeof ApiPublicPaymentsStatusRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -119,6 +126,7 @@ export interface FileRoutesByTo {
   '/api/public/order-push': typeof ApiPublicOrderPushRoute
   '/api/public/payments/config': typeof ApiPublicPaymentsConfigRoute
   '/api/public/payments/create-intent': typeof ApiPublicPaymentsCreateIntentRoute
+  '/api/public/payments/status': typeof ApiPublicPaymentsStatusRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -135,6 +143,7 @@ export interface FileRoutesById {
   '/api/public/order-push': typeof ApiPublicOrderPushRoute
   '/api/public/payments/config': typeof ApiPublicPaymentsConfigRoute
   '/api/public/payments/create-intent': typeof ApiPublicPaymentsCreateIntentRoute
+  '/api/public/payments/status': typeof ApiPublicPaymentsStatusRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -152,6 +161,7 @@ export interface FileRouteTypes {
     | '/api/public/order-push'
     | '/api/public/payments/config'
     | '/api/public/payments/create-intent'
+    | '/api/public/payments/status'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -167,6 +177,7 @@ export interface FileRouteTypes {
     | '/api/public/order-push'
     | '/api/public/payments/config'
     | '/api/public/payments/create-intent'
+    | '/api/public/payments/status'
   id:
     | '__root__'
     | '/'
@@ -182,6 +193,7 @@ export interface FileRouteTypes {
     | '/api/public/order-push'
     | '/api/public/payments/config'
     | '/api/public/payments/create-intent'
+    | '/api/public/payments/status'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -198,6 +210,7 @@ export interface RootRouteChildren {
   ApiPublicOrderPushRoute: typeof ApiPublicOrderPushRoute
   ApiPublicPaymentsConfigRoute: typeof ApiPublicPaymentsConfigRoute
   ApiPublicPaymentsCreateIntentRoute: typeof ApiPublicPaymentsCreateIntentRoute
+  ApiPublicPaymentsStatusRoute: typeof ApiPublicPaymentsStatusRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -293,6 +306,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPaymentsCreateIntentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/payments/status': {
+      id: '/api/public/payments/status'
+      path: '/api/public/payments/status'
+      fullPath: '/api/public/payments/status'
+      preLoaderRoute: typeof ApiPublicPaymentsStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -310,6 +330,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicOrderPushRoute: ApiPublicOrderPushRoute,
   ApiPublicPaymentsConfigRoute: ApiPublicPaymentsConfigRoute,
   ApiPublicPaymentsCreateIntentRoute: ApiPublicPaymentsCreateIntentRoute,
+  ApiPublicPaymentsStatusRoute: ApiPublicPaymentsStatusRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
