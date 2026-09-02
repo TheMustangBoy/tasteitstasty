@@ -21,6 +21,7 @@ import { Route as SpeisekarteRouteImport } from './routes/speisekarte'
 import { Route as StandortRouteImport } from './routes/standort'
 import { Route as ApiPublicOrderPushRouteImport } from './routes/api/public/order-push'
 import { Route as ApiPublicPaymentsConfigRouteImport } from './routes/api/public/payments/config'
+import { Route as ApiPublicPaymentsCreateIntentRouteImport } from './routes/api/public/payments/create-intent'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -82,6 +83,12 @@ const ApiPublicPaymentsConfigRoute = ApiPublicPaymentsConfigRouteImport.update({
   path: '/api/public/payments/config',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicPaymentsCreateIntentRoute =
+  ApiPublicPaymentsCreateIntentRouteImport.update({
+    id: '/api/public/payments/create-intent',
+    path: '/api/public/payments/create-intent',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -96,6 +103,7 @@ export interface FileRoutesByFullPath {
   '/standort': typeof StandortRoute
   '/api/public/order-push': typeof ApiPublicOrderPushRoute
   '/api/public/payments/config': typeof ApiPublicPaymentsConfigRoute
+  '/api/public/payments/create-intent': typeof ApiPublicPaymentsCreateIntentRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -110,6 +118,7 @@ export interface FileRoutesByTo {
   '/standort': typeof StandortRoute
   '/api/public/order-push': typeof ApiPublicOrderPushRoute
   '/api/public/payments/config': typeof ApiPublicPaymentsConfigRoute
+  '/api/public/payments/create-intent': typeof ApiPublicPaymentsCreateIntentRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -125,6 +134,7 @@ export interface FileRoutesById {
   '/standort': typeof StandortRoute
   '/api/public/order-push': typeof ApiPublicOrderPushRoute
   '/api/public/payments/config': typeof ApiPublicPaymentsConfigRoute
+  '/api/public/payments/create-intent': typeof ApiPublicPaymentsCreateIntentRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -141,6 +151,7 @@ export interface FileRouteTypes {
     | '/standort'
     | '/api/public/order-push'
     | '/api/public/payments/config'
+    | '/api/public/payments/create-intent'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -155,6 +166,7 @@ export interface FileRouteTypes {
     | '/standort'
     | '/api/public/order-push'
     | '/api/public/payments/config'
+    | '/api/public/payments/create-intent'
   id:
     | '__root__'
     | '/'
@@ -169,6 +181,7 @@ export interface FileRouteTypes {
     | '/standort'
     | '/api/public/order-push'
     | '/api/public/payments/config'
+    | '/api/public/payments/create-intent'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -184,6 +197,7 @@ export interface RootRouteChildren {
   StandortRoute: typeof StandortRoute
   ApiPublicOrderPushRoute: typeof ApiPublicOrderPushRoute
   ApiPublicPaymentsConfigRoute: typeof ApiPublicPaymentsConfigRoute
+  ApiPublicPaymentsCreateIntentRoute: typeof ApiPublicPaymentsCreateIntentRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -272,6 +286,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPaymentsConfigRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/payments/create-intent': {
+      id: '/api/public/payments/create-intent'
+      path: '/api/public/payments/create-intent'
+      fullPath: '/api/public/payments/create-intent'
+      preLoaderRoute: typeof ApiPublicPaymentsCreateIntentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -288,6 +309,7 @@ const rootRouteChildren: RootRouteChildren = {
   StandortRoute: StandortRoute,
   ApiPublicOrderPushRoute: ApiPublicOrderPushRoute,
   ApiPublicPaymentsConfigRoute: ApiPublicPaymentsConfigRoute,
+  ApiPublicPaymentsCreateIntentRoute: ApiPublicPaymentsCreateIntentRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
