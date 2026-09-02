@@ -33,6 +33,7 @@ type Props = {
 /** Stripe Payment Element inkl. Apple Pay / Google Pay (geräteabhängig). */
 export function StripePaymentSection(props: Props) {
   const stripePromise = useMemo(() => getStripe(props.publishableKey), [props.publishableKey]);
+  const isTestMode = props.publishableKey.startsWith("pk_test_");
   return (
     <Elements
       stripe={stripePromise}
@@ -41,7 +42,7 @@ export function StripePaymentSection(props: Props) {
         appearance: { theme: "night", variables: { colorPrimary: "#f59e0b", borderRadius: "12px" } },
       }}
     >
-      <PaymentForm {...props} />
+      <PaymentForm {...props} isTestMode={isTestMode} />
     </Elements>
   );
 }
