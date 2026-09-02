@@ -81,13 +81,107 @@ export const Route = createFileRoute("/admin")({
 
 function AdminPage() {
   const { adminAuthed, authLoading } = useShop();
+  const [recovering, setRecovering] = useState(
+    () => typeof window !== "undefined" && window.location.hash.includes("type=recovery"),
+  );
+
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") setRecovering(true);
+    });
+    return () => data.subscription.unsubscribe();
+  }, []);
+
   if (authLoading)
     return (
       <div className="mx-auto max-w-md px-4 py-24 text-center text-sm text-muted-foreground sm:px-6">
         Zugang wird geprüft …
       </div>
     );
+  if (recovering) return <ResetPasswordForm onDone={() => setRecovering(false)} />;
   return adminAuthed ? <AdminConsole /> : <AdminLogin />;
+}
+
+/** Formular zum Setzen eines neuen Passworts nach einem Recovery-Link. */
+function ResetPasswordForm({ onDone }: { onDone: () => void }) {
+  const [pw1, setPw1] = useState("");
+  const [pw2, setPw2] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  return (
+    <div className="mx-auto max-w-md px-4 py-16 sm:px-6">
+      <div className="rounded-3xl border border-border bg-card p-6 sm:p-8">
+        <ShieldCheck className="h-10 w-10 text-primary" />
+        <h1 className="mt-4 text-3xl">Neues Passwort setzen</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Bitte vergeben Sie ein neues Passwort für Ihr Admin-Konto.
+        </p>
+        <form
+          className="mt-6 space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (busy) return;
+            if (pw1.length < 8) {
+              setError("Das Passwort muss mindestens 8 Zeichen lang sein.");
+              return;
+            }
+            if (pw1 !== pw2) {
+              setError("Die Passwörter stimmen nicht überein.");
+              return;
+            }
+            setBusy(true);
+            setError(null);
+            void (async () => {
+              const { error: err } = await supabase.auth.updateUser({ password: pw1 });
+              if (err) {
+                setError("Das Passwort konnte nicht gespeichert werden. Bitte erneut versuchen.");
+                setBusy(false);
+                return;
+              }
+              toast.success("Passwort wurde aktualisiert.");
+              onDone();
+            })();
+          }}
+        >
+          <div>
+            <Label htmlFor="pw-new">Neues Passwort</Label>
+            <Input
+              id="pw-new"
+              type="password"
+              required
+              minLength={8}
+              value={pw1}
+              onChange={(e) => setPw1(e.target.value)}
+              autoComplete="new-password"
+              className="mt-2 h-12"
+            />
+          </div>
+          <div>
+            <Label htmlFor="pw-repeat">Passwort wiederholen</Label>
+            <Input
+              id="pw-repeat"
+              type="password"
+              required
+              minLength={8}
+              value={pw2}
+              onChange={(e) => setPw2(e.target.value)}
+              autoComplete="new-password"
+              className="mt-2 h-12"
+            />
+          </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <Button
+            type="submit"
+            disabled={busy}
+            className="h-13 w-full rounded-xl bg-flame py-4 font-bold uppercase tracking-wide text-primary-foreground"
+          >
+            {busy ? "Speichern läuft …" : "Passwort speichern"}
+          </Button>
+        </form>
+      </div>
+    </div>
+  );
 }
 
 function AdminLogin() {
