@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   BarChart3,
@@ -45,6 +45,7 @@ import {
 import { OrderCard } from "@/components/admin/order-card";
 import { ProductEditor } from "@/components/admin/product-editor";
 import { CatalogManager } from "@/components/admin/catalog-manager";
+import { supabase } from "@/integrations/supabase/client";
 import { formatPrice, WEEKDAYS } from "@/data/menu";
 import {
   CLOSED_STATUSES,
@@ -80,13 +81,107 @@ export const Route = createFileRoute("/admin")({
 
 function AdminPage() {
   const { adminAuthed, authLoading } = useShop();
+  const [recovering, setRecovering] = useState(
+    () => typeof window !== "undefined" && window.location.hash.includes("type=recovery"),
+  );
+
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") setRecovering(true);
+    });
+    return () => data.subscription.unsubscribe();
+  }, []);
+
   if (authLoading)
     return (
       <div className="mx-auto max-w-md px-4 py-24 text-center text-sm text-muted-foreground sm:px-6">
         Zugang wird geprüft …
       </div>
     );
+  if (recovering) return <ResetPasswordForm onDone={() => setRecovering(false)} />;
   return adminAuthed ? <AdminConsole /> : <AdminLogin />;
+}
+
+/** Formular zum Setzen eines neuen Passworts nach einem Recovery-Link. */
+function ResetPasswordForm({ onDone }: { onDone: () => void }) {
+  const [pw1, setPw1] = useState("");
+  const [pw2, setPw2] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  return (
+    <div className="mx-auto max-w-md px-4 py-16 sm:px-6">
+      <div className="rounded-3xl border border-border bg-card p-6 sm:p-8">
+        <ShieldCheck className="h-10 w-10 text-primary" />
+        <h1 className="mt-4 text-3xl">Neues Passwort setzen</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Bitte vergeben Sie ein neues Passwort für Ihr Admin-Konto.
+        </p>
+        <form
+          className="mt-6 space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (busy) return;
+            if (pw1.length < 8) {
+              setError("Das Passwort muss mindestens 8 Zeichen lang sein.");
+              return;
+            }
+            if (pw1 !== pw2) {
+              setError("Die Passwörter stimmen nicht überein.");
+              return;
+            }
+            setBusy(true);
+            setError(null);
+            void (async () => {
+              const { error: err } = await supabase.auth.updateUser({ password: pw1 });
+              if (err) {
+                setError("Das Passwort konnte nicht gespeichert werden. Bitte erneut versuchen.");
+                setBusy(false);
+                return;
+              }
+              toast.success("Passwort wurde aktualisiert.");
+              onDone();
+            })();
+          }}
+        >
+          <div>
+            <Label htmlFor="pw-new">Neues Passwort</Label>
+            <Input
+              id="pw-new"
+              type="password"
+              required
+              minLength={8}
+              value={pw1}
+              onChange={(e) => setPw1(e.target.value)}
+              autoComplete="new-password"
+              className="mt-2 h-12"
+            />
+          </div>
+          <div>
+            <Label htmlFor="pw-repeat">Passwort wiederholen</Label>
+            <Input
+              id="pw-repeat"
+              type="password"
+              required
+              minLength={8}
+              value={pw2}
+              onChange={(e) => setPw2(e.target.value)}
+              autoComplete="new-password"
+              className="mt-2 h-12"
+            />
+          </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <Button
+            type="submit"
+            disabled={busy}
+            className="h-13 w-full rounded-xl bg-flame py-4 font-bold uppercase tracking-wide text-primary-foreground"
+          >
+            {busy ? "Speichern läuft …" : "Passwort speichern"}
+          </Button>
+        </form>
+      </div>
+    </div>
+  );
 }
 
 function AdminLogin() {
@@ -95,6 +190,78 @@ function AdminLogin() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [resetMode, setResetMode] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetBusy, setResetBusy] = useState(false);
+
+  const requestReset = () => {
+    if (resetBusy || !email) return;
+    setResetBusy(true);
+    void (async () => {
+      await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/admin`,
+      });
+      // Generische Rückmeldung – unabhängig davon, ob das Konto existiert.
+      setResetSent(true);
+      setResetBusy(false);
+    })();
+  };
+
+  if (resetMode) {
+    return (
+      <div className="mx-auto max-w-md px-4 py-16 sm:px-6">
+        <div className="rounded-3xl border border-border bg-card p-6 sm:p-8">
+          <ShieldCheck className="h-10 w-10 text-primary" />
+          <h1 className="mt-4 text-3xl">Passwort zurücksetzen</h1>
+          {resetSent ? (
+            <p className="mt-4 text-sm text-muted-foreground">
+              Wenn ein Konto mit dieser E-Mail-Adresse existiert, wurde eine E-Mail mit einem Link
+              zum Zurücksetzen des Passworts versendet.
+            </p>
+          ) : (
+            <form
+              className="mt-6 space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                requestReset();
+              }}
+            >
+              <div>
+                <Label htmlFor="reset-email">E-Mail</Label>
+                <Input
+                  id="reset-email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                  className="mt-2 h-12"
+                  placeholder="admin@example.com"
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={resetBusy}
+                className="h-13 w-full rounded-xl bg-flame py-4 font-bold uppercase tracking-wide text-primary-foreground"
+              >
+                {resetBusy ? "Wird gesendet …" : "Link zum Zurücksetzen senden"}
+              </Button>
+            </form>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              setResetMode(false);
+              setResetSent(false);
+            }}
+            className="mt-4 text-sm text-muted-foreground underline underline-offset-4 hover:text-primary"
+          >
+            Zurück zur Anmeldung
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-md px-4 py-16 sm:px-6">
@@ -151,6 +318,13 @@ function AdminLogin() {
           >
             {busy ? "Anmeldung läuft …" : "Anmelden"}
           </Button>
+          <button
+            type="button"
+            onClick={() => setResetMode(true)}
+            className="w-full text-center text-sm text-muted-foreground underline underline-offset-4 hover:text-primary"
+          >
+            Passwort vergessen?
+          </button>
         </form>
       </div>
     </div>
@@ -819,9 +993,112 @@ function AdminConsole() {
               bleiben im 5-Minuten-Takt.
             </p>
           </section>
+
+          <SecuritySection />
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+/** Eingeloggte Admins können hier ihr eigenes Passwort ändern. */
+function SecuritySection() {
+  const [current, setCurrent] = useState("");
+  const [pw1, setPw1] = useState("");
+  const [pw2, setPw2] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  return (
+    <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+      <h2 className="flex items-center gap-2 text-xl">
+        <ShieldCheck className="h-5 w-5 text-primary" /> Sicherheit
+      </h2>
+      <p className="mt-1 text-sm text-muted-foreground">Eigenes Admin-Passwort ändern.</p>
+      <form
+        className="mt-4 grid gap-4 sm:grid-cols-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (busy) return;
+          if (pw1.length < 8) {
+            setError("Das neue Passwort muss mindestens 8 Zeichen lang sein.");
+            return;
+          }
+          if (pw1 !== pw2) {
+            setError("Die neuen Passwörter stimmen nicht überein.");
+            return;
+          }
+          setBusy(true);
+          setError(null);
+          void (async () => {
+            const { error: err } = await supabase.auth.updateUser({
+              password: pw1,
+              current_password: current,
+            });
+            setBusy(false);
+            if (err) {
+              setError(
+                "Passwort konnte nicht geändert werden. Bitte aktuelles Passwort prüfen und erneut versuchen.",
+              );
+              return;
+            }
+            toast.success("Passwort wurde geändert.");
+            setCurrent("");
+            setPw1("");
+            setPw2("");
+          })();
+        }}
+      >
+        <div>
+          <Label htmlFor="sec-current">Aktuelles Passwort</Label>
+          <Input
+            id="sec-current"
+            type="password"
+            required
+            value={current}
+            onChange={(e) => setCurrent(e.target.value)}
+            autoComplete="current-password"
+            className="mt-2 h-12"
+          />
+        </div>
+        <div>
+          <Label htmlFor="sec-new">Neues Passwort</Label>
+          <Input
+            id="sec-new"
+            type="password"
+            required
+            minLength={8}
+            value={pw1}
+            onChange={(e) => setPw1(e.target.value)}
+            autoComplete="new-password"
+            className="mt-2 h-12"
+          />
+        </div>
+        <div>
+          <Label htmlFor="sec-repeat">Neues Passwort wiederholen</Label>
+          <Input
+            id="sec-repeat"
+            type="password"
+            required
+            minLength={8}
+            value={pw2}
+            onChange={(e) => setPw2(e.target.value)}
+            autoComplete="new-password"
+            className="mt-2 h-12"
+          />
+        </div>
+        <div className="sm:col-span-3">
+          {error && <p className="mb-3 text-sm text-destructive">{error}</p>}
+          <Button
+            type="submit"
+            disabled={busy}
+            className="h-12 rounded-xl bg-flame px-6 font-bold uppercase tracking-wide text-primary-foreground"
+          >
+            {busy ? "Speichern läuft …" : "Passwort ändern"}
+          </Button>
+        </div>
+      </form>
+    </section>
   );
 }
 

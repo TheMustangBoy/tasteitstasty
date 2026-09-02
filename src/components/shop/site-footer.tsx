@@ -48,11 +48,6 @@ export function SiteFooter() {
                 AGB
               </Link>
             </li>
-            <li>
-              <Link to="/admin" className="hover:text-primary">
-                Adminbereich
-              </Link>
-            </li>
           </ul>
         </div>
       </div>
