@@ -144,22 +144,29 @@ function OrderPage() {
 
         <Separator className="my-6" />
         <ul className="space-y-3 text-sm">
-          {lastOrder.lines.map((line) => (
-            <li key={line.lineId} className="grid grid-cols-[minmax(0,1fr)_auto] gap-3">
-              <span className="min-w-0">
-                <span className="block truncate font-semibold">
-                  {line.quantity}× {line.name}
-                </span>
-                {line.bacon && <span className="block text-xs text-primary">+ Bacon</span>}
-                {line.removed.length > 0 && (
-                  <span className="block text-xs text-muted-foreground">
-                    ohne {line.removed.join(", ")}
+          {(Array.isArray(lastOrder.lines) ? lastOrder.lines : []).map((line, index) => {
+            const removed = Array.isArray(line?.removed) ? line.removed : [];
+            const safeLine = { ...line, removed, quantity: line?.quantity ?? 1 };
+            return (
+              <li
+                key={line?.lineId ?? index}
+                className="grid grid-cols-[minmax(0,1fr)_auto] gap-3"
+              >
+                <span className="min-w-0">
+                  <span className="block truncate font-semibold">
+                    {safeLine.quantity}× {line?.name ?? "Artikel"}
                   </span>
-                )}
-              </span>
-              <span className="shrink-0">{formatPrice(linePrice(line))}</span>
-            </li>
-          ))}
+                  {line?.bacon && <span className="block text-xs text-primary">+ Bacon</span>}
+                  {removed.length > 0 && (
+                    <span className="block text-xs text-muted-foreground">
+                      ohne {removed.join(", ")}
+                    </span>
+                  )}
+                </span>
+                <span className="shrink-0">{formatPrice(linePrice(safeLine))}</span>
+              </li>
+            );
+          })}
         </ul>
         <Separator className="my-6" />
         <div className="flex items-center justify-between">
