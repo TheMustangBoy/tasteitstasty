@@ -56,43 +56,19 @@ function PaymentForm({ returnUrl, amountLabel, onPaid, isTestMode }: PaymentForm
   const [error, setError] = useState<string | null>(null);
   // Apple Pay / Google Pay / Link – nur anzeigen, wenn der Browser sie anbietet.
   const [expressAvailable, setExpressAvailable] = useState(false);
-  // Diagnose-Status für Testmodus (keine personenbezogenen / gerätespezifischen Daten).
-  const [availableMethods, setAvailableMethods] = useState<
-    { applePay: boolean; googlePay: boolean } | null
-  >(null);
-
-  const isTopLevel = useMemo(() => {
-    if (typeof window === "undefined") return false;
-    try {
-      return window.top === window.self;
-    } catch {
-      return false;
-    }
-  }, []);
 
   return (
     <div className="mt-4 space-y-4 rounded-2xl border border-border bg-card p-4">
-      {isTestMode && (
-        <p className="rounded-lg border border-dashed border-yellow-500/40 bg-yellow-500/10 p-2 text-[11px] leading-relaxed text-yellow-400">
-          Diagnose: Apple Pay: {availableMethods?.["applePay"] ? "verfügbar" : "nicht verfügbar"}
-          {" · "}Google Pay: {availableMethods?.["googlePay"] ? "verfügbar" : "nicht verfügbar"}
-          {" · "}Kontext: {isTopLevel ? "Top-Level" : "iframe"}
-        </p>
-      )}
       <div className={expressAvailable ? "space-y-3" : "hidden"}>
         <ExpressCheckoutElement
           options={{
             buttonTheme: { applePay: "black", googlePay: "black" },
             ...(isTestMode && {
-              paymentMethods: { applePay: "always", googlePay: "always" },
+              paymentMethods: { applePay: "always", googlePay: "auto" },
             }),
           }}
           onReady={(event) => {
             const methods = (event.availablePaymentMethods ?? {}) as Record<string, unknown>;
-            setAvailableMethods({
-              applePay: !!methods["applePay"],
-              googlePay: !!methods["googlePay"],
-            });
             setExpressAvailable(Object.keys(methods).length > 0);
           }}
           onConfirm={async () => {
@@ -117,6 +93,7 @@ function PaymentForm({ returnUrl, amountLabel, onPaid, isTestMode }: PaymentForm
         <p className="text-center text-xs text-muted-foreground">oder mit Karte bezahlen</p>
       </div>
       <PaymentElement options={{ layout: "tabs" }} />
+
 
       {error && (
         <p
