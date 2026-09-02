@@ -500,14 +500,14 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     const channel = supabase
       .channel("admin-orders")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "orders" }, (p) => {
-        upsert(p.new);
         const id = (p.new as { id?: string } | null)?.id;
-        // Dedup: mehrfach zugestellte INSERTs oder bereits bekannte Bestellungen
-        // (Simulation, initialer Fetch) lösen keine zweite Meldung aus.
-        if (!id || knownOrderIds.current.has(id)) return;
-        knownOrderIds.current.add(id);
-        notifyNewOrder(toOrder(p.new as Parameters<typeof toOrder>[0]));
+        // Dedup zuerst prüfen (upsert markiert die ID anschließend als bekannt):
+        // mehrfach zugestellte INSERTs oder bereits geladene Bestellungen melden nicht erneut.
+        const isNew = Boolean(id) && !knownOrderIds.current.has(id!);
+        upsert(p.new);
+        if (isNew) notifyNewOrder(toOrder(p.new as Parameters<typeof toOrder>[0]));
       })
+
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "orders" }, (p) =>
         upsert(p.new),
       )
