@@ -8,12 +8,7 @@ export const VAPID_PUBLIC_KEY =
   "BNwy8xlJRLRoq0oL3Ow3MJ2BhKS8LLlAMS4Q4kapR7U9wAAiWumgHXMndjHwi_5n037CKIGpDbsxxKsMgyTqqmY";
 
 export type PushStatus =
-  | "unsupported"
-  | "needs-install"
-  | "blocked"
-  | "inactive"
-  | "active"
-  | "loading";
+  "unsupported" | "needs-install" | "blocked" | "inactive" | "active" | "loading";
 
 export function isStandalone(): boolean {
   if (typeof window === "undefined") return false;

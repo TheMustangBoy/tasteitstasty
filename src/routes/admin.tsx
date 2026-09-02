@@ -6,7 +6,6 @@ import {
   BellRing,
   Smartphone,
   ClipboardList,
-
   Copy,
   Download,
   Layers,
@@ -1201,7 +1200,8 @@ function PushSection() {
     loading: "Status wird geprüft …",
     unsupported: "Dieses Gerät oder dieser Browser unterstützt keine Push-Benachrichtigungen.",
     "needs-install": "Auf iPhone/iPad zuerst über „Teilen → Zum Home-Bildschirm“ installieren.",
-    blocked: "Benachrichtigungen sind im Browser blockiert. Bitte in den Website-Einstellungen erlauben.",
+    blocked:
+      "Benachrichtigungen sind im Browser blockiert. Bitte in den Website-Einstellungen erlauben.",
     inactive: "Push ist auf diesem Gerät noch nicht aktiv.",
     active: "Push ist auf diesem Gerät aktiv.",
   };
@@ -1290,7 +1290,6 @@ function PushSection() {
     </section>
   );
 }
-
 
 /** Eingeloggte Admins können hier ihr eigenes Passwort ändern. */
 function SecuritySection() {
