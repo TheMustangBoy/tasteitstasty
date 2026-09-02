@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AgbRouteImport } from './routes/agb'
+import { Route as AllergeneRouteImport } from './routes/allergene'
 import { Route as BestellungRouteImport } from './routes/bestellung'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as DatenschutzRouteImport } from './routes/datenschutz'
@@ -19,6 +20,7 @@ import { Route as ImpressumRouteImport } from './routes/impressum'
 import { Route as OeffnungszeitenRouteImport } from './routes/oeffnungszeiten'
 import { Route as SpeisekarteRouteImport } from './routes/speisekarte'
 import { Route as StandortRouteImport } from './routes/standort'
+import { Route as WiderrufRouteImport } from './routes/widerruf'
 import { Route as ApiPublicOrderPushRouteImport } from './routes/api/public/order-push'
 import { Route as ApiPublicPaymentsConfigRouteImport } from './routes/api/public/payments/config'
 import { Route as ApiPublicPaymentsCreateIntentRouteImport } from './routes/api/public/payments/create-intent'
@@ -39,6 +41,11 @@ const AdminRoute = AdminRouteImport.update({
 const AgbRoute = AgbRouteImport.update({
   id: '/agb',
   path: '/agb',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AllergeneRoute = AllergeneRouteImport.update({
+  id: '/allergene',
+  path: '/allergene',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BestellungRoute = BestellungRouteImport.update({
@@ -74,6 +81,11 @@ const SpeisekarteRoute = SpeisekarteRouteImport.update({
 const StandortRoute = StandortRouteImport.update({
   id: '/standort',
   path: '/standort',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WiderrufRoute = WiderrufRouteImport.update({
+  id: '/widerruf',
+  path: '/widerruf',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicOrderPushRoute = ApiPublicOrderPushRouteImport.update({
@@ -114,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/agb': typeof AgbRoute
+  '/allergene': typeof AllergeneRoute
   '/bestellung': typeof BestellungRoute
   '/checkout': typeof CheckoutRoute
   '/datenschutz': typeof DatenschutzRoute
@@ -121,6 +134,7 @@ export interface FileRoutesByFullPath {
   '/oeffnungszeiten': typeof OeffnungszeitenRoute
   '/speisekarte': typeof SpeisekarteRoute
   '/standort': typeof StandortRoute
+  '/widerruf': typeof WiderrufRoute
   '/api/public/order-push': typeof ApiPublicOrderPushRoute
   '/api/public/payments/config': typeof ApiPublicPaymentsConfigRoute
   '/api/public/payments/create-intent': typeof ApiPublicPaymentsCreateIntentRoute
@@ -132,6 +146,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/agb': typeof AgbRoute
+  '/allergene': typeof AllergeneRoute
   '/bestellung': typeof BestellungRoute
   '/checkout': typeof CheckoutRoute
   '/datenschutz': typeof DatenschutzRoute
@@ -139,6 +154,7 @@ export interface FileRoutesByTo {
   '/oeffnungszeiten': typeof OeffnungszeitenRoute
   '/speisekarte': typeof SpeisekarteRoute
   '/standort': typeof StandortRoute
+  '/widerruf': typeof WiderrufRoute
   '/api/public/order-push': typeof ApiPublicOrderPushRoute
   '/api/public/payments/config': typeof ApiPublicPaymentsConfigRoute
   '/api/public/payments/create-intent': typeof ApiPublicPaymentsCreateIntentRoute
@@ -151,6 +167,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/agb': typeof AgbRoute
+  '/allergene': typeof AllergeneRoute
   '/bestellung': typeof BestellungRoute
   '/checkout': typeof CheckoutRoute
   '/datenschutz': typeof DatenschutzRoute
@@ -158,6 +175,7 @@ export interface FileRoutesById {
   '/oeffnungszeiten': typeof OeffnungszeitenRoute
   '/speisekarte': typeof SpeisekarteRoute
   '/standort': typeof StandortRoute
+  '/widerruf': typeof WiderrufRoute
   '/api/public/order-push': typeof ApiPublicOrderPushRoute
   '/api/public/payments/config': typeof ApiPublicPaymentsConfigRoute
   '/api/public/payments/create-intent': typeof ApiPublicPaymentsCreateIntentRoute
@@ -171,6 +189,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/agb'
+    | '/allergene'
     | '/bestellung'
     | '/checkout'
     | '/datenschutz'
@@ -178,6 +197,7 @@ export interface FileRouteTypes {
     | '/oeffnungszeiten'
     | '/speisekarte'
     | '/standort'
+    | '/widerruf'
     | '/api/public/order-push'
     | '/api/public/payments/config'
     | '/api/public/payments/create-intent'
@@ -189,6 +209,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/agb'
+    | '/allergene'
     | '/bestellung'
     | '/checkout'
     | '/datenschutz'
@@ -196,6 +217,7 @@ export interface FileRouteTypes {
     | '/oeffnungszeiten'
     | '/speisekarte'
     | '/standort'
+    | '/widerruf'
     | '/api/public/order-push'
     | '/api/public/payments/config'
     | '/api/public/payments/create-intent'
@@ -207,6 +229,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/agb'
+    | '/allergene'
     | '/bestellung'
     | '/checkout'
     | '/datenschutz'
@@ -214,6 +237,7 @@ export interface FileRouteTypes {
     | '/oeffnungszeiten'
     | '/speisekarte'
     | '/standort'
+    | '/widerruf'
     | '/api/public/order-push'
     | '/api/public/payments/config'
     | '/api/public/payments/create-intent'
@@ -226,6 +250,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   AgbRoute: typeof AgbRoute
+  AllergeneRoute: typeof AllergeneRoute
   BestellungRoute: typeof BestellungRoute
   CheckoutRoute: typeof CheckoutRoute
   DatenschutzRoute: typeof DatenschutzRoute
@@ -233,6 +258,7 @@ export interface RootRouteChildren {
   OeffnungszeitenRoute: typeof OeffnungszeitenRoute
   SpeisekarteRoute: typeof SpeisekarteRoute
   StandortRoute: typeof StandortRoute
+  WiderrufRoute: typeof WiderrufRoute
   ApiPublicOrderPushRoute: typeof ApiPublicOrderPushRoute
   ApiPublicPaymentsConfigRoute: typeof ApiPublicPaymentsConfigRoute
   ApiPublicPaymentsCreateIntentRoute: typeof ApiPublicPaymentsCreateIntentRoute
@@ -262,6 +288,13 @@ declare module '@tanstack/react-router' {
       path: '/agb'
       fullPath: '/agb'
       preLoaderRoute: typeof AgbRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/allergene': {
+      id: '/allergene'
+      path: '/allergene'
+      fullPath: '/allergene'
+      preLoaderRoute: typeof AllergeneRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/bestellung': {
@@ -313,6 +346,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StandortRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/widerruf': {
+      id: '/widerruf'
+      path: '/widerruf'
+      fullPath: '/widerruf'
+      preLoaderRoute: typeof WiderrufRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/order-push': {
       id: '/api/public/order-push'
       path: '/api/public/order-push'
@@ -362,6 +402,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   AgbRoute: AgbRoute,
+  AllergeneRoute: AllergeneRoute,
   BestellungRoute: BestellungRoute,
   CheckoutRoute: CheckoutRoute,
   DatenschutzRoute: DatenschutzRoute,
@@ -369,6 +410,7 @@ const rootRouteChildren: RootRouteChildren = {
   OeffnungszeitenRoute: OeffnungszeitenRoute,
   SpeisekarteRoute: SpeisekarteRoute,
   StandortRoute: StandortRoute,
+  WiderrufRoute: WiderrufRoute,
   ApiPublicOrderPushRoute: ApiPublicOrderPushRoute,
   ApiPublicPaymentsConfigRoute: ApiPublicPaymentsConfigRoute,
   ApiPublicPaymentsCreateIntentRoute: ApiPublicPaymentsCreateIntentRoute,
