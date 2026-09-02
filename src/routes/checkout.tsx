@@ -434,7 +434,7 @@ function CheckoutPage() {
               {submitError}
             </p>
           )}
-          {intent && paymentConfig?.publishableKey ? (
+          {payment === "online" && intent && paymentConfig?.publishableKey ? (
             <StripePaymentSection
               publishableKey={paymentConfig.publishableKey}
               clientSecret={intent.clientSecret}
