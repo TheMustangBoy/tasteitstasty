@@ -1,8 +1,15 @@
 import { useMemo, useState } from "react";
 import { loadStripe, type Stripe } from "@stripe/stripe-js";
-import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
+import {
+  Elements,
+  ExpressCheckoutElement,
+  PaymentElement,
+  useElements,
+  useStripe,
+} from "@stripe/react-stripe-js";
 import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
 
 const stripeCache = new Map<string, Promise<Stripe | null>>();
 
