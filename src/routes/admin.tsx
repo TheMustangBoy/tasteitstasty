@@ -534,8 +534,6 @@ function AdminConsole() {
     };
   }, [soundOn]);
 
-
-
   /** Drag & Drop: gezogenes Produkt vor dem Ziel innerhalb der Kategorie einsortieren. */
   const dropOn = (categoryId: string, targetId: string) => {
     if (!dragId || dragId === targetId) return setDragId(null);
