@@ -9,7 +9,7 @@ export const Route = createFileRoute("/widerruf")({
       {
         name: "description",
         content:
-          "Informationen zum Widerrufsrecht bei Abholbestellungen von Speisen und Getränken mit fester Abholzeit.",
+          "Informationen zum Widerrufsrecht bei Abholbestellungen von Speisen mit fester Abholzeit.",
       },
       { property: "og:title", content: "Widerrufsrecht – Taste It's Tasty" },
       {
@@ -26,8 +26,8 @@ export const Route = createFileRoute("/widerruf")({
       <p>
         <strong>1. Kein gesetzliches Widerrufsrecht</strong>
         <br />
-        Bei den über diese Website bestellbaren Speisen und Getränken wird ein konkreter
-        Abholzeitpunkt vereinbart. Für die Lieferung von Speisen und Getränken zu einem bestimmten
+        Bei den über diese Website bestellbaren Speisen wird ein konkreter
+        Abholzeitpunkt vereinbart. Für die Lieferung von Speisen und Getränken zu einem bestimmten (gesetzliche Kategorie nach dem Wortlaut der Vorschrift)
         Termin oder innerhalb eines genau angegebenen Zeitraums besteht nach § 312g Abs. 2 Nr. 9 BGB
         kein gesetzliches Widerrufsrecht. Das gilt unabhängig davon, ob online im Voraus oder erst
         bei der Abholung bezahlt wird.
