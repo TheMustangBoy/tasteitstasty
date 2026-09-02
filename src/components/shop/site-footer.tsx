@@ -50,7 +50,7 @@ export function SiteFooter() {
             </li>
             <li>
               <Link to="/admin" className="hover:text-primary">
-                Adminbereich (Demo)
+                Adminbereich
               </Link>
             </li>
           </ul>
