@@ -5,8 +5,11 @@
  */
 export function orderErrorMessage(raw: string): string {
   const detail = (code: string) => raw.split(`${code}:`)[1]?.split(/["\n]/)[0]?.trim() ?? "";
+  if (raw.includes("SLOT_FULL_AFTER_EXPIRY"))
+    return "Die Abholzeit wurde vergeben, während die Zahlung bestätigt wurde. Der Betrag wird zurückerstattet.";
   if (raw.includes("SLOT_FULL"))
     return "Dieses Abholfenster ist leider gerade ausgebucht. Bitte wähle eine andere Zeit.";
+
   if (raw.includes("ORDERS_PAUSED")) return "Online-Bestellungen sind aktuell pausiert.";
   if (raw.includes("EMPTY_CART")) return "Dein Warenkorb ist leer.";
   if (raw.includes("PAYMENT_NOT_ALLOWED"))
