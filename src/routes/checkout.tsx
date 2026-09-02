@@ -150,6 +150,19 @@ function CheckoutPage() {
   const selectedSlot =
     slots.find((s) => s.key === slotKey && !s.full) ??
     (activeDay ? (activeDay.slots.find((s) => !s.full) ?? suggested) : suggested);
+  const pickupLabel = selectedSlot ? `${selectedSlot.dayLabel}, ${selectedSlot.label} Uhr` : "";
+
+  // Ändern sich Warenkorb, Zeit oder Kontaktdaten, wird eine offene
+  // Zahlungssitzung verworfen (verhindert Zahlungen auf veraltete Daten).
+  const intentSignature = `${total}|${selectedSlot?.key ?? ""}|${name.trim()}|${phone.trim()}|${note.trim()}|${lines.length}`;
+  const [intentKey, setIntentKey] = useState("");
+  useEffect(() => {
+    setIntentKey((prev) => {
+      if (prev && prev !== intentSignature) setIntent(null);
+      return intentSignature;
+    });
+  }, [intentSignature]);
+
   const canSubmit =
     lines.length > 0 &&
     Boolean(selectedSlot) &&
