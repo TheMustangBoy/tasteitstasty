@@ -38,11 +38,10 @@ export const LEGAL = {
 
   /**
    * Steuerhinweis für die Preisangaben (AGB).
-   * Der tatsächliche Steuerstatus ist noch offen; daher wird keine definitive
-   * Umsatzsteuer- oder Kleinunternehmer-Aussage getroffen.
+   * Festlegung: Normale Umsatzbesteuerung. Die gesetzliche Umsatzsteuer ist
+   * im angezeigten Endpreis enthalten.
    */
-  taxNote:
-    "Ein etwaig anfallender gesetzlicher Umsatzsteueranteil ist im angegebenen Preis enthalten.",
+  taxNote: "Die gesetzliche Umsatzsteuer ist im Endpreis enthalten.",
 
   /** Abholstandort – bewusst getrennt von der Geschäftsanschrift */
   pickupLocation: "REWE-Parkplatz, Kopernikusstraße 2, 85221 Dachau",
