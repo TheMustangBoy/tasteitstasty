@@ -85,7 +85,7 @@ export const Route = createFileRoute("/agb")({
       <p>
         <strong>9. Kein Widerrufsrecht bei terminierter Abholung</strong>
         <br />
-        Bei der Lieferung von Speisen und Getränken zu einem bestimmten Termin (gesetzliche Kategorie) oder innerhalb eines
+        Bei der Lieferung von Speisen und Getränken zu einem bestimmten Termin oder innerhalb eines
         genau angegebenen Zeitraums besteht nach § 312g Abs. 2 Nr. 9 BGB kein gesetzliches
         Widerrufsrecht. Einzelheiten dazu erklären wir auf der Seite{" "}
         <Link to="/widerruf" className="text-primary hover:underline">

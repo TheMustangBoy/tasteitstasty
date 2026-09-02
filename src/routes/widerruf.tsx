@@ -27,7 +27,7 @@ export const Route = createFileRoute("/widerruf")({
         <strong>1. Kein gesetzliches Widerrufsrecht</strong>
         <br />
         Bei den über diese Website bestellbaren Speisen wird ein konkreter
-        Abholzeitpunkt vereinbart. Für die Lieferung von Speisen und Getränken zu einem bestimmten (gesetzliche Kategorie nach dem Wortlaut der Vorschrift)
+        Abholzeitpunkt vereinbart. Für die Lieferung von Speisen und Getränken zu einem bestimmten
         Termin oder innerhalb eines genau angegebenen Zeitraums besteht nach § 312g Abs. 2 Nr. 9 BGB
         kein gesetzliches Widerrufsrecht. Das gilt unabhängig davon, ob online im Voraus oder erst
         bei der Abholung bezahlt wird.
