@@ -56,7 +56,7 @@ import {
   type OrderStatus,
   type ProductRecord,
 } from "@/context/shop";
-import { primeAudio } from "@/lib/admin-sound";
+import { primeAudio, playNotificationSound } from "@/lib/admin-sound";
 import { downloadCsv, ordersToCsv } from "@/lib/csv";
 
 /** Kompakte Statusfilter über den offenen Bestellungen. */
@@ -421,7 +421,7 @@ function AdminLogin() {
             if (busy) return;
             // Login ist eine Nutzergeste: Audio hier freischalten, damit spätere
             // Benachrichtigungstöne nicht vom Browser blockiert werden.
-            primeAudio();
+            void primeAudio();
             setBusy(true);
             setError(null);
 
@@ -514,6 +514,25 @@ function AdminConsole() {
   const [deleteTarget, setDeleteTarget] = useState<ProductRecord | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [dragId, setDragId] = useState<string | null>(null);
+
+  /**
+   * Wiederhergestellte Session (kein Login-Submit): Audio bei der ersten
+   * Nutzergeste freischalten, danach Listener wieder entfernen.
+   */
+  useEffect(() => {
+    if (!soundOn) return;
+    const onGesture = () => {
+      void primeAudio();
+      window.removeEventListener("pointerdown", onGesture);
+      window.removeEventListener("keydown", onGesture);
+    };
+    window.addEventListener("pointerdown", onGesture);
+    window.addEventListener("keydown", onGesture);
+    return () => {
+      window.removeEventListener("pointerdown", onGesture);
+      window.removeEventListener("keydown", onGesture);
+    };
+  }, [soundOn]);
 
   /** Drag & Drop: gezogenes Produkt vor dem Ziel innerhalb der Kategorie einsortieren. */
   const dropOn = (categoryId: string, targetId: string) => {
@@ -610,9 +629,14 @@ function AdminConsole() {
             variant="outline"
             className="h-11 rounded-full"
             onClick={() => {
-              // Nutzergeste: Audio freischalten, damit spätere Töne nicht blockiert werden.
-              if (!soundOn) primeAudio();
-              setSoundOn(!soundOn);
+              const next = !soundOn;
+              setSoundOn(next);
+              // Nutzergeste: Audio freischalten und beim Einschalten einmal testen.
+              if (next) {
+                void (async () => {
+                  if (await primeAudio()) void playNotificationSound();
+                })();
+              }
             }}
             aria-label={soundOn ? "Ton ausschalten" : "Ton einschalten"}
           >
@@ -624,7 +648,7 @@ function AdminConsole() {
             onClick={async () => {
               // Audio aus der Nutzergeste heraus freischalten; Toast + Ton
               // kommen zentral über den Realtime-INSERT-Handler.
-              primeAudio();
+              void primeAudio();
               try {
                 await simulateOrder();
               } catch (error) {
