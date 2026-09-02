@@ -318,7 +318,7 @@ function CheckoutPage() {
                   id="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Max Mustermann"
+                  placeholder="Vor- und Nachname"
                   className="mt-2 h-12"
                 />
               </div>
@@ -549,7 +549,7 @@ function CheckoutPage() {
                 ? "Wird gesendet …"
                 : payment === "online"
                   ? "Weiter zur Zahlung"
-                  : "Bestellung abschließen"}
+                  : "Zahlungspflichtig bestellen"}
             </Button>
           )}
 
@@ -557,6 +557,21 @@ function CheckoutPage() {
             {payment === "online"
               ? "Die Bestellung wird erst nach bestätigter Zahlung angelegt."
               : "Bezahlt wird direkt am Truck bei der Abholung."}
+          </p>
+          <p className="mt-2 text-center text-xs text-muted-foreground">
+            Mit der Bestellung gelten unsere{" "}
+            <Link to="/agb" className="text-primary hover:underline">
+              AGB
+            </Link>
+            ,{" "}
+            <Link to="/datenschutz" className="text-primary hover:underline">
+              Datenschutzhinweise
+            </Link>{" "}
+            und Informationen zum{" "}
+            <Link to="/widerruf" className="text-primary hover:underline">
+              Widerrufsrecht
+            </Link>
+            .
           </p>
         </aside>
       </div>
