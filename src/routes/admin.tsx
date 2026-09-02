@@ -3,7 +3,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import {
   BarChart3,
   Bell,
+  BellRing,
+  Smartphone,
   ClipboardList,
+
   Copy,
   Download,
   Layers,
@@ -57,6 +60,8 @@ import {
   type ProductRecord,
 } from "@/context/shop";
 import { primeAudio, playNotificationSound } from "@/lib/admin-sound";
+import { disablePush, enablePush, readPushStatus, type PushStatus } from "@/lib/push";
+
 import { downloadCsv, ordersToCsv } from "@/lib/csv";
 
 /** Kompakte Statusfilter über den offenen Bestellungen. */
@@ -1166,12 +1171,126 @@ function AdminConsole() {
             </p>
           </section>
 
+          <PushSection />
+
           <SecuritySection />
         </TabsContent>
       </Tabs>
     </div>
   );
 }
+
+/** App-Installation und geräteweise Push-Benachrichtigungen für neue Bestellungen. */
+function PushSection() {
+  const [status, setStatus] = useState<PushStatus>("loading");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [installEvent, setInstallEvent] = useState<{ prompt: () => Promise<void> } | null>(null);
+
+  useEffect(() => {
+    void readPushStatus().then(setStatus);
+    const onPrompt = (event: Event) => {
+      event.preventDefault();
+      setInstallEvent(event as unknown as { prompt: () => Promise<void> });
+    };
+    window.addEventListener("beforeinstallprompt", onPrompt);
+    return () => window.removeEventListener("beforeinstallprompt", onPrompt);
+  }, []);
+
+  const statusText: Record<PushStatus, string> = {
+    loading: "Status wird geprüft …",
+    unsupported: "Dieses Gerät oder dieser Browser unterstützt keine Push-Benachrichtigungen.",
+    "needs-install": "Auf iPhone/iPad zuerst über „Teilen → Zum Home-Bildschirm“ installieren.",
+    blocked: "Benachrichtigungen sind im Browser blockiert. Bitte in den Website-Einstellungen erlauben.",
+    inactive: "Push ist auf diesem Gerät noch nicht aktiv.",
+    active: "Push ist auf diesem Gerät aktiv.",
+  };
+
+  return (
+    <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+      <h2 className="flex items-center gap-2 text-xl">
+        <Smartphone className="h-5 w-5 text-primary" /> App &amp; Benachrichtigungen
+      </h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Installiere den Adminbereich als App und erhalte Push-Meldungen bei neuen Bestellungen –
+        auch wenn der Tab geschlossen ist.
+      </p>
+
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <Badge
+          className={
+            status === "active"
+              ? "bg-primary text-primary-foreground"
+              : "bg-muted text-muted-foreground"
+          }
+        >
+          {status === "active" ? "Aktiv" : status === "blocked" ? "Blockiert" : "Inaktiv"}
+        </Badge>
+        <span className="text-sm text-muted-foreground">{statusText[status]}</span>
+      </div>
+
+      {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
+
+      <div className="mt-4 flex flex-wrap gap-3">
+        <Button
+          type="button"
+          disabled={busy || status === "active" || status === "unsupported" || status === "loading"}
+          onClick={() => {
+            setBusy(true);
+            setError(null);
+            void (async () => {
+              const result = await enablePush();
+              setStatus(result.status);
+              setBusy(false);
+              if (result.ok) toast.success("Push für dieses Gerät aktiviert.");
+              else setError(result.error ?? "Push konnte nicht aktiviert werden.");
+            })();
+          }}
+          className="h-12 rounded-xl bg-flame px-6 font-bold uppercase tracking-wide text-primary-foreground"
+        >
+          <BellRing className="mr-2 h-4 w-4" /> Push aktivieren
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={busy || status !== "active"}
+          onClick={() => {
+            setBusy(true);
+            void (async () => {
+              await disablePush();
+              setStatus(await readPushStatus());
+              setBusy(false);
+              toast.success("Push für dieses Gerät deaktiviert.");
+            })();
+          }}
+          className="h-12 rounded-xl px-6"
+        >
+          Push deaktivieren
+        </Button>
+        {installEvent && (
+          <Button
+            type="button"
+            variant="outline"
+            className="h-12 rounded-xl px-6"
+            onClick={() => {
+              void installEvent.prompt();
+              setInstallEvent(null);
+            }}
+          >
+            App installieren
+          </Button>
+        )}
+      </div>
+
+      <p className="mt-4 rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
+        Hinweis: Jedes Gerät meldet sich einzeln an. Beim Abmelden wird die Push-Registrierung
+        dieses Geräts wieder entfernt. Push-Meldungen enthalten nur Bestellnummer, Abholzeit und
+        Betrag – keine Kundendaten.
+      </p>
+    </section>
+  );
+}
+
 
 /** Eingeloggte Admins können hier ihr eigenes Passwort ändern. */
 function SecuritySection() {
