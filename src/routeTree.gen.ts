@@ -23,6 +23,7 @@ import { Route as ApiPublicOrderPushRouteImport } from './routes/api/public/orde
 import { Route as ApiPublicPaymentsConfigRouteImport } from './routes/api/public/payments/config'
 import { Route as ApiPublicPaymentsCreateIntentRouteImport } from './routes/api/public/payments/create-intent'
 import { Route as ApiPublicPaymentsStatusRouteImport } from './routes/api/public/payments/status'
+import { Route as ApiPublicPaymentsStripeWebhookRouteImport } from './routes/api/public/payments/stripe-webhook'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -95,6 +96,12 @@ const ApiPublicPaymentsStatusRoute = ApiPublicPaymentsStatusRouteImport.update({
   path: '/api/public/payments/status',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicPaymentsStripeWebhookRoute =
+  ApiPublicPaymentsStripeWebhookRouteImport.update({
+    id: '/api/public/payments/stripe-webhook',
+    path: '/api/public/payments/stripe-webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -111,6 +118,7 @@ export interface FileRoutesByFullPath {
   '/api/public/payments/config': typeof ApiPublicPaymentsConfigRoute
   '/api/public/payments/create-intent': typeof ApiPublicPaymentsCreateIntentRoute
   '/api/public/payments/status': typeof ApiPublicPaymentsStatusRoute
+  '/api/public/payments/stripe-webhook': typeof ApiPublicPaymentsStripeWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -127,6 +135,7 @@ export interface FileRoutesByTo {
   '/api/public/payments/config': typeof ApiPublicPaymentsConfigRoute
   '/api/public/payments/create-intent': typeof ApiPublicPaymentsCreateIntentRoute
   '/api/public/payments/status': typeof ApiPublicPaymentsStatusRoute
+  '/api/public/payments/stripe-webhook': typeof ApiPublicPaymentsStripeWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -144,6 +153,7 @@ export interface FileRoutesById {
   '/api/public/payments/config': typeof ApiPublicPaymentsConfigRoute
   '/api/public/payments/create-intent': typeof ApiPublicPaymentsCreateIntentRoute
   '/api/public/payments/status': typeof ApiPublicPaymentsStatusRoute
+  '/api/public/payments/stripe-webhook': typeof ApiPublicPaymentsStripeWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -162,6 +172,7 @@ export interface FileRouteTypes {
     | '/api/public/payments/config'
     | '/api/public/payments/create-intent'
     | '/api/public/payments/status'
+    | '/api/public/payments/stripe-webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -178,6 +189,7 @@ export interface FileRouteTypes {
     | '/api/public/payments/config'
     | '/api/public/payments/create-intent'
     | '/api/public/payments/status'
+    | '/api/public/payments/stripe-webhook'
   id:
     | '__root__'
     | '/'
@@ -194,6 +206,7 @@ export interface FileRouteTypes {
     | '/api/public/payments/config'
     | '/api/public/payments/create-intent'
     | '/api/public/payments/status'
+    | '/api/public/payments/stripe-webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -211,6 +224,7 @@ export interface RootRouteChildren {
   ApiPublicPaymentsConfigRoute: typeof ApiPublicPaymentsConfigRoute
   ApiPublicPaymentsCreateIntentRoute: typeof ApiPublicPaymentsCreateIntentRoute
   ApiPublicPaymentsStatusRoute: typeof ApiPublicPaymentsStatusRoute
+  ApiPublicPaymentsStripeWebhookRoute: typeof ApiPublicPaymentsStripeWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -313,6 +327,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPaymentsStatusRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/payments/stripe-webhook': {
+      id: '/api/public/payments/stripe-webhook'
+      path: '/api/public/payments/stripe-webhook'
+      fullPath: '/api/public/payments/stripe-webhook'
+      preLoaderRoute: typeof ApiPublicPaymentsStripeWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -331,6 +352,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicPaymentsConfigRoute: ApiPublicPaymentsConfigRoute,
   ApiPublicPaymentsCreateIntentRoute: ApiPublicPaymentsCreateIntentRoute,
   ApiPublicPaymentsStatusRoute: ApiPublicPaymentsStatusRoute,
+  ApiPublicPaymentsStripeWebhookRoute: ApiPublicPaymentsStripeWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
