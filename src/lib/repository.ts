@@ -327,8 +327,11 @@ export function orderErrorMessage(raw: string): string {
     return `Das Extra „${detail("EXTRA_UNAVAILABLE") || "unbekannt"}“ ist nicht mehr verfügbar.`;
   if (raw.includes("OPTION_UNAVAILABLE"))
     return `Die Auswahl „${detail("OPTION_UNAVAILABLE") || "unbekannt"}“ ist nicht mehr verfügbar.`;
+  if (raw.includes("INVALID_REMOVAL"))
+    return "Eine ausgewählte Änderung an den Zutaten ist nicht mehr verfügbar. Bitte lege den Artikel neu in den Warenkorb.";
   if (raw.includes("INVALID_QUANTITY"))
     return `Die Menge für „${detail("INVALID_QUANTITY") || "ein Produkt"}“ ist ungültig.`;
+
   if (raw.includes("PRICE_CHANGED"))
     return "Die Preise haben sich geändert. Bitte lade die Seite neu und prüfe deinen Warenkorb.";
   if (raw.includes("PICKUP_TOO_SOON"))
