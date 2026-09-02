@@ -1,7 +1,18 @@
 import type { ShopOrder } from "@/context/shop";
 import { linePrice } from "@/context/cart";
 
-const escape = (value: string | number) => `"${String(value).replace(/"/g, '""')}"`;
+/**
+ * Neutralisiert Zellen, die von Tabellenkalkulationen als Formel interpretiert
+ * werden koennten (CSV-/Formula-Injection). Fuehrendes Apostroph erzwingt Text.
+ */
+export const neutralizeCsvCell = (value: string | number) => {
+  const text = String(value);
+  const trimmed = text.replace(/^[\s\u00a0]+/, "");
+  return /^[=+\-@\t\r\n]/.test(trimmed) ? `'${text}` : text;
+};
+
+const escape = (value: string | number) =>
+  `"${neutralizeCsvCell(value).replace(/"/g, '""')}"`;
 
 /** Bestellhistorie als CSV (rein clientseitig). */
 export function ordersToCsv(orders: ShopOrder[]) {
