@@ -5,6 +5,8 @@
  */
 export function orderErrorMessage(raw: string): string {
   const detail = (code: string) => raw.split(`${code}:`)[1]?.split(/["\n]/)[0]?.trim() ?? "";
+  if (raw.includes("CHECKOUT_KEY_STALE"))
+    return "Diese Zahlung ist abgelaufen. Bitte starte den Bezahlvorgang erneut.";
   if (raw.includes("SLOT_FULL_AFTER_EXPIRY"))
     return "Die Abholzeit wurde vergeben, während die Zahlung bestätigt wurde. Der Betrag wird zurückerstattet.";
   if (raw.includes("SLOT_FULL"))
