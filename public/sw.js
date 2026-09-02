@@ -7,6 +7,17 @@
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
 
+/** True, wenn der Adminbereich gerade sichtbar im Vordergrund geöffnet ist. */
+async function adminVisibleInForeground() {
+  const clientList = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+  return clientList.some(
+    (client) =>
+      new URL(client.url).pathname.startsWith("/admin") &&
+      client.visibilityState === "visible" &&
+      client.focused !== false,
+  );
+}
+
 self.addEventListener("push", (event) => {
   let payload = {};
   try {
@@ -19,17 +30,23 @@ self.addEventListener("push", (event) => {
   const body = payload.body || "Im Adminbereich ansehen.";
 
   event.waitUntil(
-    self.registration.showNotification(title, {
-      body,
-      icon: "/icons/icon-192.png",
-      badge: "/icons/icon-192.png",
-      tag: payload.tag || "new-order",
-      renotify: true,
-      requireInteraction: false,
-      data: { url: "/admin" },
-    }),
+    (async () => {
+      // Im Vordergrund übernimmt der Realtime-Toast die Meldung -> keine Doppelung.
+      if (await adminVisibleInForeground()) return;
+
+      await self.registration.showNotification(title, {
+        body,
+        icon: "/icons/icon-192.png",
+        badge: "/icons/icon-192.png",
+        tag: payload.tag || "new-order",
+        renotify: true,
+        requireInteraction: false,
+        data: { url: "/admin" },
+      });
+    })(),
   );
 });
+
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();

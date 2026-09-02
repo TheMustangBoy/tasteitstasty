@@ -38,15 +38,17 @@ function urlBase64ToUint8Array(base64: string): Uint8Array {
   return out;
 }
 
-function encodeKey(buffer: ArrayBuffer | null): string {
-  if (!buffer) return "";
-  const bytes = new Uint8Array(buffer);
-  let binary = "";
-  bytes.forEach((b) => {
-    binary += String.fromCharCode(b);
-  });
-  return btoa(binary);
+/** Liest die Schlüssel im Web-Push-Format (base64url) direkt aus der Subscription. */
+function readSubscriptionKeys(
+  subscription: PushSubscription,
+): { p256dh: string; auth: string } | null {
+  const keys = subscription.toJSON().keys;
+  const p256dh = keys?.["p256dh"] ?? "";
+  const auth = keys?.["auth"] ?? "";
+  if (!p256dh || !auth) return null;
+  return { p256dh, auth };
 }
+
 
 /** Registriert den Messaging-Service-Worker (nur auf Nutzergeste aufrufen). */
 export async function ensureServiceWorker(): Promise<ServiceWorkerRegistration | null> {
@@ -111,6 +113,16 @@ export async function enablePush(): Promise<{ ok: boolean; status: PushStatus; e
       applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as BufferSource,
     }));
 
+  const keys = readSubscriptionKeys(subscription);
+  if (!keys) {
+    await subscription.unsubscribe().catch(() => undefined);
+    return {
+      ok: false,
+      status: "inactive",
+      error: "Push-Schlüssel unvollständig – bitte erneut versuchen.",
+    };
+  }
+
   const { data: userData } = await supabase.auth.getUser();
   const userId = userData.user?.id;
   if (!userId) {
@@ -121,12 +133,13 @@ export async function enablePush(): Promise<{ ok: boolean; status: PushStatus; e
     {
       user_id: userId,
       endpoint: subscription.endpoint,
-      p256dh: encodeKey(subscription.getKey("p256dh")),
-      auth: encodeKey(subscription.getKey("auth")),
+      p256dh: keys.p256dh,
+      auth: keys.auth,
       user_agent: navigator.userAgent.slice(0, 180),
     },
     { onConflict: "endpoint" },
   );
+
 
   if (error) {
     return { ok: false, status: "inactive", error: "Gerät konnte nicht registriert werden." };

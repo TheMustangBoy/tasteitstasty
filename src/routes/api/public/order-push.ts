@@ -15,13 +15,6 @@ const payloadSchema = z.object({
   total: z.union([z.number(), z.string()]).optional(),
 });
 
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i += 1) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
-}
-
 function formatPickup(label: string, iso?: string): string {
   if (label) return label;
   if (!iso) return "";
@@ -40,11 +33,22 @@ export const Route = createFileRoute("/api/public/order-push")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const secret = process.env["PUSH_HOOK_SECRET"];
         const provided = request.headers.get("x-push-secret") ?? "";
-        if (!secret || !timingSafeEqual(provided, secret)) {
-          return new Response("Unauthorized", { status: 401 });
+        if (!provided) return new Response("Unauthorized", { status: 401 });
+
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+        // Das Secret liegt ausschließlich im verschlüsselten Vault; der Abgleich
+        // passiert serverseitig in der Datenbank.
+        const { data: secretOk, error: secretError } = await supabaseAdmin.rpc(
+          "verify_push_hook_secret",
+          { p_secret: provided },
+        );
+        if (secretError) {
+          console.error("[push] secret verification failed");
+          return new Response("Not configured", { status: 500 });
         }
+        if (secretOk !== true) return new Response("Unauthorized", { status: 401 });
 
         const parsed = payloadSchema.safeParse(await request.json().catch(() => null));
         if (!parsed.success) return new Response("Bad Request", { status: 400 });
@@ -58,7 +62,7 @@ export const Route = createFileRoute("/api/public/order-push")({
           return new Response("Not configured", { status: 500 });
         }
 
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
         const { data: subs, error } = await supabaseAdmin
           .from("push_subscriptions")
           .select("id, endpoint, p256dh, auth");

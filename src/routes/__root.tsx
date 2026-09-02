@@ -144,6 +144,15 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
+  // Service Worker früh registrieren (nur für Web Push / Installierbarkeit).
+  // Es wird bewusst KEINE Benachrichtigungs-Berechtigung angefragt.
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
+    void navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+  }, []);
+
+
+
   return (
     <QueryClientProvider client={queryClient}>
       <ShopProvider>

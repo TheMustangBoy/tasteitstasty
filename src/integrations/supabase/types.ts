@@ -385,6 +385,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      verify_push_hook_secret: { Args: { p_secret: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
