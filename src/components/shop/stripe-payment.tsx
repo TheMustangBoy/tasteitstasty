@@ -30,6 +30,16 @@ type Props = {
   onPaid: () => void | Promise<void>;
 };
 
+/** Lokale, reine Darstellungs-Erkennung für Apple-Geräte (kein Logging/Speichern/Übertragen). */
+function isAppleDevice(): boolean {
+  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
+  const platform = navigator.platform?.toLowerCase() ?? "";
+  const userAgent = navigator.userAgent?.toLowerCase() ?? "";
+  const isIOS = /iphone|ipad|ipod/.test(userAgent);
+  const isMac = platform.includes("mac") || userAgent.includes("macintosh");
+  return isIOS || isMac;
+}
+
 /** Stripe Payment Element inkl. Apple Pay / Google Pay (geräteabhängig). */
 export function StripePaymentSection(props: Props) {
   const stripePromise = useMemo(() => getStripe(props.publishableKey), [props.publishableKey]);
