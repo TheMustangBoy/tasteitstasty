@@ -146,7 +146,7 @@ function OrderPage() {
         <ul className="space-y-3 text-sm">
           {(Array.isArray(lastOrder.lines) ? lastOrder.lines : []).map((line, index) => {
             const removed = Array.isArray(line?.removed) ? line.removed : [];
-            const safeLine = { ...line, removed, quantity: line?.quantity ?? 1 };
+            const safeLine = { ...line, removed, quantity: line?.quantity ?? 1, basePrice: line?.basePrice ?? 0 };
             return (
               <li
                 key={line?.lineId ?? index}
@@ -173,7 +173,7 @@ function OrderPage() {
           <span className="text-sm uppercase tracking-wide text-muted-foreground">
             {lastOrder.payment}
           </span>
-          <span className="font-display text-2xl">{formatPrice(lastOrder.total)}</span>
+          <span className="font-display text-2xl">{formatPrice(lastOrder.total ?? 0)}</span>
         </div>
 
         <Button asChild variant="outline" className="mt-6 h-12 w-full rounded-xl">
