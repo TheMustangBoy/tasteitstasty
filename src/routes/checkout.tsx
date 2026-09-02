@@ -241,7 +241,7 @@ function CheckoutPage() {
             <h2 className="text-xl">Kontakt</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <div>
-                <Label htmlFor="name">Name</Label>
+                <Label htmlFor="name">Name *</Label>
                 <Input
                   id="name"
                   value={name}
