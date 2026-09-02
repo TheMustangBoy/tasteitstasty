@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   BarChart3,
-  Bell,
   BellRing,
   Smartphone,
   ClipboardList,
