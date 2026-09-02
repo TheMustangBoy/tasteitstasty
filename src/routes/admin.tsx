@@ -496,6 +496,7 @@ function AdminConsole() {
     setOrderNote,
     cancelOrder,
     restoreOrder,
+    refundAndCloseOrder,
     duplicateProduct,
     deleteProduct,
     moveProduct,
@@ -742,6 +743,9 @@ function AdminConsole() {
                     onStatus={(status) => setOrderStatus(order.id, status)}
                     onNote={(note) => setOrderNote(order.id, note)}
                     onCancel={(reason, cancelNote) => cancelOrder(order.id, reason, cancelNote)}
+                    onRefundClose={(status, reason, cancelNote) =>
+                      refundAndCloseOrder(order.id, status, reason, cancelNote)
+                    }
                   />
                 ))}
               </div>
@@ -802,6 +806,9 @@ function AdminConsole() {
                   onStatus={(status) => setOrderStatus(order.id, status)}
                   onNote={(note) => setOrderNote(order.id, note)}
                   onCancel={(reason, cancelNote) => cancelOrder(order.id, reason, cancelNote)}
+                  onRefundClose={(status, reason, cancelNote) =>
+                    refundAndCloseOrder(order.id, status, reason, cancelNote)
+                  }
                   onRestore={(status) => {
                     restoreOrder(order.id, status);
                     toast.success(`${order.reference} wieder aktiv`);
