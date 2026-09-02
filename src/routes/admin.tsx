@@ -85,12 +85,12 @@ const PASSWORD_POLICY_ERROR =
 
 /** Übersetzt Auth-Fehler in sichere, hilfreiche Meldungen ohne Backend-Details offenzulegen. */
 function recoveryErrorMessage(error: {
-  code?: string;
-  message?: string;
-  status?: number;
+  code?: unknown;
+  message?: unknown;
+  status?: unknown;
 }) {
-  const code = error.code?.toLowerCase() ?? "";
-  const message = error.message?.toLowerCase() ?? "";
+  const code = typeof error.code === "string" ? error.code.toLowerCase() : "";
+  const message = typeof error.message === "string" ? error.message.toLowerCase() : "";
 
   if (
     code === "weak_password" ||
