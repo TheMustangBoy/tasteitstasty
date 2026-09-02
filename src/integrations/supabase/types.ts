@@ -147,13 +147,17 @@ export type Database = {
           internal_note: string
           lines: Json
           note: string
+          paid_at: string | null
           payment: string
+          payment_provider: string | null
+          payment_status: string | null
           phone: string
           pickup_at: string
           pickup_label: string
           reference: string
           status: string
           status_timestamps: Json
+          stripe_payment_intent_id: string | null
           total: number
           updated_at: string
         }
@@ -166,13 +170,17 @@ export type Database = {
           internal_note?: string
           lines?: Json
           note?: string
+          paid_at?: string | null
           payment?: string
+          payment_provider?: string | null
+          payment_status?: string | null
           phone?: string
           pickup_at: string
           pickup_label?: string
           reference: string
           status?: string
           status_timestamps?: Json
+          stripe_payment_intent_id?: string | null
           total?: number
           updated_at?: string
         }
@@ -185,17 +193,95 @@ export type Database = {
           internal_note?: string
           lines?: Json
           note?: string
+          paid_at?: string | null
           payment?: string
+          payment_provider?: string | null
+          payment_status?: string | null
           phone?: string
           pickup_at?: string
           pickup_label?: string
           reference?: string
           status?: string
           status_timestamps?: Json
+          stripe_payment_intent_id?: string | null
           total?: number
           updated_at?: string
         }
         Relationships: []
+      }
+      payment_reservations: {
+        Row: {
+          created_at: string
+          currency: string
+          customer_name: string
+          expires_at: string
+          final_order_id: string | null
+          id: string
+          last_error: string | null
+          lines: Json
+          note: string
+          phone: string
+          pickup_at: string
+          pickup_label: string
+          reference: string
+          status: string
+          stripe_payment_intent_id: string | null
+          stripe_session_id: string | null
+          token: string
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          customer_name?: string
+          expires_at: string
+          final_order_id?: string | null
+          id?: string
+          last_error?: string | null
+          lines?: Json
+          note?: string
+          phone?: string
+          pickup_at: string
+          pickup_label?: string
+          reference: string
+          status?: string
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+          token: string
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          customer_name?: string
+          expires_at?: string
+          final_order_id?: string | null
+          id?: string
+          last_error?: string | null
+          lines?: Json
+          note?: string
+          phone?: string
+          pickup_at?: string
+          pickup_label?: string
+          reference?: string
+          status?: string
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+          token?: string
+          total?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_reservations_final_order_id_fkey"
+            columns: ["final_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       products: {
         Row: {
@@ -339,6 +425,92 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assert_slot_capacity: {
+        Args: { p_pickup_at: string }
+        Returns: undefined
+      }
+      attach_payment_intent: {
+        Args: { p_payment_intent_id: string; p_reservation_id: string }
+        Returns: undefined
+      }
+      create_payment_reservation: {
+        Args: {
+          p_customer_name: string
+          p_lines: Json
+          p_note?: string
+          p_phone: string
+          p_pickup_at: string
+          p_pickup_label: string
+          p_reference: string
+          p_token: string
+          p_total: number
+          p_ttl_minutes?: number
+        }
+        Returns: {
+          created_at: string
+          currency: string
+          customer_name: string
+          expires_at: string
+          final_order_id: string | null
+          id: string
+          last_error: string | null
+          lines: Json
+          note: string
+          phone: string
+          pickup_at: string
+          pickup_label: string
+          reference: string
+          status: string
+          stripe_payment_intent_id: string | null
+          stripe_session_id: string | null
+          token: string
+          total: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "payment_reservations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      finalize_payment_reservation: {
+        Args: {
+          p_amount_cents: number
+          p_currency: string
+          p_payment_intent_id: string
+          p_reservation_id: string
+        }
+        Returns: {
+          cancel_note: string | null
+          cancel_reason: string | null
+          created_at: string
+          customer_name: string
+          id: string
+          internal_note: string
+          lines: Json
+          note: string
+          paid_at: string | null
+          payment: string
+          payment_provider: string | null
+          payment_status: string | null
+          phone: string
+          pickup_at: string
+          pickup_label: string
+          reference: string
+          status: string
+          status_timestamps: Json
+          stripe_payment_intent_id: string | null
+          total: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "orders"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_slot_bookings: {
         Args: never
         Returns: {
@@ -347,6 +519,10 @@ export type Database = {
         }[]
       }
       is_admin: { Args: never; Returns: boolean }
+      mark_payment_reservation: {
+        Args: { p_error?: string; p_reservation_id: string; p_status: string }
+        Returns: undefined
+      }
       place_order: {
         Args: {
           p_customer_name: string
@@ -368,13 +544,17 @@ export type Database = {
           internal_note: string
           lines: Json
           note: string
+          paid_at: string | null
           payment: string
+          payment_provider: string | null
+          payment_status: string | null
           phone: string
           pickup_at: string
           pickup_label: string
           reference: string
           status: string
           status_timestamps: Json
+          stripe_payment_intent_id: string | null
           total: number
           updated_at: string
         }
@@ -384,6 +564,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      validate_order_payload: {
+        Args: { p_lines: Json; p_pickup_at: string; p_total: number }
+        Returns: Json
       }
       verify_push_hook_secret: { Args: { p_secret: string }; Returns: boolean }
     }
