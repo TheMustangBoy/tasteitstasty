@@ -467,31 +467,39 @@ function CheckoutPage() {
                 if (!selectedSlot || selectedSlot.full || submitting) return;
                 if (settings.ordersPaused || unavailableLines.length > 0 || staleLines.length > 0)
                   return;
-                const reference = `TIT-${Math.floor(1000 + Math.random() * 9000)}`;
                 setSubmitting(true);
                 setSubmitError(null);
+                const orderLines = lines.map((l) => ({
+                  lineId: l.lineId,
+                  itemId: l.itemId,
+                  name: l.name,
+                  basePrice: l.basePrice,
+                  quantity: l.quantity,
+                  removed: l.removed,
+                  bacon: l.bacon,
+                  extras: l.extras ?? [],
+                  options: lineOptions(l),
+                }));
                 try {
                   if (payment === "online") {
                     // Es entsteht nur eine Reservierung – die Bestellung erzeugt
                     // erst der Stripe-Webhook nach bestätigter Zahlung.
+                    const pickupISO = new Date(selectedSlot.key).toISOString();
                     const created = await createPaymentIntent({
-                      reference,
+                      checkoutKey: checkoutKeyFor({
+                        name: name.trim(),
+                        phone: phone.trim(),
+                        note: note.trim(),
+                        pickupISO,
+                        lines: orderLines,
+                        total,
+                      }),
                       name: name.trim(),
                       phone: phone.trim(),
                       note: note.trim(),
-                      pickupISO: new Date(selectedSlot.key).toISOString(),
+                      pickupISO,
                       pickupLabel,
-                      lines: lines.map((l) => ({
-                        lineId: l.lineId,
-                        itemId: l.itemId,
-                        name: l.name,
-                        basePrice: l.basePrice,
-                        quantity: l.quantity,
-                        removed: l.removed,
-                        bacon: l.bacon,
-                        extras: l.extras ?? [],
-                        options: lineOptions(l),
-                      })),
+                      lines: orderLines,
                       total,
                     });
                     setIntent(created);
@@ -500,8 +508,9 @@ function CheckoutPage() {
 
                   const paymentLabel = PAYMENT_ON_SITE[payment];
                   // Erst speichern (inkl. serverseitiger Kapazitätsprüfung), dann bestätigen.
-                  await addOrder({
-                    reference,
+                  // Die Bestellnummer vergibt ausschließlich der Server.
+                  const saved = await addOrder({
+                    reference: "",
                     createdAt: new Date().toISOString(),
                     pickupISO: selectedSlot.key,
                     pickupLabel,
@@ -512,8 +521,14 @@ function CheckoutPage() {
                     lines,
                     total,
                   });
-                  placeOrder({ reference, pickupLabel, payment: paymentLabel, name: name.trim() });
+                  placeOrder({
+                    reference: saved.reference,
+                    pickupLabel,
+                    payment: paymentLabel,
+                    name: name.trim(),
+                  });
                   navigate({ to: "/bestellung" });
+
                 } catch (error) {
                   // Warenkorb bleibt erhalten – nur Meldung anzeigen und Slots neu laden.
                   setSubmitError(
