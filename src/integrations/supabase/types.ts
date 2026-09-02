@@ -528,6 +528,10 @@ export type Database = {
         Returns: undefined
       }
       next_order_reference: { Args: never; Returns: string }
+      note_payment_failure: {
+        Args: { p_error: string; p_reservation_id: string }
+        Returns: undefined
+      }
       place_order: {
         Args: {
           p_customer_name: string
