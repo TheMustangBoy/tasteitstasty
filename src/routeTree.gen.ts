@@ -19,6 +19,7 @@ import { Route as ImpressumRouteImport } from './routes/impressum'
 import { Route as OeffnungszeitenRouteImport } from './routes/oeffnungszeiten'
 import { Route as SpeisekarteRouteImport } from './routes/speisekarte'
 import { Route as StandortRouteImport } from './routes/standort'
+import { Route as ApiPublicOrderPushRouteImport } from './routes/api/public/order-push'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -70,6 +71,11 @@ const StandortRoute = StandortRouteImport.update({
   path: '/standort',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicOrderPushRoute = ApiPublicOrderPushRouteImport.update({
+  id: '/api/public/order-push',
+  path: '/api/public/order-push',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/oeffnungszeiten': typeof OeffnungszeitenRoute
   '/speisekarte': typeof SpeisekarteRoute
   '/standort': typeof StandortRoute
+  '/api/public/order-push': typeof ApiPublicOrderPushRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -94,6 +101,7 @@ export interface FileRoutesByTo {
   '/oeffnungszeiten': typeof OeffnungszeitenRoute
   '/speisekarte': typeof SpeisekarteRoute
   '/standort': typeof StandortRoute
+  '/api/public/order-push': typeof ApiPublicOrderPushRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -107,6 +115,7 @@ export interface FileRoutesById {
   '/oeffnungszeiten': typeof OeffnungszeitenRoute
   '/speisekarte': typeof SpeisekarteRoute
   '/standort': typeof StandortRoute
+  '/api/public/order-push': typeof ApiPublicOrderPushRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -121,6 +130,7 @@ export interface FileRouteTypes {
     | '/oeffnungszeiten'
     | '/speisekarte'
     | '/standort'
+    | '/api/public/order-push'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -133,6 +143,7 @@ export interface FileRouteTypes {
     | '/oeffnungszeiten'
     | '/speisekarte'
     | '/standort'
+    | '/api/public/order-push'
   id:
     | '__root__'
     | '/'
@@ -145,6 +156,7 @@ export interface FileRouteTypes {
     | '/oeffnungszeiten'
     | '/speisekarte'
     | '/standort'
+    | '/api/public/order-push'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -158,6 +170,7 @@ export interface RootRouteChildren {
   OeffnungszeitenRoute: typeof OeffnungszeitenRoute
   SpeisekarteRoute: typeof SpeisekarteRoute
   StandortRoute: typeof StandortRoute
+  ApiPublicOrderPushRoute: typeof ApiPublicOrderPushRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -232,6 +245,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StandortRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/order-push': {
+      id: '/api/public/order-push'
+      path: '/api/public/order-push'
+      fullPath: '/api/public/order-push'
+      preLoaderRoute: typeof ApiPublicOrderPushRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -246,6 +266,7 @@ const rootRouteChildren: RootRouteChildren = {
   OeffnungszeitenRoute: OeffnungszeitenRoute,
   SpeisekarteRoute: SpeisekarteRoute,
   StandortRoute: StandortRoute,
+  ApiPublicOrderPushRoute: ApiPublicOrderPushRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
