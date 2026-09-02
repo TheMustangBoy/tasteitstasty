@@ -430,6 +430,71 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     };
   }, [refresh]);
 
+  // Realtime nur für angemeldete Admins – anon/non-admin erhalten durch RLS
+  // ohnehin keine Payloads, wir öffnen den Channel gar nicht erst.
+  useEffect(() => {
+    if (!state.adminAuthed) return;
+    let cancelled = false;
+    let retry: ReturnType<typeof setTimeout> | null = null;
+
+    const upsert = (row: unknown) => {
+      const order = toOrder(row as Parameters<typeof toOrder>[0]);
+      setState((prev) => {
+        const idx = prev.orders.findIndex((o) => o.id === order.id);
+        if (idx === -1) return { ...prev, orders: [order, ...prev.orders] };
+        const orders = [...prev.orders];
+        orders[idx] = { ...orders[idx], ...order };
+        return { ...prev, orders };
+      });
+    };
+
+    const channel = supabase
+      .channel("admin-orders")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "orders" }, (p) =>
+        upsert(p.new),
+      )
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "orders" }, (p) =>
+        upsert(p.new),
+      )
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "orders" }, (p) => {
+        const id = (p.old as { id?: string } | null)?.id;
+        if (!id) return;
+        setState((prev) => ({ ...prev, orders: prev.orders.filter((o) => o.id !== id) }));
+      })
+      .subscribe((status) => {
+        if (cancelled) return;
+        if (status === "SUBSCRIBED") {
+          // Lücke zwischen initialem Fetch und Subscription schließen.
+          void fetchAdminOrders()
+            .then((orders) => {
+              if (!cancelled) setState((prev) => ({ ...prev, orders }));
+            })
+            .catch(() => {
+              /* stiller Fehler – Bestand bleibt erhalten */
+            });
+        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          // Einmaliger, verzögerter Nachfetch statt aggressiver Reconnect-Schleife.
+          if (retry) return;
+          retry = setTimeout(() => {
+            retry = null;
+            void fetchAdminOrders()
+              .then((orders) => {
+                if (!cancelled) setState((prev) => ({ ...prev, orders }));
+              })
+              .catch(() => {
+                /* ignore */
+              });
+          }, 5000);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      if (retry) clearTimeout(retry);
+      void supabase.removeChannel(channel);
+    };
+  }, [state.adminAuthed]);
+
 
   useEffect(() => {
     if (!hydrated) return;
