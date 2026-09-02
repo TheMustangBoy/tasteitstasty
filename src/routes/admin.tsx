@@ -45,6 +45,7 @@ import {
 import { OrderCard } from "@/components/admin/order-card";
 import { ProductEditor } from "@/components/admin/product-editor";
 import { CatalogManager } from "@/components/admin/catalog-manager";
+import { supabase } from "@/integrations/supabase/client";
 import { formatPrice, WEEKDAYS } from "@/data/menu";
 import {
   CLOSED_STATUSES,
