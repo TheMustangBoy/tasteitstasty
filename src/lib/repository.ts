@@ -131,21 +131,20 @@ export type ShopSnapshot = {
   extras: ExtraRecord[];
   products: ProductRecord[];
   settings: ShopSettings;
-  orders: ShopOrder[];
 };
 
-export async function fetchSnapshot(): Promise<ShopSnapshot> {
-  const [categories, ingredients, extras, products, settings, hours, orders] = await Promise.all([
+/** Öffentlich lesbare Stammdaten – ohne Bestellungen (keine Kundendaten). */
+export async function fetchPublicSnapshot(): Promise<ShopSnapshot> {
+  const [categories, ingredients, extras, products, settings, hours] = await Promise.all([
     supabase.from("categories").select("*").order("sort_order"),
     supabase.from("ingredients").select("*").order("sort_order"),
     supabase.from("extras").select("*").order("sort_order"),
     supabase.from("products").select("*").order("sort_order"),
     supabase.from("shop_settings").select("*").eq("id", 1).maybeSingle(),
     supabase.from("opening_hours").select("*").order("weekday"),
-    supabase.from("orders").select("*").order("created_at", { ascending: false }).limit(500),
   ]);
 
-  const firstError = [categories, ingredients, extras, products, settings, hours, orders].find(
+  const firstError = [categories, ingredients, extras, products, settings, hours].find(
     (r) => r.error,
   )?.error;
   if (firstError) throw firstError;
@@ -187,9 +186,38 @@ export async function fetchSnapshot(): Promise<ShopSnapshot> {
       ordersPaused: settings.data?.orders_paused ?? false,
       wheelSoundOn: settings.data?.wheel_sound_on ?? true,
     },
-    orders: (orders.data ?? []).map((o) => toOrder(o as OrderRow)),
   };
 }
+
+/** Vollständige Bestellungen – nur für angemeldete Admins (RLS). */
+export async function fetchAdminOrders(): Promise<ShopOrder[]> {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(500);
+  if (error) throw error;
+  return (data ?? []).map((o) => toOrder(o as OrderRow));
+}
+
+/** Slot-Auslastung ohne personenbezogene Daten (nur Zeit + Anzahl). */
+export async function fetchSlotBookings(): Promise<Record<string, number>> {
+  const { data, error } = await supabase.rpc("get_slot_bookings");
+  if (error) throw error;
+  const map: Record<string, number> = {};
+  for (const row of data ?? []) {
+    map[new Date(row.pickup_at).toISOString()] = Number(row.bookings ?? 0);
+  }
+  return map;
+}
+
+/** Prüft serverseitig, ob die aktuelle Session Adminrechte besitzt. */
+export async function checkIsAdmin(): Promise<boolean> {
+  const { data, error } = await supabase.rpc("is_admin");
+  if (error) return false;
+  return data === true;
+}
+
 
 /* -------------------------------------------------------------- Schreiben */
 
