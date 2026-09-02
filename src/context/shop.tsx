@@ -507,7 +507,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       overrides,
       bookings,
       loading,
+      authLoading,
       loadError,
+
       refresh,
       setSettings: (p) => {
         const next = { ...state.settings, ...p };
