@@ -610,9 +610,14 @@ function AdminConsole() {
             variant="outline"
             className="h-11 rounded-full"
             onClick={() => {
-              // Nutzergeste: Audio freischalten, damit spätere Töne nicht blockiert werden.
-              if (!soundOn) primeAudio();
-              setSoundOn(!soundOn);
+              const next = !soundOn;
+              setSoundOn(next);
+              // Nutzergeste: Audio freischalten und beim Einschalten einmal testen.
+              if (next) {
+                void (async () => {
+                  if (await primeAudio()) void playNotificationSound();
+                })();
+              }
             }}
             aria-label={soundOn ? "Ton ausschalten" : "Ton einschalten"}
           >
@@ -624,7 +629,7 @@ function AdminConsole() {
             onClick={async () => {
               // Audio aus der Nutzergeste heraus freischalten; Toast + Ton
               // kommen zentral über den Realtime-INSERT-Handler.
-              primeAudio();
+              void primeAudio();
               try {
                 await simulateOrder();
               } catch (error) {
