@@ -61,11 +61,6 @@ export const Route = createFileRoute("/impressum")({
         <br />
         Der Abholstandort ist nicht zwingend die Geschäftsanschrift des Betreibers.
       </p>
-      <p>
-        <strong>Verantwortlich für redaktionelle Inhalte</strong>
-        <br />
-        {LEGAL.operatorName}, {LEGAL.address}
-      </p>
     </PageShell>
   ),
 });

@@ -20,7 +20,7 @@ export const Route = createFileRoute("/agb")({
         <strong>1. Geltungsbereich und Vertragspartner</strong>
         <br />
         Diese Bedingungen gelten für alle über diese Website aufgegebenen Bestellungen von Speisen
-        und Getränken zur Abholung. Vertragspartner ist {LEGAL.operatorName}, {LEGAL.address}. Eine
+        zur Abholung. Vertragspartner ist {LEGAL.operatorName}, {LEGAL.address}. Eine
         Lieferung wird nicht angeboten.
       </p>
 

@@ -123,9 +123,10 @@ export const Route = createFileRoute("/datenschutz")({
         <br />
         Bestelldaten werden für die Abwicklung und Rückfragen gespeichert und anschließend gelöscht,
         soweit keine gesetzlichen Aufbewahrungspflichten bestehen. Aufgrund handels- und
-        steuerrechtlicher Pflichten (§ 147 AO, § 257 HGB) werden abrechnungsrelevante Unterlagen
-        regelmäßig 6 bzw. 10 Jahre aufbewahrt. Technische Zugriffsdaten werden nur kurzzeitig
-        vorgehalten.
+        steuerrechtlicher Pflichten (§ 147 AO, § 257 HGB) werden aufbewahrungspflichtige Unterlagen
+        je nach Art der Unterlage regelmäßig 6, 8 oder 10 Jahre aufbewahrt. Technische
+        Zugriffsdaten werden nur solange vorgehalten, wie dies für Betrieb und Sicherheit
+        erforderlich ist bzw. nach den Vorgaben des Hosting-Anbieters.
       </p>
 
       <p>

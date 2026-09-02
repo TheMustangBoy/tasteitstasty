@@ -2,30 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageShell } from "@/components/shop/page-shell";
 import { CATEGORIES, MENU } from "@/data/menu";
 import { LEGAL } from "@/data/legal";
-
-/**
- * Vorbereitete Allergen-Struktur. Es werden bewusst KEINE Allergene erfunden –
- * je Produkt steht ein Platzhalter, der vor dem Livebetrieb gefüllt werden muss.
- */
-const ALLERGEN_PLACEHOLDER = "[ALLERGENE FÜR DIESES PRODUKT EINTRAGEN]";
-
-/** Gesetzliche Hauptallergengruppen nach Anhang II LMIV – als Ausfüllhilfe. */
-const ALLERGEN_GROUPS = [
-  "Glutenhaltiges Getreide",
-  "Krebstiere",
-  "Eier",
-  "Fische",
-  "Erdnüsse",
-  "Sojabohnen",
-  "Milch (inkl. Laktose)",
-  "Schalenfrüchte",
-  "Sellerie",
-  "Senf",
-  "Sesamsamen",
-  "Schwefeldioxid und Sulphite",
-  "Lupinen",
-  "Weichtiere",
-];
+import {
+  ALLERGEN_CROSS_CONTACT_NOTE,
+  ALLERGEN_GROUPS,
+  ALLERGEN_PLACEHOLDER,
+  allergensForProduct,
+} from "@/data/allergens";
 
 export const Route = createFileRoute("/allergene")({
   head: () => ({
@@ -65,7 +47,7 @@ function AllergenePage() {
               {items.map((item) => (
                 <li key={item.id} className="rounded-xl border border-border bg-card p-4">
                   <p className="font-semibold">{item.name}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{ALLERGEN_PLACEHOLDER}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{allergensForProduct(item.id)}</p>
                 </li>
               ))}
             </ul>
@@ -83,9 +65,7 @@ function AllergenePage() {
       </section>
 
       <p className="text-xs text-muted-foreground">
-        Hinweis zu Kreuzkontakten: Im Food Truck werden verschiedene Zutaten in derselben Küche
-        verarbeitet. Spuren anderer Allergene können daher nicht vollständig ausgeschlossen werden.
-        Bei Unverträglichkeiten wende dich bitte vor der Bestellung an uns: {LEGAL.phone} ·{" "}
+        Hinweis zu Kreuzkontakten: {ALLERGEN_CROSS_CONTACT_NOTE} Bei Unverträglichkeiten wende dich bitte vor der Bestellung an uns: {LEGAL.phone} ·{" "}
         {LEGAL.email}
       </p>
     </PageShell>
