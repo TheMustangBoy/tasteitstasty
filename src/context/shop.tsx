@@ -290,15 +290,20 @@ type ShopContextValue = ShopState & {
   reorderProducts: (categoryId: string, orderedIds: string[]) => void;
   setProductSoldOut: (id: string, soldOut: boolean) => void;
   setCategoryPaused: (id: string, paused: boolean) => void;
-  addOrder: (order: Omit<ShopOrder, "id" | "status">) => ShopOrder;
+  addOrder: (order: Omit<ShopOrder, "id" | "status">) => Promise<ShopOrder>;
   setOrderStatus: (id: string, status: OrderStatus) => void;
   cancelOrder: (id: string, reason: CancelReason, cancelNote?: string) => void;
   restoreOrder: (id: string, status: OrderStatus) => void;
   setOrderNote: (id: string, internalNote: string) => void;
-  simulateOrder: () => ShopOrder;
+  simulateOrder: () => Promise<ShopOrder>;
   login: (user: string, password: string) => boolean;
   logout: () => void;
   setSoundOn: (on: boolean) => void;
+  /** Ladezustand des zentralen Datenstands. */
+  loading: boolean;
+  loadError: string | null;
+  refresh: () => Promise<void>;
+
 };
 
 /** Setzt den Status und schreibt den passenden Zeitstempel fort. */
