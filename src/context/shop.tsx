@@ -303,13 +303,16 @@ type ShopContextValue = ShopState & {
   restoreOrder: (id: string, status: OrderStatus) => void;
   setOrderNote: (id: string, internalNote: string) => void;
   simulateOrder: () => Promise<ShopOrder>;
-  login: (user: string, password: string) => boolean;
-  logout: () => void;
+  login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  logout: () => Promise<void>;
   setSoundOn: (on: boolean) => void;
   /** Ladezustand des zentralen Datenstands. */
   loading: boolean;
+  /** Session-Prüfung läuft noch. */
+  authLoading: boolean;
   loadError: string | null;
   refresh: () => Promise<void>;
+
 };
 
 /** Setzt den Status und schreibt den passenden Zeitstempel fort. */
