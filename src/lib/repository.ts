@@ -352,5 +352,5 @@ export async function saveOrderPatch(id: string, patch: OrderPatch) {
   if (patch.timestamps !== undefined) payload["status_timestamps"] = patch.timestamps;
   if (patch.cancelReason !== undefined) payload["cancel_reason"] = patch.cancelReason;
   if (patch.cancelNote !== undefined) payload["cancel_note"] = patch.cancelNote;
-  check((await supabase.from("orders").update(payload).eq("id", id)).error);
+  check((await supabase.from("orders").update(payload as never).eq("id", id)).error);
 }
