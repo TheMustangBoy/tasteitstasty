@@ -45,7 +45,10 @@ export const Route = createFileRoute("/checkout")({
 function CheckoutPage() {
   const navigate = useNavigate();
   const { lines, total, placeOrder } = useCart();
-  const { settings, bookings, addOrder, orderableProducts } = useShop();
+  const { settings, bookings, addOrder, orderableProducts, refresh } = useShop();
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
   const [now, setNow] = useState<Date | null>(null);
 
   // Slots erst im Browser berechnen, damit SSR und Client identisch starten.
@@ -84,11 +87,24 @@ function CheckoutPage() {
   const phoneValid = isValidPhone(phone);
 
   // Verfügbarkeitsprüfung: Produkt aktiv, nicht ausverkauft, Kategorie nicht pausiert.
-  const orderableIds = useMemo(
-    () => new Set(orderableProducts.map((p) => p.id)),
+  const productById = useMemo(
+    () => new Map(orderableProducts.map((p) => [p.id, p])),
     [orderableProducts],
   );
-  const unavailableLines = lines.filter((l) => !orderableIds.has(l.itemId));
+  const unavailableLines = lines.filter((l) => !productById.has(l.itemId));
+
+  // Extras und Auswahl-Optionen müssen im Katalog noch existieren (inkl. Preis).
+  const staleLines = lines.filter((l) => {
+    const product = productById.get(l.itemId);
+    if (!product) return false;
+    const extrasOk = (l.extras ?? []).every((e) =>
+      (product.extras ?? []).some((x) => x.id === e.id && x.price === e.price),
+    );
+    const optionsOk = lineOptions(l).every((o) =>
+      (product.options ?? []).some((x) => x.id === o.id && x.priceDelta === o.priceDelta),
+    );
+    return !extrasOk || !optionsOk || product.price !== l.basePrice;
+  });
 
   const selectedSlot =
     slots.find((s) => s.key === slotKey && !s.full) ??
@@ -99,6 +115,8 @@ function CheckoutPage() {
     name.trim().length > 1 &&
     phoneValid &&
     unavailableLines.length === 0 &&
+    staleLines.length === 0 &&
+    !submitting &&
     !settings.ordersPaused;
 
   if (lines.length === 0) {
@@ -326,38 +344,69 @@ function CheckoutPage() {
               Warenkorb entfernen.
             </p>
           )}
+          {staleLines.length > 0 && (
+            <p className="mt-3 flex items-start gap-2 rounded-lg border border-destructive/60 bg-destructive/10 p-3 text-xs text-destructive">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              Preise oder Optionen haben sich geändert ({staleLines.map((l) => l.name).join(", ")}).
+              Bitte den Artikel neu in den Warenkorb legen.
+            </p>
+          )}
+          {submitError && (
+            <p
+              role="alert"
+              className="mt-3 flex items-start gap-2 rounded-lg border border-destructive/60 bg-destructive/10 p-3 text-xs text-destructive"
+            >
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              {submitError}
+            </p>
+          )}
           <Button
             size="lg"
             disabled={!canSubmit}
+            aria-busy={submitting}
             className="mt-5 h-14 w-full rounded-xl bg-flame text-base font-bold uppercase tracking-wide text-primary-foreground shadow-flame hover:opacity-90"
-            onClick={() => {
+            onClick={async () => {
               // Letzte Prüfung direkt vor dem Absenden.
-              if (!selectedSlot || selectedSlot.full) return;
-              if (settings.ordersPaused || unavailableLines.length > 0) return;
+              if (!selectedSlot || selectedSlot.full || submitting) return;
+              if (settings.ordersPaused || unavailableLines.length > 0 || staleLines.length > 0)
+                return;
               const paymentLabel = PAYMENTS.find((p) => p.id === payment)?.label ?? "";
               const pickupLabel = `${selectedSlot.dayLabel}, ${selectedSlot.label} Uhr`;
-              const order = placeOrder({
-                pickupLabel,
-                payment: paymentLabel,
-                name: name.trim(),
-              });
-              addOrder({
-                reference: order.reference,
-                createdAt: new Date().toISOString(),
-                pickupISO: selectedSlot.key,
-                pickupLabel,
-                name: order.name,
-                phone: phone.trim(),
-                note: note.trim(),
-                payment: paymentLabel,
-                lines: order.lines,
-                total: order.total,
-              });
-              navigate({ to: "/bestellung" });
+              const reference = `TIT-${Math.floor(1000 + Math.random() * 9000)}`;
+              setSubmitting(true);
+              setSubmitError(null);
+              try {
+                // Erst speichern (inkl. serverseitiger Kapazitätsprüfung), dann bestätigen.
+                await addOrder({
+                  reference,
+                  createdAt: new Date().toISOString(),
+                  pickupISO: selectedSlot.key,
+                  pickupLabel,
+                  name: name.trim(),
+                  phone: phone.trim(),
+                  note: note.trim(),
+                  payment: paymentLabel,
+                  lines,
+                  total,
+                });
+                placeOrder({ reference, pickupLabel, payment: paymentLabel, name: name.trim() });
+                navigate({ to: "/bestellung" });
+              } catch (error) {
+                // Warenkorb bleibt erhalten – nur Meldung anzeigen und Slots neu laden.
+                setSubmitError(
+                  error instanceof Error
+                    ? error.message
+                    : "Die Bestellung konnte nicht gespeichert werden. Bitte versuche es erneut.",
+                );
+                void refresh();
+              } finally {
+                setSubmitting(false);
+              }
             }}
           >
-            Bestellung abschließen
+            {submitting ? "Wird gesendet …" : "Bestellung abschließen"}
           </Button>
+
           <p className="mt-3 text-center text-xs text-muted-foreground">
             Demo: Es wird keine echte Zahlung ausgeführt.
           </p>

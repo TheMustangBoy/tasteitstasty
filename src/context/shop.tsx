@@ -20,6 +20,28 @@ import {
 } from "@/data/menu";
 import { DEFAULT_MAX_ORDERS_PER_SLOT, DEFAULT_MIN_LEAD_MINUTES } from "@/lib/pickup";
 import { demoPickupDate } from "@/lib/demo-pickup";
+import { toast } from "sonner";
+import {
+  fetchSnapshot,
+  placeOrderRemote,
+  removeCategory,
+  removeExtra,
+  removeIngredient,
+  removeProduct,
+  saveCategory,
+  saveCategoryOrder,
+  saveExtra,
+  saveExtraOrder,
+  saveHours,
+  saveIngredient,
+  saveIngredientOrder,
+  saveOrderPatch,
+  saveProduct,
+  saveProductOrder,
+  saveSettings,
+  type OrderPatch,
+  type ShopSnapshot,
+} from "@/lib/repository";
 import type { CartLine } from "@/context/cart";
 
 export const ORDER_STATUSES = [
@@ -241,39 +263,6 @@ function demoLine(
   };
 }
 
-function seedOrders(): ShopOrder[] {
-  const now = Date.now();
-  const statuses: OrderStatus[] = [
-    "neu",
-    "zubereitung",
-    "abholbereit",
-    "abgeschlossen",
-    "abgeschlossen",
-  ];
-  return statuses.map((status, i) => {
-    const items = [MENU[i % MENU.length]!, MENU[(i + 3) % MENU.length]!];
-    const lines = [demoLine(items[0]!, 1 + (i % 2), i % 2 === 0), demoLine(items[1]!, 1)];
-    const total = lines.reduce((s, l) => s + (l.basePrice + (l.bacon ? 1 : 0)) * l.quantity, 0);
-    // Demo-Abholzeiten über den Tag verteilen, damit kein Slot künstlich voll wirkt.
-    const pickup = demoPickupDate(new Date(now + (i - 2) * 25 * 60_000), i * 20);
-    return {
-      id: `demo-${i}`,
-      reference: `TIT-${1200 + i * 37}`,
-      createdAt: new Date(now - (i + 1) * 18 * 60_000).toISOString(),
-      pickupISO: pickup.toISOString(),
-      pickupLabel: `${String(pickup.getHours()).padStart(2, "0")}:${String(pickup.getMinutes()).padStart(2, "0")} Uhr`,
-      status,
-      name: DEMO_NAMES[i % DEMO_NAMES.length]!,
-      phone: "0151 2345678",
-      note: i === 1 ? "Bitte gut durch" : "",
-      internalNote: "",
-      payment: DEMO_PAYMENTS[i % DEMO_PAYMENTS.length]!,
-      lines,
-      total,
-    };
-  });
-}
-
 type ShopContextValue = ShopState & {
   /** Für die Kundenansicht aufbereitete Produkte (aktiv + inaktiv). */
   products: MenuItem[];
@@ -299,15 +288,19 @@ type ShopContextValue = ShopState & {
   reorderProducts: (categoryId: string, orderedIds: string[]) => void;
   setProductSoldOut: (id: string, soldOut: boolean) => void;
   setCategoryPaused: (id: string, paused: boolean) => void;
-  addOrder: (order: Omit<ShopOrder, "id" | "status">) => ShopOrder;
+  addOrder: (order: Omit<ShopOrder, "id" | "status">) => Promise<ShopOrder>;
   setOrderStatus: (id: string, status: OrderStatus) => void;
   cancelOrder: (id: string, reason: CancelReason, cancelNote?: string) => void;
   restoreOrder: (id: string, status: OrderStatus) => void;
   setOrderNote: (id: string, internalNote: string) => void;
-  simulateOrder: () => ShopOrder;
+  simulateOrder: () => Promise<ShopOrder>;
   login: (user: string, password: string) => boolean;
   logout: () => void;
   setSoundOn: (on: boolean) => void;
+  /** Ladezustand des zentralen Datenstands. */
+  loading: boolean;
+  loadError: string | null;
+  refresh: () => Promise<void>;
 };
 
 /** Setzt den Status und schreibt den passenden Zeitstempel fort. */
@@ -392,6 +385,23 @@ export function ShopProvider({ children }: { children: ReactNode }) {
 
   const patch = useCallback((fn: (prev: ShopState) => ShopState) => setState(fn), []);
 
+  /**
+   * Optimistisches Update wurde bereits angewendet – hier folgt der Write-Through.
+   * Bei Fehler: verständliche Meldung + Rollback über den zentralen Datenstand.
+   */
+  const persist = useCallback(
+    (op: () => Promise<unknown>, message = "Änderung konnte nicht gespeichert werden.") => {
+      void (async () => {
+        try {
+          await op();
+        } catch {
+          toast.error(message, { description: "Der letzte Stand wurde wiederhergestellt." });
+          await refresh();
+        }
+      })();
+    },
+    [refresh],
+  );
 
   const value = useMemo<ShopContextValue>(() => {
     const extraById = new Map(state.catalog.extras.map((e) => [e.id, e]));
@@ -460,38 +470,48 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       orderableProducts: orderable,
       overrides,
       bookings,
-      setSettings: (p) => patch((prev) => ({ ...prev, settings: { ...prev.settings, ...p } })),
-      setDayHours: (index, p) =>
+      loading,
+      loadError,
+      refresh,
+      setSettings: (p) => {
+        const next = { ...state.settings, ...p };
+        patch((prev) => ({ ...prev, settings: next }));
+        persist(async () => {
+          await saveSettings(next);
+          if (p.hours) await saveHours(next.hours);
+        }, "Einstellungen konnten nicht gespeichert werden.");
+      },
+      setDayHours: (index, p) => {
+        const hours = state.settings.hours.map((h, i) => (i === index ? { ...h, ...p } : h));
+        patch((prev) => ({ ...prev, settings: { ...prev.settings, hours } }));
+        persist(() => saveHours(hours), "Öffnungszeiten konnten nicht gespeichert werden.");
+      },
+      setOverride: (id, p) => {
+        const row = state.productRows.find((r) => r.id === id);
+        if (!row) return;
+        const next: ProductRecord = {
+          ...row,
+          name: p.name ?? row.name,
+          price: p.price ?? row.price,
+          description: p.description ?? row.description,
+          active: p.available ?? row.active,
+          soldOut: p.soldOut ?? row.soldOut,
+        };
         patch((prev) => ({
           ...prev,
-          settings: {
-            ...prev.settings,
-            hours: prev.settings.hours.map((h, i) => (i === index ? { ...h, ...p } : h)),
-          },
-        })),
-      setOverride: (id, p) =>
-        patch((prev) => ({
-          ...prev,
-          productRows: prev.productRows.map((row) =>
-            row.id !== id
-              ? row
-              : {
-                  ...row,
-                  name: p.name ?? row.name,
-                  price: p.price ?? row.price,
-                  description: p.description ?? row.description,
-                  active: p.available ?? row.active,
-                  soldOut: p.soldOut ?? row.soldOut,
-                },
-          ),
-        })),
-      upsertProduct: (row) =>
+          productRows: prev.productRows.map((r) => (r.id === id ? next : r)),
+        }));
+        persist(() => saveProduct(next), "Produkt konnte nicht gespeichert werden.");
+      },
+      upsertProduct: (row) => {
         patch((prev) => ({
           ...prev,
           productRows: prev.productRows.some((r) => r.id === row.id)
             ? prev.productRows.map((r) => (r.id === row.id ? row : r))
             : [...prev.productRows, row],
-        })),
+        }));
+        persist(() => saveProduct(row), "Produkt konnte nicht gespeichert werden.");
+      },
       duplicateProduct: (id) => {
         const source = state.productRows.find((r) => r.id === id);
         if (!source) return null;
@@ -503,11 +523,14 @@ export function ShopProvider({ children }: { children: ReactNode }) {
           sortOrder: source.sortOrder + 0.5,
         };
         patch((prev) => ({ ...prev, productRows: [...prev.productRows, copy] }));
+        persist(() => saveProduct(copy), "Produktkopie konnte nicht gespeichert werden.");
         return copy;
       },
-      deleteProduct: (id) =>
-        patch((prev) => ({ ...prev, productRows: prev.productRows.filter((r) => r.id !== id) })),
-      upsertCategory: (row) =>
+      deleteProduct: (id) => {
+        patch((prev) => ({ ...prev, productRows: prev.productRows.filter((r) => r.id !== id) }));
+        persist(() => removeProduct(id), "Produkt konnte nicht gelöscht werden.");
+      },
+      upsertCategory: (row) => {
         patch((prev) => ({
           ...prev,
           catalog: {
@@ -516,16 +539,23 @@ export function ShopProvider({ children }: { children: ReactNode }) {
               ? prev.catalog.categories.map((c) => (c.id === row.id ? row : c))
               : [...prev.catalog.categories, row],
           },
-        })),
-      deleteCategory: (id) =>
-        patch((prev) => ({
-          ...prev,
-          catalog: {
-            ...prev.catalog,
-            categories: reindex(prev.catalog.categories.filter((c) => c.id !== id)),
-          },
-        })),
-      upsertIngredient: (row) =>
+        }));
+        persist(() => saveCategory(row), "Kategorie konnte nicht gespeichert werden.");
+      },
+      deleteCategory: (id) => {
+        // Kategorien mit Produkten dürfen nicht gelöscht werden (Fremdschlüssel).
+        if (state.productRows.some((r) => r.categoryId === id)) {
+          toast.error("Kategorie enthält noch Produkte und kann nicht gelöscht werden.");
+          return;
+        }
+        const rest = reindex(state.catalog.categories.filter((c) => c.id !== id));
+        patch((prev) => ({ ...prev, catalog: { ...prev.catalog, categories: rest } }));
+        persist(async () => {
+          await removeCategory(id);
+          await saveCategoryOrder(rest);
+        }, "Kategorie konnte nicht gelöscht werden.");
+      },
+      upsertIngredient: (row) => {
         patch((prev) => ({
           ...prev,
           catalog: {
@@ -534,16 +564,18 @@ export function ShopProvider({ children }: { children: ReactNode }) {
               ? prev.catalog.ingredients.map((c) => (c.id === row.id ? row : c))
               : [...prev.catalog.ingredients, row],
           },
-        })),
-      deleteIngredient: (id) =>
-        patch((prev) => ({
-          ...prev,
-          catalog: {
-            ...prev.catalog,
-            ingredients: reindex(prev.catalog.ingredients.filter((c) => c.id !== id)),
-          },
-        })),
-      upsertExtra: (row) =>
+        }));
+        persist(() => saveIngredient(row), "Zutat konnte nicht gespeichert werden.");
+      },
+      deleteIngredient: (id) => {
+        const rest = reindex(state.catalog.ingredients.filter((c) => c.id !== id));
+        patch((prev) => ({ ...prev, catalog: { ...prev.catalog, ingredients: rest } }));
+        persist(async () => {
+          await removeIngredient(id);
+          await saveIngredientOrder(rest);
+        }, "Zutat konnte nicht gelöscht werden.");
+      },
+      upsertExtra: (row) => {
         patch((prev) => ({
           ...prev,
           catalog: {
@@ -552,126 +584,190 @@ export function ShopProvider({ children }: { children: ReactNode }) {
               ? prev.catalog.extras.map((c) => (c.id === row.id ? row : c))
               : [...prev.catalog.extras, row],
           },
-        })),
-      deleteExtra: (id) =>
+        }));
+        persist(() => saveExtra(row), "Extra konnte nicht gespeichert werden.");
+      },
+      deleteExtra: (id) => {
+        const rest = reindex(state.catalog.extras.filter((c) => c.id !== id));
+        const touched = state.productRows
+          .filter((r) => r.extraIds.includes(id))
+          .map((r) => ({ id: r.id, extraIds: r.extraIds.filter((x) => x !== id) }));
         patch((prev) => ({
           ...prev,
-          catalog: {
-            ...prev.catalog,
-            extras: reindex(prev.catalog.extras.filter((c) => c.id !== id)),
-          },
+          catalog: { ...prev.catalog, extras: rest },
           productRows: prev.productRows.map((r) => ({
             ...r,
             extraIds: r.extraIds.filter((x) => x !== id),
           })),
-        })),
-      moveEntry: (list, id, dir) =>
-        patch((prev) => {
-          const entries = [...prev.catalog[list]].sort((a, b) => a.sortOrder - b.sortOrder);
-          const index = entries.findIndex((e) => e.id === id);
-          const target = index + dir;
-          if (index < 0 || target < 0 || target >= entries.length) return prev;
-          const swapped = [...entries];
-          const a = swapped[index]!;
-          swapped[index] = swapped[target]!;
-          swapped[target] = a;
-          return {
-            ...prev,
-            catalog: { ...prev.catalog, [list]: reindex(swapped) } as Catalog,
-          };
-        }),
-      moveProduct: (id, dir) =>
-        patch((prev) => {
-          const row = prev.productRows.find((r) => r.id === id);
-          if (!row) return prev;
-          // Nur innerhalb derselben Kategorie sortieren.
-          const group = prev.productRows
-            .filter((r) => r.categoryId === row.categoryId)
-            .sort((a, b) => a.sortOrder - b.sortOrder);
-          const index = group.findIndex((r) => r.id === id);
-          const target = index + dir;
-          if (target < 0 || target >= group.length) return prev;
-          const swapped = [...group];
-          const a = swapped[index]!;
-          swapped[index] = swapped[target]!;
-          swapped[target] = a;
-          const orderById = new Map(swapped.map((r, i) => [r.id, i]));
-          return {
-            ...prev,
-            productRows: prev.productRows.map((r) =>
-              orderById.has(r.id) ? { ...r, sortOrder: orderById.get(r.id)! } : r,
-            ),
-          };
-        }),
-      setProductSoldOut: (id, soldOut) =>
+        }));
+        persist(async () => {
+          await removeExtra(id, touched);
+          await saveExtraOrder(rest);
+        }, "Extra konnte nicht gelöscht werden.");
+      },
+      moveEntry: (list, id, dir) => {
+        const entries = [...state.catalog[list]].sort((a, b) => a.sortOrder - b.sortOrder);
+        const index = entries.findIndex((e) => e.id === id);
+        const target = index + dir;
+        if (index < 0 || target < 0 || target >= entries.length) return;
+        const swapped = [...entries];
+        const a = swapped[index]!;
+        swapped[index] = swapped[target]!;
+        swapped[target] = a;
+        const next = reindex(swapped);
         patch((prev) => ({
           ...prev,
-          productRows: prev.productRows.map((r) => (r.id === id ? { ...r, soldOut } : r)),
-        })),
-      reorderProducts: (categoryId, orderedIds) =>
-        patch((prev) => {
-          const rank = new Map(orderedIds.map((id, i) => [id, i]));
-          return {
-            ...prev,
-            productRows: prev.productRows.map((r) =>
-              r.categoryId === categoryId && rank.has(r.id)
-                ? { ...r, sortOrder: rank.get(r.id)! }
-                : r,
-            ),
-          };
-        }),
-      setCategoryPaused: (id, paused) =>
+          catalog: { ...prev.catalog, [list]: next } as Catalog,
+        }));
+        persist(() => {
+          if (list === "categories") return saveCategoryOrder(next as CategoryRecord[]);
+          if (list === "ingredients") return saveIngredientOrder(next as IngredientRecord[]);
+          return saveExtraOrder(next as ExtraRecord[]);
+        }, "Reihenfolge konnte nicht gespeichert werden.");
+      },
+      moveProduct: (id, dir) => {
+        const row = state.productRows.find((r) => r.id === id);
+        if (!row) return;
+        const group = state.productRows
+          .filter((r) => r.categoryId === row.categoryId)
+          .sort((a, b) => a.sortOrder - b.sortOrder);
+        const index = group.findIndex((r) => r.id === id);
+        const target = index + dir;
+        if (target < 0 || target >= group.length) return;
+        const swapped = [...group];
+        const a = swapped[index]!;
+        swapped[index] = swapped[target]!;
+        swapped[target] = a;
+        const ordered = swapped.map((r, i) => ({ id: r.id, sortOrder: i }));
+        const orderById = new Map(ordered.map((r) => [r.id, r.sortOrder]));
+        patch((prev) => ({
+          ...prev,
+          productRows: prev.productRows.map((r) =>
+            orderById.has(r.id) ? { ...r, sortOrder: orderById.get(r.id)! } : r,
+          ),
+        }));
+        persist(() => saveProductOrder(ordered), "Reihenfolge konnte nicht gespeichert werden.");
+      },
+      setProductSoldOut: (id, soldOut) => {
+        const row = state.productRows.find((r) => r.id === id);
+        if (!row) return;
+        const next = { ...row, soldOut };
+        patch((prev) => ({
+          ...prev,
+          productRows: prev.productRows.map((r) => (r.id === id ? next : r)),
+        }));
+        persist(() => saveProduct(next), "Verfügbarkeit konnte nicht gespeichert werden.");
+      },
+      reorderProducts: (categoryId, orderedIds) => {
+        const rank = new Map(orderedIds.map((id, i) => [id, i]));
+        patch((prev) => ({
+          ...prev,
+          productRows: prev.productRows.map((r) =>
+            r.categoryId === categoryId && rank.has(r.id)
+              ? { ...r, sortOrder: rank.get(r.id)! }
+              : r,
+          ),
+        }));
+        persist(
+          () => saveProductOrder(orderedIds.map((id, i) => ({ id, sortOrder: i }))),
+          "Reihenfolge konnte nicht gespeichert werden.",
+        );
+      },
+      setCategoryPaused: (id, paused) => {
+        const row = state.catalog.categories.find((c) => c.id === id);
+        if (!row) return;
+        const next = { ...row, paused };
         patch((prev) => ({
           ...prev,
           catalog: {
             ...prev.catalog,
-            categories: prev.catalog.categories.map((c) => (c.id === id ? { ...c, paused } : c)),
+            categories: prev.catalog.categories.map((c) => (c.id === id ? next : c)),
           },
-        })),
-      addOrder: (order) => {
-        const full: ShopOrder = { internalNote: "", ...order, id: `${Date.now()}`, status: "neu" };
-        patch((prev) => ({ ...prev, orders: [full, ...prev.orders] }));
-        return full;
+        }));
+        persist(() => saveCategory(next), "Kategorie konnte nicht gespeichert werden.");
       },
-      setOrderStatus: (id, status) =>
+      addOrder: async (order) => {
+        // Kapazitätsprüfung passiert atomar in der Datenbank – kein optimistisches Insert.
+        const saved = await placeOrderRemote({
+          reference: order.reference,
+          name: order.name,
+          phone: order.phone,
+          pickupISO: order.pickupISO,
+          pickupLabel: order.pickupLabel,
+          payment: order.payment,
+          lines: order.lines,
+          total: order.total,
+          note: order.note ?? "",
+        });
+        patch((prev) => ({ ...prev, orders: [saved, ...prev.orders] }));
+        return saved;
+      },
+      setOrderStatus: (id, status) => {
+        const order = state.orders.find((o) => o.id === id);
+        if (!order) return;
+        const next = withStatus(order, status);
+        patch((prev) => ({ ...prev, orders: prev.orders.map((o) => (o.id === id ? next : o)) }));
+        persist(
+          () => saveOrderPatch(id, { status: next.status, timestamps: next.timestamps ?? {} }),
+          "Status konnte nicht gespeichert werden.",
+        );
+      },
+      cancelOrder: (id, reason, cancelNote) => {
+        const order = state.orders.find((o) => o.id === id);
+        if (!order) return;
+        const next: ShopOrder = {
+          ...withStatus(order, "storniert"),
+          cancelReason: reason,
+          cancelNote: cancelNote ?? "",
+        };
+        patch((prev) => ({ ...prev, orders: prev.orders.map((o) => (o.id === id ? next : o)) }));
+        persist(
+          () =>
+            saveOrderPatch(id, {
+              status: next.status,
+              timestamps: next.timestamps ?? {},
+              cancelReason: reason,
+              cancelNote: cancelNote ?? "",
+            }),
+          "Stornierung konnte nicht gespeichert werden.",
+        );
+      },
+      restoreOrder: (id, status) => {
+        const order = state.orders.find((o) => o.id === id);
+        if (!order) return;
+        const withNext = withStatus(order, status);
+        const timestamps = { ...(withNext.timestamps ?? {}) };
+        delete timestamps.completedAt;
+        delete timestamps.cancelledAt;
+        const restored: ShopOrder = { ...withNext, timestamps };
+        delete restored.cancelReason;
+        delete restored.cancelNote;
         patch((prev) => ({
           ...prev,
-          orders: prev.orders.map((o) => (o.id === id ? withStatus(o, status) : o)),
-        })),
-      cancelOrder: (id, reason, cancelNote) =>
-        patch((prev) => ({
-          ...prev,
-          orders: prev.orders.map((o) =>
-            o.id === id
-              ? {
-                  ...withStatus(o, "storniert"),
-                  cancelReason: reason,
-                  cancelNote: cancelNote ?? "",
-                }
-              : o,
-          ),
-        })),
-      restoreOrder: (id, status) =>
-        patch((prev) => ({
-          ...prev,
-          orders: prev.orders.map((o) => {
-            if (o.id !== id) return o;
-            const next = withStatus(o, status);
-            const timestamps = { ...(next.timestamps ?? {}) };
-            delete timestamps.completedAt;
-            delete timestamps.cancelledAt;
-            const restored: ShopOrder = { ...next, timestamps };
-            delete restored.cancelReason;
-            delete restored.cancelNote;
-            return restored;
-          }),
-        })),
-      setOrderNote: (id, internalNote) =>
+          orders: prev.orders.map((o) => (o.id === id ? restored : o)),
+        }));
+        const orderPatch: OrderPatch = {
+          status,
+          timestamps,
+          cancelReason: null,
+          cancelNote: null,
+        };
+        persist(
+          () => saveOrderPatch(id, orderPatch),
+          "Bestellung konnte nicht reaktiviert werden.",
+        );
+      },
+      setOrderNote: (id, internalNote) => {
         patch((prev) => ({
           ...prev,
           orders: prev.orders.map((o) => (o.id === id ? { ...o, internalNote } : o)),
-        })),
-      simulateOrder: () => {
+        }));
+        persist(
+          () => saveOrderPatch(id, { internalNote }),
+          "Notiz konnte nicht gespeichert werden.",
+        );
+      },
+      simulateOrder: async () => {
         const pool = orderable.length ? orderable : products;
         const lines = [
           demoLine(
@@ -683,23 +779,19 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         ];
         const total = lines.reduce((s, l) => s + (l.basePrice + (l.bacon ? 1 : 0)) * l.quantity, 0);
         const pickup = demoPickupDate(new Date(Date.now() + 25 * 60_000));
-        const order: ShopOrder = {
-          id: `${Date.now()}`,
+        const saved = await placeOrderRemote({
           reference: `TIT-${Math.floor(1000 + Math.random() * 9000)}`,
-          createdAt: new Date().toISOString(),
-          pickupISO: pickup.toISOString(),
-          pickupLabel: `${String(pickup.getHours()).padStart(2, "0")}:${String(pickup.getMinutes()).padStart(2, "0")} Uhr`,
-          status: "neu",
           name: DEMO_NAMES[Math.floor(Math.random() * DEMO_NAMES.length)]!,
           phone: "0151 2345678",
-          note: "",
-          internalNote: "",
+          pickupISO: pickup.toISOString(),
+          pickupLabel: `${String(pickup.getHours()).padStart(2, "0")}:${String(pickup.getMinutes()).padStart(2, "0")} Uhr`,
           payment: DEMO_PAYMENTS[Math.floor(Math.random() * DEMO_PAYMENTS.length)]!,
           lines,
           total,
-        };
-        patch((prev) => ({ ...prev, orders: [order, ...prev.orders] }));
-        return order;
+          note: "",
+        });
+        patch((prev) => ({ ...prev, orders: [saved, ...prev.orders] }));
+        return saved;
       },
       login: (user, password) => {
         const ok = user.trim().toLowerCase() === "admin" && password === "tasty2024";
@@ -709,7 +801,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       logout: () => patch((prev) => ({ ...prev, adminAuthed: false })),
       setSoundOn: (on) => patch((prev) => ({ ...prev, soundOn: on })),
     };
-  }, [state, patch]);
+  }, [state, patch, persist, refresh, loading, loadError]);
 
   return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>;
 }

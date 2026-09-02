@@ -62,7 +62,9 @@ type CartContextValue = {
   remove: (lineId: string) => void;
   clear: () => void;
   lastOrder: PlacedOrder | null;
-  placeOrder: (data: Omit<PlacedOrder, "reference" | "lines" | "total">) => PlacedOrder;
+  placeOrder: (
+    data: Omit<PlacedOrder, "reference" | "lines" | "total"> & { reference?: string },
+  ) => PlacedOrder;
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -156,7 +158,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       placeOrder: (data) => {
         const order: PlacedOrder = {
           ...data,
-          reference: `TIT-${Math.floor(1000 + Math.random() * 9000)}`,
+          reference: data.reference ?? `TIT-${Math.floor(1000 + Math.random() * 9000)}`,
           lines,
           total,
         };

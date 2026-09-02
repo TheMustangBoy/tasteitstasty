@@ -165,6 +165,8 @@ function AdminConsole() {
     setCategoryPaused,
     simulateOrder,
     logout,
+    loading,
+    loadError,
   } = useShop();
 
   const [query, setQuery] = useState("");
@@ -265,7 +267,7 @@ function AdminConsole() {
         <div>
           <h1 className="text-3xl sm:text-4xl">Adminbereich</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Demo-Konsole · Daten liegen lokal im Browser.
+            Demo-Konsole · Daten liegen zentral in der Datenbank.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -280,13 +282,21 @@ function AdminConsole() {
           </Button>
           <Button
             className="h-11 rounded-full bg-flame font-bold uppercase text-primary-foreground"
-            onClick={() => {
-              const order = simulateOrder();
-              if (soundOn) playNotificationSound();
-              toast.success("Neue Bestellung eingegangen", {
-                description: `${order.reference} · Abholung ${order.pickupLabel} · ${formatPrice(order.total)}`,
-                duration: 8000,
-              });
+            onClick={async () => {
+              try {
+                const order = await simulateOrder();
+                if (soundOn) playNotificationSound();
+                toast.success("Neue Bestellung eingegangen", {
+                  description: `${order.reference} · Abholung ${order.pickupLabel} · ${formatPrice(order.total)}`,
+                  duration: 8000,
+                });
+              } catch (error) {
+                toast.error(
+                  error instanceof Error
+                    ? error.message
+                    : "Testbestellung konnte nicht gespeichert werden.",
+                );
+              }
             }}
           >
             <Bell className="mr-2 h-4 w-4" /> Bestellung simulieren
@@ -297,6 +307,16 @@ function AdminConsole() {
           </Button>
         </div>
       </header>
+
+      {loading && <p className="mt-4 text-sm text-muted-foreground">Daten werden geladen …</p>}
+      {loadError && (
+        <p
+          role="alert"
+          className="mt-4 rounded-lg border border-destructive/60 bg-destructive/10 p-3 text-sm text-destructive"
+        >
+          {loadError}
+        </p>
+      )}
 
       <Tabs defaultValue="live" className="mt-8">
         <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-5">

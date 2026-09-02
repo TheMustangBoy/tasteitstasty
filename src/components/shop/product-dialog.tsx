@@ -36,7 +36,6 @@ export function ProductDialog({
       setOptionIds([]);
       setQuantity(1);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, item?.id]);
 
   if (!item) return null;
