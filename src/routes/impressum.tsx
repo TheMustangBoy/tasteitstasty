@@ -1,7 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageShell } from "@/components/shop/page-shell";
-import { LEGAL, LEGAL_PLACEHOLDER_NOTE } from "@/data/legal";
+import { LEGAL } from "@/data/legal";
 
+/**
+ * INTERNER HINWEIS: Alle Angaben stammen aus src/data/legal.ts (Musterdaten).
+ * Optionale Blöcke werden nur gerendert, wenn dort ein Wert hinterlegt ist.
+ */
 export const Route = createFileRoute("/impressum")({
   head: () => ({
     meta: [
@@ -9,24 +13,28 @@ export const Route = createFileRoute("/impressum")({
       { name: "description", content: "Impressum und Anbieterkennzeichnung von Taste It's Tasty." },
       { property: "og:title", content: "Impressum – Taste It's Tasty" },
       { property: "og:description", content: "Anbieterkennzeichnung des Food Trucks." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: () => (
-    <PageShell title="Impressum" intro={LEGAL_PLACEHOLDER_NOTE}>
+    <PageShell title="Impressum" intro="Anbieterkennzeichnung und Kontaktangaben.">
       <p>
-        <strong>Anbieterkennzeichnung gemäß § 5 DDG</strong>
+        <strong>Anbieter gemäß § 5 DDG</strong>
         <br />
         {LEGAL.operatorName}
         <br />
-        {LEGAL.legalForm}
-        <br />
         {LEGAL.address}
       </p>
-      <p>
-        <strong>Vertretungsberechtigt</strong>
-        <br />
-        {LEGAL.representative}
-      </p>
+
+      {LEGAL.representative && (
+        <p>
+          <strong>Vertretungsberechtigte Person</strong>
+          <br />
+          {LEGAL.representative}
+        </p>
+      )}
+
       <p>
         <strong>Kontakt</strong>
         <br />
@@ -34,32 +42,44 @@ export const Route = createFileRoute("/impressum")({
         <br />
         E-Mail: {LEGAL.email}
       </p>
-      <p>
-        <strong>Registereintrag</strong>
-        <br />
-        {LEGAL.register}
-      </p>
-      <p>
-        <strong>Umsatzsteuer-Identifikationsnummer</strong>
-        <br />
-        {LEGAL.vatId}
-      </p>
-      <p>
-        <strong>Zuständige Aufsichtsbehörde</strong>
-        <br />
-        {LEGAL.supervisoryAuthority}
-      </p>
-      <p>
-        <strong>Verbraucherstreitbeilegung</strong>
-        <br />
-        {LEGAL.consumerArbitration}
-      </p>
+
+      {LEGAL.register && (
+        <p>
+          <strong>Registereintrag</strong>
+          <br />
+          {LEGAL.register}
+        </p>
+      )}
+
+      {LEGAL.vatId && (
+        <p>
+          <strong>Umsatzsteuer-Identifikationsnummer</strong>
+          <br />
+          {LEGAL.vatId}
+        </p>
+      )}
+
+      {LEGAL.supervisoryAuthority && (
+        <p>
+          <strong>Zuständige Aufsichtsbehörde</strong>
+          <br />
+          {LEGAL.supervisoryAuthority}
+        </p>
+      )}
+
       <p>
         <strong>Abholstandort</strong>
         <br />
         {LEGAL.pickupLocation}
         <br />
-        Der Abholstandort ist nicht zwingend die Geschäftsanschrift des Betreibers.
+        Der Abholstandort ist der Verkaufsstandort des Food Trucks und nicht die Geschäftsanschrift
+        des Anbieters.
+      </p>
+
+      <p>
+        <strong>Verbraucherstreitbeilegung</strong>
+        <br />
+        {LEGAL.consumerArbitration}
       </p>
     </PageShell>
   ),
