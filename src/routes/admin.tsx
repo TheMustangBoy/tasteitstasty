@@ -79,15 +79,22 @@ export const Route = createFileRoute("/admin")({
 });
 
 function AdminPage() {
-  const { adminAuthed } = useShop();
+  const { adminAuthed, authLoading } = useShop();
+  if (authLoading)
+    return (
+      <div className="mx-auto max-w-md px-4 py-24 text-center text-sm text-muted-foreground sm:px-6">
+        Zugang wird geprüft …
+      </div>
+    );
   return adminAuthed ? <AdminConsole /> : <AdminLogin />;
 }
 
 function AdminLogin() {
   const { login } = useShop();
-  const [user, setUser] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   return (
     <div className="mx-auto max-w-md px-4 py-16 sm:px-6">
@@ -95,24 +102,33 @@ function AdminLogin() {
         <ShieldCheck className="h-10 w-10 text-primary" />
         <h1 className="mt-4 text-3xl">Adminbereich</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Demo-Login – es werden keine echten Zugangsdaten verwendet.
+          Anmeldung nur für freigeschaltete Admin-Konten.
         </p>
         <form
           className="mt-6 space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
-            if (!login(user, password)) setError(true);
+            if (busy) return;
+            setBusy(true);
+            setError(null);
+            void (async () => {
+              const res = await login(email, password);
+              if (!res.ok) setError(res.error ?? "Anmeldung fehlgeschlagen.");
+              setBusy(false);
+            })();
           }}
         >
           <div>
-            <Label htmlFor="admin-user">Benutzer</Label>
+            <Label htmlFor="admin-email">E-Mail</Label>
             <Input
-              id="admin-user"
-              value={user}
-              onChange={(e) => setUser(e.target.value)}
-              autoComplete="username"
+              id="admin-email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
               className="mt-2 h-12"
-              placeholder="admin"
+              placeholder="admin@example.com"
             />
           </div>
           <div>
@@ -120,28 +136,27 @@ function AdminLogin() {
             <Input
               id="admin-pass"
               type="password"
+              required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
               className="mt-2 h-12"
-              placeholder="tasty2024"
             />
           </div>
-          {error && <p className="text-sm text-destructive">Zugangsdaten stimmen nicht.</p>}
+          {error && <p className="text-sm text-destructive">{error}</p>}
           <Button
             type="submit"
+            disabled={busy}
             className="h-13 w-full rounded-xl bg-flame py-4 font-bold uppercase tracking-wide text-primary-foreground"
           >
-            Anmelden
+            {busy ? "Anmeldung läuft …" : "Anmelden"}
           </Button>
         </form>
-        <p className="mt-5 rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
-          Platzhalter-Zugang: Benutzer <strong>admin</strong>, Passwort <strong>tasty2024</strong>.
-        </p>
       </div>
     </div>
   );
 }
+
 
 function AdminConsole() {
   const {
