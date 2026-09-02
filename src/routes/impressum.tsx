@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageShell } from "@/components/shop/page-shell";
-import { BUSINESS } from "@/data/menu";
+import { LEGAL, LEGAL_PLACEHOLDER_NOTE } from "@/data/legal";
 
 export const Route = createFileRoute("/impressum")({
   head: () => ({
@@ -12,32 +12,59 @@ export const Route = createFileRoute("/impressum")({
     ],
   }),
   component: () => (
-    <PageShell title="Impressum" intro="Platzhalter – rechtlich verbindliche Angaben folgen.">
+    <PageShell title="Impressum" intro={LEGAL_PLACEHOLDER_NOTE}>
       <p>
-        <strong>Angaben gemäß § 5 TMG</strong>
+        <strong>Anbieterkennzeichnung gemäß § 5 DDG</strong>
         <br />
-        {BUSINESS.name}
+        {LEGAL.operatorName}
         <br />
-        {BUSINESS.place}, {BUSINESS.street}
+        {LEGAL.legalForm}
         <br />
-        {BUSINESS.city}
+        {LEGAL.address}
       </p>
       <p>
-        <strong>Vertreten durch</strong>
+        <strong>Vertretungsberechtigt</strong>
         <br />
-        {BUSINESS.owner}
+        {LEGAL.representative}
       </p>
       <p>
         <strong>Kontakt</strong>
         <br />
-        Telefon: {BUSINESS.phone}
+        Telefon: {LEGAL.phone}
         <br />
-        E-Mail: {BUSINESS.email}
+        E-Mail: {LEGAL.email}
       </p>
       <p>
-        <strong>Umsatzsteuer-ID</strong>
+        <strong>Registereintrag</strong>
         <br />
-        Platzhalter – wird ergänzt.
+        {LEGAL.register}
+      </p>
+      <p>
+        <strong>Umsatzsteuer-Identifikationsnummer</strong>
+        <br />
+        {LEGAL.vatId}
+      </p>
+      <p>
+        <strong>Zuständige Aufsichtsbehörde</strong>
+        <br />
+        {LEGAL.supervisoryAuthority}
+      </p>
+      <p>
+        <strong>Verbraucherstreitbeilegung</strong>
+        <br />
+        {LEGAL.consumerArbitration}
+      </p>
+      <p>
+        <strong>Abholstandort</strong>
+        <br />
+        {LEGAL.pickupLocation}
+        <br />
+        Der Abholstandort ist nicht zwingend die Geschäftsanschrift des Betreibers.
+      </p>
+      <p>
+        <strong>Verantwortlich für redaktionelle Inhalte</strong>
+        <br />
+        {LEGAL.operatorName}, {LEGAL.address}
       </p>
     </PageShell>
   ),
