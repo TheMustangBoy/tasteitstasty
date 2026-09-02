@@ -58,18 +58,12 @@ export function playNotificationSound() {
 }
 
 
-let tickCtx: AudioContext | null = null;
-
-/** Sehr kurzer Tick beim Weiterrasten des Wheel Pickers. */
+/** Sehr kurzer Tick beim Weiterrasten des Wheel Pickers (gleicher AudioContext). */
 export function playWheelTick() {
-  if (typeof window === "undefined") return;
-  const Ctx =
-    window.AudioContext ??
-    (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-  if (!Ctx) return;
+  const ctx = getCtx();
+  if (!ctx) return;
   try {
-    tickCtx ??= new Ctx();
-    const ctx = tickCtx;
+
     const now = ctx.currentTime;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
