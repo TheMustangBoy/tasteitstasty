@@ -36,9 +36,19 @@ export const LEGAL = {
   consumerArbitration:
     "Wir sind nicht verpflichtet und nicht bereit, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.",
 
+  /**
+   * Steuerhinweis für die Preisangaben (AGB).
+   * Vor dem Livebetrieb an den tatsächlichen Steuerstatus anpassen, z. B.
+   * "Die gesetzliche Umsatzsteuer ist enthalten." oder den Kleinunternehmer-Hinweis
+   * nach § 19 UStG.
+   */
+  taxNote:
+    "Ein etwaig anfallender gesetzlicher Umsatzsteueranteil ist im angegebenen Preis enthalten.",
+
   /** Abholstandort – bewusst getrennt von der Geschäftsanschrift */
   pickupLocation: "REWE-Parkplatz, Kopernikusstraße 2, 85221 Dachau",
 
   /** Marke / Copyright */
   brand: "Taste It's Tasty",
 } as const;
+
