@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { BUSINESS } from "@/data/menu";
+import { LEGAL } from "@/data/legal";
 import { Logo } from "./logo";
 
 export function SiteFooter() {
@@ -9,6 +10,8 @@ export function SiteFooter() {
         <div>
           <Logo />
           <p className="mt-4 text-sm text-muted-foreground">
+            Abholung am
+            <br />
             {BUSINESS.place}
             <br />
             {BUSINESS.street}
@@ -19,15 +22,9 @@ export function SiteFooter() {
         <div className="text-sm">
           <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Kontakt</h2>
           <p className="mt-3 text-muted-foreground">
-            {BUSINESS.owner}
+            {LEGAL.phone}
             <br />
-            <a className="hover:text-primary" href={`tel:${BUSINESS.phone.replace(/\s/g, "")}`}>
-              {BUSINESS.phone}
-            </a>
-            <br />
-            <a className="hover:text-primary" href={`mailto:${BUSINESS.email}`}>
-              {BUSINESS.email}
-            </a>
+            {LEGAL.email}
           </p>
         </div>
         <div className="text-sm">
@@ -48,11 +45,21 @@ export function SiteFooter() {
                 AGB
               </Link>
             </li>
+            <li>
+              <Link to="/widerruf" className="hover:text-primary">
+                Widerrufsrecht
+              </Link>
+            </li>
+            <li>
+              <Link to="/allergene" className="hover:text-primary">
+                Allergene
+              </Link>
+            </li>
           </ul>
         </div>
       </div>
       <p className="border-t border-border/60 px-4 py-5 text-center text-xs text-muted-foreground">
-        Demo-Version · Bestellungen und Zahlungen sind noch nicht aktiv. Lieferung folgt später.
+        © {new Date().getFullYear()} {LEGAL.brand}. Alle Rechte vorbehalten.
       </p>
     </footer>
   );

@@ -142,9 +142,6 @@ function PaymentForm({ returnUrl, amountLabel, onPaid, isTestMode }: PaymentForm
       >
         {busy ? "Zahlung läuft …" : `${amountLabel} bezahlen`}
       </Button>
-      <p className="text-center text-xs text-muted-foreground">
-        Stripe-Testmodus – es wird kein echtes Geld bewegt.
-      </p>
     </div>
   );
 }

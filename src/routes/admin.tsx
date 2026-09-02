@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   BarChart3,
-  Bell,
   BellRing,
   Smartphone,
   ClipboardList,
@@ -73,7 +72,7 @@ export const Route = createFileRoute("/admin")({
       {
         name: "description",
         content:
-          "Interner Demo-Adminbereich des Food Trucks: Bestellungen verwalten, Produkte pflegen, Öffnungszeiten und Abholfenster einstellen.",
+          "Interner Adminbereich des Food Trucks: Bestellungen verwalten, Produkte pflegen, Öffnungszeiten und Abholfenster einstellen.",
       },
       { name: "robots", content: "noindex" },
       { property: "og:title", content: "Adminbereich – Taste It's Tasty" },
@@ -502,7 +501,6 @@ function AdminConsole() {
     moveProduct,
     reorderProducts,
     setCategoryPaused,
-    simulateOrder,
     logout,
     loading,
     loadError,
@@ -625,7 +623,7 @@ function AdminConsole() {
         <div>
           <h1 className="text-3xl sm:text-4xl">Adminbereich</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Demo-Konsole · Daten liegen zentral in der Datenbank.
+            Bestellungen, Produkte und Öffnungszeiten verwalten.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -646,25 +644,6 @@ function AdminConsole() {
           >
             {soundOn ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
             <span className="ml-2 hidden sm:inline">{soundOn ? "Ton an" : "Ton aus"}</span>
-          </Button>
-          <Button
-            className="h-11 rounded-full bg-flame font-bold uppercase text-primary-foreground"
-            onClick={async () => {
-              // Audio aus der Nutzergeste heraus freischalten; Toast + Ton
-              // kommen zentral über den Realtime-INSERT-Handler.
-              void primeAudio();
-              try {
-                await simulateOrder();
-              } catch (error) {
-                toast.error(
-                  error instanceof Error
-                    ? error.message
-                    : "Testbestellung konnte nicht gespeichert werden.",
-                );
-              }
-            }}
-          >
-            <Bell className="mr-2 h-4 w-4" /> Bestellung simulieren
           </Button>
           <Button variant="ghost" className="h-11 rounded-full" onClick={logout}>
             <LogOut className="h-5 w-5" />
@@ -787,7 +766,7 @@ function AdminConsole() {
                   ordersToCsv(history),
                 );
                 toast.success("CSV-Export erstellt", {
-                  description: `${history.length} Bestellungen exportiert (Demo).`,
+                  description: `${history.length} Bestellungen exportiert.`,
                 });
               }}
             >
@@ -1158,8 +1137,7 @@ function AdminConsole() {
               </div>
             </div>
             <p className="mt-4 rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
-              Demo-Hinweis: Keine echten Zugangsdaten, Zahlungen oder Push-Dienste. Zeitfenster
-              bleiben im 5-Minuten-Takt.
+              Zeitfenster bleiben im 5-Minuten-Takt.
             </p>
           </section>
 

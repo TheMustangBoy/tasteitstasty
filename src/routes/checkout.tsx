@@ -303,8 +303,8 @@ function CheckoutPage() {
             {paymentConfig && !onlineReady && (
               <p className="mt-3 flex items-start gap-2 rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                Stripe-Testmodus noch nicht verbunden – Online-Zahlung ist deaktiviert. Bestellungen
-                mit Zahlung am Truck sind weiterhin möglich.
+                Online-Zahlung ist derzeit nicht verfügbar. Bestellungen mit Zahlung am Truck sind
+                weiterhin möglich.
               </p>
             )}
           </section>
@@ -318,7 +318,7 @@ function CheckoutPage() {
                   id="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Max Mustermann"
+                  placeholder="Vor- und Nachname"
                   className="mt-2 h-12"
                 />
               </div>
@@ -549,7 +549,7 @@ function CheckoutPage() {
                 ? "Wird gesendet …"
                 : payment === "online"
                   ? "Weiter zur Zahlung"
-                  : "Bestellung abschließen"}
+                  : "Zahlungspflichtig bestellen"}
             </Button>
           )}
 
@@ -557,6 +557,21 @@ function CheckoutPage() {
             {payment === "online"
               ? "Die Bestellung wird erst nach bestätigter Zahlung angelegt."
               : "Bezahlt wird direkt am Truck bei der Abholung."}
+          </p>
+          <p className="mt-2 text-center text-xs text-muted-foreground">
+            Mit der Bestellung gelten unsere{" "}
+            <Link to="/agb" className="text-primary hover:underline">
+              AGB
+            </Link>
+            ,{" "}
+            <Link to="/datenschutz" className="text-primary hover:underline">
+              Datenschutzhinweise
+            </Link>{" "}
+            und Informationen zum{" "}
+            <Link to="/widerruf" className="text-primary hover:underline">
+              Widerrufsrecht
+            </Link>
+            .
           </p>
         </aside>
       </div>
