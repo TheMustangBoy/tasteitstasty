@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { AlertCircle, Clock, CreditCard, Smartphone, Wallet, Banknote } from "lucide-react";
+import { AlertCircle, Banknote, Clock, CreditCard, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,13 +18,35 @@ import {
   nextOpeningLabel,
 } from "@/lib/pickup";
 import { isValidPhone, PHONE_ERROR, sanitizePhoneInput } from "@/lib/phone";
+import { PAYMENT_ON_SITE, type PaymentConfig } from "@/lib/payments/config";
+import {
+  createPaymentIntent,
+  fetchPaymentConfig,
+  waitForPaidReservation,
+} from "@/lib/payments/client";
+import { StripePaymentSection } from "@/components/shop/stripe-payment";
+
+type PaymentChoice = "cash" | "terminal" | "online";
 
 const PAYMENTS = [
-  { id: "card", label: "Kreditkarte", icon: CreditCard, hint: "Online bezahlen" },
-  { id: "apple", label: "Apple Pay", icon: Smartphone, hint: "Online bezahlen" },
-  { id: "google", label: "Google Pay", icon: Wallet, hint: "Online bezahlen" },
-  { id: "cash", label: "Barzahlung bei Abholung", icon: Banknote, hint: "Am Truck" },
-  { id: "terminal", label: "Kartenzahlung bei Abholung", icon: CreditCard, hint: "Am Truck" },
+  {
+    id: "cash",
+    label: PAYMENT_ON_SITE.cash,
+    icon: Banknote,
+    hint: "Am Truck",
+  },
+  {
+    id: "terminal",
+    label: PAYMENT_ON_SITE.terminal,
+    icon: CreditCard,
+    hint: "Am Truck",
+  },
+  {
+    id: "online",
+    label: "Online bezahlen",
+    icon: Globe,
+    hint: "Karte · Apple Pay · Google Pay",
+  },
 ] as const;
 
 export const Route = createFileRoute("/checkout")({
@@ -79,12 +101,31 @@ function CheckoutPage() {
     ? dayKey
     : (suggested?.dayKey ?? slotDays[0]?.dayKey ?? "");
   const activeDay = slotDays.find((d) => d.dayKey === activeDayKey);
-  const [payment, setPayment] = useState<string>("card");
+  const [payment, setPayment] = useState<PaymentChoice>("cash");
+  const [paymentConfig, setPaymentConfig] = useState<PaymentConfig | null>(null);
+  const [intent, setIntent] = useState<{
+    clientSecret: string;
+    reservationId: string;
+    token: string;
+    reference: string;
+  } | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [note, setNote] = useState("");
   const [phoneTouched, setPhoneTouched] = useState(false);
   const phoneValid = isValidPhone(phone);
+  const onlineReady = paymentConfig?.configured === true && Boolean(paymentConfig.publishableKey);
+
+  // Verfügbarkeit der Online-Zahlung einmalig serverseitig erfragen.
+  useEffect(() => {
+    let active = true;
+    void fetchPaymentConfig().then((config) => {
+      if (active) setPaymentConfig(config);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Verfügbarkeitsprüfung: Produkt aktiv, nicht ausverkauft, Kategorie nicht pausiert.
   const productById = useMemo(
@@ -215,15 +256,24 @@ function CheckoutPage() {
               {PAYMENTS.map((option) => {
                 const Icon = option.icon;
                 const active = payment === option.id;
+                const disabled = option.id === "online" && !onlineReady;
                 return (
                   <button
                     key={option.id}
                     type="button"
-                    onClick={() => setPayment(option.id)}
+                    disabled={disabled}
+                    aria-disabled={disabled}
+                    onClick={() => {
+                      if (disabled) return;
+                      setPayment(option.id);
+                      setSubmitError(null);
+                    }}
                     className={`flex items-center gap-3 rounded-xl border p-4 text-left transition-colors ${
-                      active
-                        ? "border-primary bg-primary/10"
-                        : "border-border bg-card hover:border-primary/50"
+                      disabled
+                        ? "cursor-not-allowed border-border bg-card opacity-50"
+                        : active
+                          ? "border-primary bg-primary/10"
+                          : "border-border bg-card hover:border-primary/50"
                     }`}
                   >
                     <Icon className="h-5 w-5 shrink-0 text-primary" />
@@ -235,6 +285,13 @@ function CheckoutPage() {
                 );
               })}
             </div>
+            {paymentConfig && !onlineReady && (
+              <p className="mt-3 flex items-start gap-2 rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                Stripe-Testmodus noch nicht verbunden – Online-Zahlung ist deaktiviert. Bestellungen
+                mit Zahlung am Truck sind weiterhin möglich.
+              </p>
+            )}
           </section>
 
           <section>
