@@ -16,6 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 import { formatPrice } from "@/data/menu";
 import { lineOptions, linePrice } from "@/context/cart";
 import {
@@ -77,12 +78,19 @@ export function OrderCard({
   onNote,
   onCancel,
   onRestore,
+  onRefundClose,
 }: {
   order: ShopOrder;
   onStatus: (status: OrderStatus) => void;
   onNote?: (note: string) => void;
   onCancel?: (reason: CancelReason, note: string) => void;
   onRestore?: (status: OrderStatus) => void;
+  /** Serverseitige Stornierung/Ablehnung inkl. voller Stripe-Rückerstattung. */
+  onRefundClose?: (
+    status: "storniert" | "abgelehnt",
+    reason?: CancelReason,
+    note?: string,
+  ) => Promise<{ ok: boolean; error?: string; refunded?: boolean }>;
 }) {
   const next = NEXT_STATUS[order.status];
   const prev = PREV_STATUS[order.status];
@@ -104,6 +112,34 @@ export function OrderCard({
   const [reason, setReason] = useState<CancelReason>("kunde");
   const [reasonNote, setReasonNote] = useState("");
   const [restoreStatus, setRestoreStatus] = useState<OrderStatus>("angenommen");
+  const [pending, setPending] = useState(false);
+
+  /** Online bezahlte Stripe-Bestellung: Storno/Ablehnung erstattet automatisch. */
+  const paidOnline = order.paymentProvider === "stripe" && order.paymentStatus === "paid";
+  const wasRefunded = order.paymentStatus === "refunded";
+
+  /** Schließt die Bestellung serverseitig (inkl. Refund) und meldet das Ergebnis. */
+  const closeWithRefund = async (
+    status: "storniert" | "abgelehnt",
+    cancelReason?: CancelReason,
+    note?: string,
+  ) => {
+    if (!onRefundClose) return;
+    setPending(true);
+    const result = await onRefundClose(status, cancelReason, note);
+    setPending(false);
+    if (!result.ok) {
+      toast.error(result.error ?? "Aktion fehlgeschlagen.");
+      return;
+    }
+    toast.success(
+      result.refunded
+        ? `Bestellung ${order.reference} ${status} – Betrag wurde vollständig erstattet.`
+        : `Bestellung ${order.reference} ${status}.`,
+    );
+    if (status === "abgelehnt") setRejectOpen(false);
+    else setCancelOpen(false);
+  };
 
   const readyMinutes =
     order.status === "abholbereit" && now ? minutesSince(order.timestamps?.readyAt, now) : null;
@@ -366,12 +402,29 @@ export function OrderCard({
             <AlertDialogDescription>
               {order.reference} wird abgelehnt und in die Historie verschoben. Die Kundschaft sollte
               telefonisch informiert werden.
+              {paidOnline && (
+                <>
+                  {" "}
+                  Diese Bestellung wurde online bezahlt: Der volle Betrag von{" "}
+                  {formatPrice(order.total)} wird automatisch zurückerstattet.
+                </>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Zurück</AlertDialogCancel>
-            <AlertDialogAction onClick={() => onStatus("abgelehnt")}>
-              Bestellung ablehnen
+            <AlertDialogCancel disabled={pending}>Zurück</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={pending}
+              onClick={(event) => {
+                if (paidOnline && onRefundClose) {
+                  event.preventDefault();
+                  void closeWithRefund("abgelehnt");
+                  return;
+                }
+                onStatus("abgelehnt");
+              }}
+            >
+              {pending ? "Wird erstattet …" : "Bestellung ablehnen"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -383,6 +436,13 @@ export function OrderCard({
             <AlertDialogTitle>Bestellung {order.reference} stornieren?</AlertDialogTitle>
             <AlertDialogDescription>
               Bitte einen Grund angeben. Stornierte Bestellungen bleiben in der Historie sichtbar.
+              {paidOnline && (
+                <>
+                  {" "}
+                  Diese Bestellung wurde online bezahlt: Der volle Betrag von{" "}
+                  {formatPrice(order.total)} wird automatisch zurückerstattet.
+                </>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-3">
@@ -419,15 +479,21 @@ export function OrderCard({
             )}
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel>Zurück</AlertDialogCancel>
+            <AlertDialogCancel disabled={pending}>Zurück</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() =>
-                onCancel
-                  ? onCancel(reason, reason === "sonstiges" ? reasonNote.trim() : "")
-                  : onStatus("storniert")
-              }
+              disabled={pending}
+              onClick={(event) => {
+                const note = reason === "sonstiges" ? reasonNote.trim() : "";
+                if (paidOnline && onRefundClose) {
+                  event.preventDefault();
+                  void closeWithRefund("storniert", reason, note);
+                  return;
+                }
+                if (onCancel) onCancel(reason, note);
+                else onStatus("storniert");
+              }}
             >
-              Stornieren
+              {pending ? "Wird erstattet …" : "Stornieren"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -439,6 +505,13 @@ export function OrderCard({
             <AlertDialogTitle>Bestellung {order.reference} reaktivieren?</AlertDialogTitle>
             <AlertDialogDescription>
               Die Bestellung erscheint wieder unter „Offene Bestellungen“.
+              {wasRefunded && (
+                <>
+                  {" "}
+                  Diese Bestellung wurde bereits zurückerstattet. Durch Reaktivieren wird keine neue
+                  Onlinezahlung ausgelöst. Die Zahlung erfolgt bei Abholung.
+                </>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="grid gap-2">

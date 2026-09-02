@@ -386,6 +386,10 @@ export type OrderPatch = {
   timestamps?: OrderTimestamps;
   cancelReason?: CancelReason | null;
   cancelNote?: string | null;
+  /** Nur beim Reaktivieren erstatteter Bestellungen: zurück auf Zahlung bei Abholung. */
+  paymentProvider?: "manual" | "stripe";
+  paymentStatus?: "pay_on_pickup" | "paid" | "refunded";
+  payment?: string;
 };
 
 export async function saveOrderPatch(id: string, patch: OrderPatch) {
@@ -395,6 +399,9 @@ export async function saveOrderPatch(id: string, patch: OrderPatch) {
   if (patch.timestamps !== undefined) payload["status_timestamps"] = patch.timestamps;
   if (patch.cancelReason !== undefined) payload["cancel_reason"] = patch.cancelReason;
   if (patch.cancelNote !== undefined) payload["cancel_note"] = patch.cancelNote;
+  if (patch.paymentProvider !== undefined) payload["payment_provider"] = patch.paymentProvider;
+  if (patch.paymentStatus !== undefined) payload["payment_status"] = patch.paymentStatus;
+  if (patch.payment !== undefined) payload["payment"] = patch.payment;
   check(
     (
       await supabase

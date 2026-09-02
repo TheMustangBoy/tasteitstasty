@@ -22,6 +22,7 @@ import {
 } from "@/data/menu";
 import { DEFAULT_MAX_ORDERS_PER_SLOT, DEFAULT_MIN_LEAD_MINUTES } from "@/lib/pickup";
 import { toast } from "sonner";
+import { refundAndCloseOrderRemote } from "@/lib/payments/refund-client";
 import {
   checkIsAdmin,
   fetchAdminOrders,
@@ -285,6 +286,16 @@ type ShopContextValue = ShopState & {
   setOrderStatus: (id: string, status: OrderStatus) => void;
   cancelOrder: (id: string, reason: CancelReason, cancelNote?: string) => void;
   restoreOrder: (id: string, status: OrderStatus) => void;
+  /**
+   * Storniert/lehnt eine Bestellung ab. Bei online bezahlten Stripe-Bestellungen
+   * erfolgt zuerst serverseitig die volle Rückerstattung – erst danach der Status.
+   */
+  refundAndCloseOrder: (
+    id: string,
+    status: "storniert" | "abgelehnt",
+    reason?: CancelReason,
+    cancelNote?: string,
+  ) => Promise<{ ok: boolean; error?: string; refunded?: boolean }>;
   setOrderNote: (id: string, internalNote: string) => void;
   login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => Promise<void>;
@@ -910,6 +921,26 @@ export function ShopProvider({ children }: { children: ReactNode }) {
           "Stornierung konnte nicht gespeichert werden.",
         );
       },
+      refundAndCloseOrder: async (id, status, reason, cancelNote) => {
+        const order = state.orders.find((o) => o.id === id);
+        if (!order) return { ok: false, error: "Bestellung wurde nicht gefunden." };
+        try {
+          const result = await refundAndCloseOrderRemote({
+            orderId: id,
+            status,
+            cancelReason: reason ?? null,
+            cancelNote: cancelNote ?? null,
+          });
+          if (!result.ok) return { ok: false, error: result.error };
+          await refresh();
+          return { ok: true, refunded: result.refunded };
+        } catch {
+          return {
+            ok: false,
+            error: "Die Aktion konnte nicht ausgeführt werden. Bitte erneut versuchen.",
+          };
+        }
+      },
       restoreOrder: (id, status) => {
         const order = state.orders.find((o) => o.id === id);
         if (!order) return;
@@ -920,6 +951,13 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         const restored: ShopOrder = { ...withNext, timestamps };
         delete restored.cancelReason;
         delete restored.cancelNote;
+        // Erstattete Onlinezahlungen werden NIE wieder als Onlinezahlung geöffnet.
+        const wasRefunded = order.paymentStatus === "refunded";
+        if (wasRefunded) {
+          restored.paymentProvider = "manual";
+          restored.paymentStatus = "pay_on_pickup";
+          restored.payment = "Zahlung bei Abholung";
+        }
         patch((prev) => ({
           ...prev,
           orders: prev.orders.map((o) => (o.id === id ? restored : o)),
@@ -929,6 +967,13 @@ export function ShopProvider({ children }: { children: ReactNode }) {
           timestamps,
           cancelReason: null,
           cancelNote: null,
+          ...(wasRefunded
+            ? {
+                paymentProvider: "manual" as const,
+                paymentStatus: "pay_on_pickup" as const,
+                payment: "Zahlung bei Abholung",
+              }
+            : {}),
         };
         persist(
           () => saveOrderPatch(id, orderPatch),
