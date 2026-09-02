@@ -22,7 +22,10 @@ import { DEFAULT_MAX_ORDERS_PER_SLOT, DEFAULT_MIN_LEAD_MINUTES } from "@/lib/pic
 import { demoPickupDate } from "@/lib/demo-pickup";
 import { toast } from "sonner";
 import {
-  fetchSnapshot,
+  checkIsAdmin,
+  fetchAdminOrders,
+  fetchPublicSnapshot,
+  fetchSlotBookings,
   placeOrderRemote,
   removeCategory,
   removeExtra,
@@ -42,7 +45,9 @@ import {
   type OrderPatch,
   type ShopSnapshot,
 } from "@/lib/repository";
+import { supabase } from "@/integrations/supabase/client";
 import type { CartLine } from "@/context/cart";
+
 
 export const ORDER_STATUSES = [
   "neu",
