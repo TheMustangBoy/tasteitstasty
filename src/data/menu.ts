@@ -179,9 +179,6 @@ export const BUSINESS = {
   street: "Kopernikusstraße 2",
   city: "85221 Dachau",
   place: "REWE-Parkplatz",
-  // Nicht im UI gerendert; verbindliche Betreiberangaben stehen in src/data/legal.ts.
-  owner: "Muster Betreiber",
-
   phone: "01234 567890",
   email: "info@tasteitstasty.de",
 };
