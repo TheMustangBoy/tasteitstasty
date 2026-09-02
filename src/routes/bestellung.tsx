@@ -23,7 +23,7 @@ export const Route = createFileRoute("/bestellung")({
 });
 
 function OrderPage() {
-  const { lastOrder } = useCart();
+  const { lastOrder, clear } = useCart();
   // Rückkehr aus einem Stripe-Redirect (z. B. 3-D-Secure) ohne lokalen Bestellstand.
   const [redirectState, setRedirectState] = useState<
     { phase: "idle" } | { phase: "checking" } | { phase: "done"; reference: string; paid: boolean }
@@ -39,16 +39,21 @@ function OrderPage() {
     setRedirectState({ phase: "checking" });
     void waitForPaidReservation(reservation, token).then((status) => {
       if (!active) return;
+      // Nur bei serverseitig bestätigter Zahlung den Warenkorb leeren.
+      if (status === "paid") clear();
       setRedirectState({
         phase: "done",
         reference: params.get("ref") ?? "",
         paid: status === "paid",
       });
+      // Reservierungs-Parameter aus der URL entfernen.
+      window.history.replaceState({}, "", window.location.pathname);
     });
     return () => {
       active = false;
     };
-  }, [lastOrder]);
+  }, [lastOrder, clear]);
+
 
   if (!lastOrder && redirectState.phase === "checking") {
     return (
