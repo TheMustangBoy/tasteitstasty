@@ -56,7 +56,7 @@ import {
   type OrderStatus,
   type ProductRecord,
 } from "@/context/shop";
-import { playNotificationSound } from "@/lib/admin-sound";
+import { primeAudio } from "@/lib/admin-sound";
 import { downloadCsv, ordersToCsv } from "@/lib/csv";
 
 /** Kompakte Statusfilter über den offenen Bestellungen. */
@@ -84,11 +84,7 @@ const PASSWORD_POLICY_ERROR =
   "Dieses Passwort ist zu schwach oder als leicht zu erraten bekannt. Bitte wähle ein anderes Passwort mit mindestens 8 Zeichen, Groß- und Kleinbuchstaben, Zahl und Sonderzeichen.";
 
 /** Übersetzt Auth-Fehler in sichere, hilfreiche Meldungen ohne Backend-Details offenzulegen. */
-function recoveryErrorMessage(error: {
-  code?: unknown;
-  message?: unknown;
-  status?: unknown;
-}) {
+function recoveryErrorMessage(error: { code?: unknown; message?: unknown; status?: unknown }) {
   const code = typeof error.code === "string" ? error.code.toLowerCase() : "";
   const message = typeof error.message === "string" ? error.message.toLowerCase() : "";
 
@@ -331,7 +327,6 @@ function ResetPasswordForm({ onDone }: { onDone: () => void }) {
   );
 }
 
-
 function AdminLogin() {
   const { login } = useShop();
   const [email, setEmail] = useState("");
@@ -424,8 +419,12 @@ function AdminLogin() {
           onSubmit={(e) => {
             e.preventDefault();
             if (busy) return;
+            // Login ist eine Nutzergeste: Audio hier freischalten, damit spätere
+            // Benachrichtigungstöne nicht vom Browser blockiert werden.
+            primeAudio();
             setBusy(true);
             setError(null);
+
             void (async () => {
               const res = await login(email, password);
               if (!res.ok) setError(res.error ?? "Anmeldung fehlgeschlagen.");
@@ -478,7 +477,6 @@ function AdminLogin() {
     </div>
   );
 }
-
 
 function AdminConsole() {
   const {
@@ -611,7 +609,11 @@ function AdminConsole() {
           <Button
             variant="outline"
             className="h-11 rounded-full"
-            onClick={() => setSoundOn(!soundOn)}
+            onClick={() => {
+              // Nutzergeste: Audio freischalten, damit spätere Töne nicht blockiert werden.
+              if (!soundOn) primeAudio();
+              setSoundOn(!soundOn);
+            }}
             aria-label={soundOn ? "Ton ausschalten" : "Ton einschalten"}
           >
             {soundOn ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
@@ -620,13 +622,11 @@ function AdminConsole() {
           <Button
             className="h-11 rounded-full bg-flame font-bold uppercase text-primary-foreground"
             onClick={async () => {
+              // Audio aus der Nutzergeste heraus freischalten; Toast + Ton
+              // kommen zentral über den Realtime-INSERT-Handler.
+              primeAudio();
               try {
-                const order = await simulateOrder();
-                if (soundOn) playNotificationSound();
-                toast.success("Neue Bestellung eingegangen", {
-                  description: `${order.reference} · Abholung ${order.pickupLabel} · ${formatPrice(order.total)}`,
-                  duration: 8000,
-                });
+                await simulateOrder();
               } catch (error) {
                 toast.error(
                   error instanceof Error

@@ -4,9 +4,11 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
+
 import {
   CATEGORIES,
   DEFAULT_EXTRAS,
@@ -47,8 +49,8 @@ import {
   type ShopSnapshot,
 } from "@/lib/repository";
 import { supabase } from "@/integrations/supabase/client";
+import { playNotificationSound } from "@/lib/admin-sound";
 import type { CartLine } from "@/context/cart";
-
 
 export const ORDER_STATUSES = [
   "neu",
@@ -199,7 +201,6 @@ type ShopState = {
 
 const STORAGE_KEY = "tit-shop-cache-v3";
 
-
 const DEFAULT_SETTINGS: ShopSettings = {
   hours: DEFAULT_HOURS,
   maxOrdersPerSlot: DEFAULT_MAX_ORDERS_PER_SLOT,
@@ -313,7 +314,6 @@ type ShopContextValue = ShopState & {
   authLoading: boolean;
   loadError: string | null;
   refresh: () => Promise<void>;
-
 };
 
 /** Setzt den Status und schreibt den passenden Zeitstempel fort. */
@@ -336,12 +336,45 @@ const initialState: ShopState = {
   soundOn: true,
 };
 
+const SOUND_KEY = "tit-admin-sound-on";
+
 export function ShopProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<ShopState>(initialState);
   const [hydrated, setHydrated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  /**
+   * Bereits bekannte Bestell-IDs (Dedup für Benachrichtigungen).
+   * Bewusst ein Ref und kein State: kein Re-Render, keine Race-Conditions
+   * zwischen initialem Fetch und Realtime-INSERT.
+   */
+  const knownOrderIds = useRef<Set<string>>(new Set());
+  /** Aktueller Ton-Wunsch ohne Neuaufbau des Realtime-Channels. */
+  const soundOnRef = useRef(state.soundOn);
+  soundOnRef.current = state.soundOn;
+
+  /** Bestellungen aus einem Vollabruf als „bekannt“ markieren – ohne Meldung. */
+  const markKnown = useCallback((orders: ShopOrder[]) => {
+    for (const o of orders) knownOrderIds.current.add(o.id);
+  }, []);
+
+  /** Zentrale Benachrichtigung: Toast, optional Ton, kurzer Titel-Hinweis. */
+  const notifyNewOrder = useCallback((order: ShopOrder) => {
+    toast.success("Neue Bestellung eingegangen", {
+      description: `${order.reference} · Abholung ${order.pickupLabel} · ${order.total.toFixed(2).replace(".", ",")} €`,
+      duration: 8000,
+    });
+    if (soundOnRef.current) playNotificationSound();
+    if (typeof document !== "undefined") {
+      const original = document.title;
+      document.title = "🔔 Neue Bestellung!";
+      setTimeout(() => {
+        document.title = original;
+      }, 5000);
+    }
+  }, []);
 
   const applySnapshot = useCallback((snap: ShopSnapshot) => {
     setState((prev) => ({
@@ -368,9 +401,12 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       const admin = sessionData.session ? await checkIsAdmin() : false;
       setState((prev) => ({ ...prev, adminAuthed: admin }));
       if (admin) {
+        // Bestand aus dem Vollabruf gilt als bekannt – keine Meldung für Altbestellungen.
         const orders = await fetchAdminOrders();
+        markKnown(orders);
         setState((prev) => ({ ...prev, orders }));
       } else {
+        knownOrderIds.current.clear();
         setState((prev) => ({ ...prev, orders: [] }));
       }
     } catch {
@@ -379,7 +415,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       setAuthLoading(false);
     }
-  }, [applySnapshot]);
+  }, [applySnapshot, markKnown]);
 
   useEffect(() => {
     // Altlast entfernen: v2 enthielt Bestellungen, Kundendaten und adminAuthed.
@@ -402,6 +438,13 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     } catch {
       /* ignore */
     }
+    // Ton-Präferenz ist gerätespezifisch und wird nicht in der DB gespeichert.
+    try {
+      const stored = localStorage.getItem(SOUND_KEY);
+      if (stored !== null) setState((prev) => ({ ...prev, soundOn: stored === "1" }));
+    } catch {
+      /* ignore */
+    }
     setHydrated(true);
   }, []);
 
@@ -418,6 +461,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       // INITIAL_SESSION wird vom obigen getSession()-Pfad abgedeckt.
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
       if (event === "SIGNED_OUT") {
+        knownOrderIds.current.clear();
         setState((prev) => ({ ...prev, adminAuthed: false, orders: [] }));
         setAuthLoading(false);
         return;
@@ -439,6 +483,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
 
     const upsert = (row: unknown) => {
       const order = toOrder(row as Parameters<typeof toOrder>[0]);
+      knownOrderIds.current.add(order.id);
       setState((prev) => {
         const idx = prev.orders.findIndex((o) => o.id === order.id);
         if (idx === -1) return { ...prev, orders: [order, ...prev.orders] };
@@ -450,9 +495,15 @@ export function ShopProvider({ children }: { children: ReactNode }) {
 
     const channel = supabase
       .channel("admin-orders")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "orders" }, (p) =>
-        upsert(p.new),
-      )
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "orders" }, (p) => {
+        const id = (p.new as { id?: string } | null)?.id;
+        // Dedup zuerst prüfen (upsert markiert die ID anschließend als bekannt):
+        // mehrfach zugestellte INSERTs oder bereits geladene Bestellungen melden nicht erneut.
+        const isNew = Boolean(id) && !knownOrderIds.current.has(id!);
+        upsert(p.new);
+        if (isNew) notifyNewOrder(toOrder(p.new as Parameters<typeof toOrder>[0]));
+      })
+
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "orders" }, (p) =>
         upsert(p.new),
       )
@@ -467,7 +518,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
           // Lücke zwischen initialem Fetch und Subscription schließen.
           void fetchAdminOrders()
             .then((orders) => {
-              if (!cancelled) setState((prev) => ({ ...prev, orders }));
+              if (cancelled) return;
+              markKnown(orders);
+              setState((prev) => ({ ...prev, orders }));
             })
             .catch(() => {
               /* stiller Fehler – Bestand bleibt erhalten */
@@ -479,7 +532,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
             retry = null;
             void fetchAdminOrders()
               .then((orders) => {
-                if (!cancelled) setState((prev) => ({ ...prev, orders }));
+                if (cancelled) return;
+                markKnown(orders);
+                setState((prev) => ({ ...prev, orders }));
               })
               .catch(() => {
                 /* ignore */
@@ -493,8 +548,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       if (retry) clearTimeout(retry);
       void supabase.removeChannel(channel);
     };
-  }, [state.adminAuthed]);
-
+  }, [state.adminAuthed, markKnown, notifyNewOrder]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -508,7 +562,6 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   }, [state, hydrated]);
 
   const patch = useCallback((fn: (prev: ShopState) => ShopState) => setState(fn), []);
-
 
   /**
    * Optimistisches Update wurde bereits angewendet – hier folgt der Write-Through.
@@ -582,7 +635,6 @@ export function ShopProvider({ children }: { children: ReactNode }) {
 
     // Auslastung stammt aus der datenschutzkonformen RPC (nur Zeit + Anzahl).
     const bookings: Record<string, number> = { ...state.slotBookings };
-
 
     const reindex = <T extends { sortOrder: number }>(list: T[]) =>
       list.map((entry, i) => ({ ...entry, sortOrder: i }));
@@ -936,13 +988,20 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       },
       logout: async () => {
         // Sensible Daten sofort verwerfen, dann Session beenden.
+        knownOrderIds.current.clear();
         patch((prev) => ({ ...prev, adminAuthed: false, orders: [] }));
         await supabase.auth.signOut();
       },
-      setSoundOn: (on) => patch((prev) => ({ ...prev, soundOn: on })),
+      setSoundOn: (on) => {
+        try {
+          localStorage.setItem(SOUND_KEY, on ? "1" : "0");
+        } catch {
+          /* ignore */
+        }
+        patch((prev) => ({ ...prev, soundOn: on }));
+      },
     };
   }, [state, patch, persist, refresh, loading, authLoading, loadError]);
-
 
   return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>;
 }
