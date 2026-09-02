@@ -1,65 +1,39 @@
 /**
  * Zentrale Allergen-Daten.
  *
- * Die Angaben beruhen ausschließlich auf den vom Betreiber bestätigten
- * Zutaten-Allergenen. Es werden bewusst KEINE Allergene erfunden: nicht
- * abschließend geklärte Bestandteile werden ausdrücklich als offen markiert.
- * Änderungen erfolgen nur hier, nicht in der Route.
+ * Die Angaben beruhen ausschließlich auf dem vom Betreiber bestätigten
+ * Aushang des Food Trucks. Nicht aufgeführte Bestandteile müssen vor der
+ * Bestellung beim Personal geklärt werden.
  */
 
-/** Interner Platzhalter – wird öffentlich nie angezeigt. */
-export const ALLERGEN_PLACEHOLDER = "[ALLERGENE FÜR DIESES PRODUKT EINTRAGEN]";
+/** Bestandteil mit den auf dem Aushang verwendeten Allergen-Kürzeln. */
+export const INGREDIENT_ALLERGENS: { ingredient: string; codes: string[] }[] = [
+  { ingredient: "Brioche Bun", codes: ["EI", "GL"] },
+  { ingredient: "Käse", codes: ["MI"] },
+  { ingredient: "Röstzwiebel", codes: ["GL"] },
+  { ingredient: "Burgersosse", codes: ["EI", "SF", "GL"] },
+  { ingredient: "Ketchup", codes: ["SL"] },
+  { ingredient: "Mayonnaise", codes: ["EI", "SF", "GL"] },
+  { ingredient: "Senf", codes: ["SF"] },
+  { ingredient: "BBQ Sosse", codes: ["GL", "SJ"] },
+  { ingredient: "Chicken Patty", codes: ["MI", "SF", "EI"] },
+  { ingredient: "Veggie Patty", codes: ["MI", "SF", "EI"] },
+];
 
-/** Kundenverständlicher Text für noch ungeklärte Produkte. */
-export const ALLERGEN_UNCONFIRMED_TEXT =
-  "Allergenangaben noch nicht abschließend bestätigt – bitte vor der Bestellung beim Personal nachfragen.";
-
-/** Die 14 gesetzlichen Allergengruppen nach Anhang II LMIV – als Legende. */
-export const ALLERGEN_GROUPS = [
-  "Glutenhaltiges Getreide",
-  "Krebstiere",
-  "Eier",
-  "Fische",
-  "Erdnüsse",
-  "Sojabohnen",
-  "Milch (inkl. Laktose)",
-  "Schalenfrüchte (Nüsse)",
-  "Sellerie",
-  "Senf",
-  "Sesamsamen",
-  "Schwefeldioxid und Sulfite",
-  "Lupinen",
-  "Weichtiere",
-] as const;
-
-const COCKTAIL_NOTE =
-  "Zusätzliche Allergene der Cocktail-Sauce noch nicht abschließend bestätigt.";
-
-/** Produkt-ID (aus MENU) -> Allergenangabe. */
-export const PRODUCT_ALLERGENS: Record<string, string> = {
-  "smash-burger": `Enthält: Eier, Glutenhaltiges Getreide. ${COCKTAIL_NOTE}`,
-  "tripple-smash": "Enthält: Eier, Glutenhaltiges Getreide.",
-  "chili-cheese":
-    "Enthält: Eier, Glutenhaltiges Getreide, Milch. Zusätzliche Allergene der Chili-Sauce noch nicht abschließend bestätigt.",
-  "oklahoma-smash": "Enthält: Eier, Glutenhaltiges Getreide, Sellerie, Senf.",
-  "bbq-smash": "Enthält: Eier, Glutenhaltiges Getreide, Sojabohnen.",
-  "trueffel-smash":
-    "Enthält: Eier, Glutenhaltiges Getreide. Zusätzliche Allergene der Trüffel-Remoulade noch nicht abschließend bestätigt.",
-  "chicken-burger": `Enthält: Eier, Glutenhaltiges Getreide, Milch, Senf. ${COCKTAIL_NOTE}`,
-  "tasty-burger": `Enthält: Eier, Glutenhaltiges Getreide, Sojabohnen. ${COCKTAIL_NOTE}`,
-  "veggie-burger": `Enthält: Eier, Glutenhaltiges Getreide, Milch, Senf. ${COCKTAIL_NOTE}`,
-  pommes: "Keine deklarationspflichtigen Allergene bekannt.",
-  "suesskartoffel-pommes": ALLERGEN_UNCONFIRMED_TEXT,
-  "curly-fries": "Enthält: Glutenhaltiges Getreide.",
-  "trueffel-fries":
-    "Allergenangaben noch nicht abschließend bestätigt – insbesondere Trüffel-Sauce bzw. Trüffel-Remoulade. Bitte vor der Bestellung beim Personal nachfragen.",
-};
-
-/** Fallback für Produkte, die hier noch nicht gepflegt sind. */
-export function allergensForProduct(productId: string): string {
-  return PRODUCT_ALLERGENS[productId] ?? ALLERGEN_UNCONFIRMED_TEXT;
-}
+/** Legende der auf dem Aushang verwendeten Allergen-Kürzel. */
+export const ALLERGEN_LEGEND: { code: string; label: string }[] = [
+  { code: "GL", label: "Gluten / glutenhaltiges Getreide" },
+  { code: "EI", label: "Eier" },
+  { code: "MI", label: "Milch" },
+  { code: "SF", label: "Senf" },
+  { code: "SL", label: "Sellerie" },
+  { code: "SJ", label: "Soja" },
+];
 
 /** Hinweis zu Kreuzkontakten in der gemeinsamen Küche des Food Trucks. */
 export const ALLERGEN_CROSS_CONTACT_NOTE =
   "Im Food Truck werden verschiedene Zutaten in derselben Küche verarbeitet. Spuren anderer Allergene können daher nicht vollständig ausgeschlossen werden.";
+
+/** Hinweis für nicht aufgeführte Bestandteile. */
+export const ALLERGEN_UNCONFIRMED_TEXT =
+  "Für nicht aufgeführte Bestandteile bitte vor der Bestellung beim Personal nachfragen.";
