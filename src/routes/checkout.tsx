@@ -345,38 +345,69 @@ function CheckoutPage() {
               Warenkorb entfernen.
             </p>
           )}
+          {staleLines.length > 0 && (
+            <p className="mt-3 flex items-start gap-2 rounded-lg border border-destructive/60 bg-destructive/10 p-3 text-xs text-destructive">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              Preise oder Optionen haben sich geändert ({staleLines.map((l) => l.name).join(", ")}).
+              Bitte den Artikel neu in den Warenkorb legen.
+            </p>
+          )}
+          {submitError && (
+            <p
+              role="alert"
+              className="mt-3 flex items-start gap-2 rounded-lg border border-destructive/60 bg-destructive/10 p-3 text-xs text-destructive"
+            >
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              {submitError}
+            </p>
+          )}
           <Button
             size="lg"
             disabled={!canSubmit}
+            aria-busy={submitting}
             className="mt-5 h-14 w-full rounded-xl bg-flame text-base font-bold uppercase tracking-wide text-primary-foreground shadow-flame hover:opacity-90"
-            onClick={() => {
+            onClick={async () => {
               // Letzte Prüfung direkt vor dem Absenden.
-              if (!selectedSlot || selectedSlot.full) return;
-              if (settings.ordersPaused || unavailableLines.length > 0) return;
+              if (!selectedSlot || selectedSlot.full || submitting) return;
+              if (settings.ordersPaused || unavailableLines.length > 0 || staleLines.length > 0)
+                return;
               const paymentLabel = PAYMENTS.find((p) => p.id === payment)?.label ?? "";
               const pickupLabel = `${selectedSlot.dayLabel}, ${selectedSlot.label} Uhr`;
-              const order = placeOrder({
-                pickupLabel,
-                payment: paymentLabel,
-                name: name.trim(),
-              });
-              addOrder({
-                reference: order.reference,
-                createdAt: new Date().toISOString(),
-                pickupISO: selectedSlot.key,
-                pickupLabel,
-                name: order.name,
-                phone: phone.trim(),
-                note: note.trim(),
-                payment: paymentLabel,
-                lines: order.lines,
-                total: order.total,
-              });
-              navigate({ to: "/bestellung" });
+              const reference = `TIT-${Math.floor(1000 + Math.random() * 9000)}`;
+              setSubmitting(true);
+              setSubmitError(null);
+              try {
+                // Erst speichern (inkl. serverseitiger Kapazitätsprüfung), dann bestätigen.
+                await addOrder({
+                  reference,
+                  createdAt: new Date().toISOString(),
+                  pickupISO: selectedSlot.key,
+                  pickupLabel,
+                  name: name.trim(),
+                  phone: phone.trim(),
+                  note: note.trim(),
+                  payment: paymentLabel,
+                  lines,
+                  total,
+                });
+                placeOrder({ reference, pickupLabel, payment: paymentLabel, name: name.trim() });
+                navigate({ to: "/bestellung" });
+              } catch (error) {
+                // Warenkorb bleibt erhalten – nur Meldung anzeigen und Slots neu laden.
+                setSubmitError(
+                  error instanceof Error
+                    ? error.message
+                    : "Die Bestellung konnte nicht gespeichert werden. Bitte versuche es erneut.",
+                );
+                void refresh();
+              } finally {
+                setSubmitting(false);
+              }
             }}
           >
-            Bestellung abschließen
+            {submitting ? "Wird gesendet …" : "Bestellung abschließen"}
           </Button>
+
           <p className="mt-3 text-center text-xs text-muted-foreground">
             Demo: Es wird keine echte Zahlung ausgeführt.
           </p>
