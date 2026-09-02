@@ -121,8 +121,8 @@ export function toOrder(row: OrderRow): ShopOrder {
     lines: ((row.lines as CartLine[] | null) ?? []) as CartLine[],
     total: num(row.total),
     timestamps: ((row.status_timestamps as OrderTimestamps | null) ?? {}) as OrderTimestamps,
-    paymentProvider: (row.payment_provider ?? null) as ShopOrder["paymentProvider"],
-    paymentStatus: (row.payment_status ?? null) as ShopOrder["paymentStatus"],
+    paymentProvider: (row.payment_provider ?? null) as "manual" | "stripe" | null,
+    paymentStatus: (row.payment_status ?? null) as "pay_on_pickup" | "paid" | "refunded" | null,
     paidAt: row.paid_at ?? null,
   };
   if (row.cancel_reason) order.cancelReason = row.cancel_reason as CancelReason;

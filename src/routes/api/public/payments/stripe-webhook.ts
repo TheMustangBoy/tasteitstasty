@@ -60,8 +60,7 @@ export const Route = createFileRoute("/api/public/payments/stripe-webhook")({
               p_payment_intent_id: intent.id,
               p_amount_cents: intent.amount_received || intent.amount,
               p_currency: intent.currency,
-            })
-            .maybeSingle();
+            });
 
           if (error) {
             console.error("[payments] finalize failed");

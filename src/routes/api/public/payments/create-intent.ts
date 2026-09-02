@@ -53,8 +53,7 @@ export const Route = createFileRoute("/api/public/payments/create-intent")({
             p_total: input.total,
             p_note: input.note,
             p_ttl_minutes: 20,
-          })
-          .maybeSingle();
+          });
 
         if (error || !reservation) {
           const { orderErrorMessage } = await import("@/lib/payments/errors");
