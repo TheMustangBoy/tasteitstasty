@@ -349,15 +349,26 @@ export function OrderCard({
           <p className="mb-1 text-xs font-bold uppercase tracking-[0.15em] text-muted-foreground">
             Status
           </p>
-          <WheelField
-            ariaLabel="Bestellstatus wählen"
-            title="Bestellstatus ändern"
-            description="Status auswählen und mit „Bestätigen“ übernehmen."
-            confirmLabel="Bestätigen"
-            value={order.status}
-            options={ORDER_STATUSES.map((s) => ({ value: s, label: STATUS_LABEL[s] }))}
-            onChange={(v) => onStatus(v as OrderStatus)}
-          />
+          {isClosed ? (
+            /* Geschlossene Bestellungen werden ausschließlich über den
+               Reaktivieren-Dialog wieder geöffnet – nur so wird eine erstattete
+               Zahlung sicher auf „Zahlung bei Abholung“ umgestellt. */
+            <p className="rounded-xl border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+              {STATUS_LABEL[order.status]} – Wiedereröffnen nur über „Reaktivieren“.
+            </p>
+          ) : (
+            <WheelField
+              ariaLabel="Bestellstatus wählen"
+              title="Bestellstatus ändern"
+              description="Status auswählen und mit „Bestätigen“ übernehmen."
+              confirmLabel="Bestätigen"
+              value={order.status}
+              options={ORDER_STATUSES.filter((s) => s !== "storniert" && s !== "abgelehnt").map(
+                (s) => ({ value: s, label: STATUS_LABEL[s] }),
+              )}
+              onChange={(v) => onStatus(v as OrderStatus)}
+            />
+          )}
         </div>
         {onNote && (
           <div>
