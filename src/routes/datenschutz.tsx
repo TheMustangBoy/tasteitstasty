@@ -72,6 +72,10 @@ export const Route = createFileRoute("/datenschutz")({
         Zahlungs- und Gerätedaten) direkt an Stripe übermittelt und dort eigenverantwortlich
         verarbeitet. Vollständige Karten- oder Wallet-Daten werden von dieser Website nicht erhoben
         und nicht gespeichert; wir erhalten lediglich Zahlungsstatus und Referenzkennungen.
+        Im Rahmen der vom Kunden gestarteten Zahlungsabwicklung können Stripe bzw. die
+        eingebundenen Wallet-Verfahren technisch erforderliche Browser-, Geräte- und
+        Sicherheitsinformationen auf dem Endgerät speichern oder auslesen, soweit dies für die
+        Zahlungsabwicklung, Authentifizierung und Betrugsprävention erforderlich ist.
         Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO. Bei Zahlung vor Ort entfällt diese
         Verarbeitung.
       </p>
