@@ -56,7 +56,7 @@ import {
   type OrderStatus,
   type ProductRecord,
 } from "@/context/shop";
-import { playNotificationSound } from "@/lib/admin-sound";
+import { primeAudio } from "@/lib/admin-sound";
 import { downloadCsv, ordersToCsv } from "@/lib/csv";
 
 /** Kompakte Statusfilter über den offenen Bestellungen. */
@@ -611,7 +611,11 @@ function AdminConsole() {
           <Button
             variant="outline"
             className="h-11 rounded-full"
-            onClick={() => setSoundOn(!soundOn)}
+            onClick={() => {
+              // Nutzergeste: Audio freischalten, damit spätere Töne nicht blockiert werden.
+              if (!soundOn) primeAudio();
+              setSoundOn(!soundOn);
+            }}
             aria-label={soundOn ? "Ton ausschalten" : "Ton einschalten"}
           >
             {soundOn ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
@@ -620,13 +624,11 @@ function AdminConsole() {
           <Button
             className="h-11 rounded-full bg-flame font-bold uppercase text-primary-foreground"
             onClick={async () => {
+              // Audio aus der Nutzergeste heraus freischalten; Toast + Ton
+              // kommen zentral über den Realtime-INSERT-Handler.
+              primeAudio();
               try {
-                const order = await simulateOrder();
-                if (soundOn) playNotificationSound();
-                toast.success("Neue Bestellung eingegangen", {
-                  description: `${order.reference} · Abholung ${order.pickupLabel} · ${formatPrice(order.total)}`,
-                  duration: 8000,
-                });
+                await simulateOrder();
               } catch (error) {
                 toast.error(
                   error instanceof Error
