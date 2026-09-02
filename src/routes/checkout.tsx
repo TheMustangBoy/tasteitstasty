@@ -497,14 +497,7 @@ function CheckoutPage() {
                     // erst der Stripe-Webhook nach bestätigter Zahlung.
                     const pickupISO = new Date(selectedSlot.key).toISOString();
                     const created = await createPaymentIntent({
-                      checkoutKey: checkoutKeyFor({
-                        name: name.trim(),
-                        phone: phone.trim(),
-                        note: note.trim(),
-                        pickupISO,
-                        lines: orderLines,
-                        total,
-                      }),
+
                       name: name.trim(),
                       phone: phone.trim(),
                       note: note.trim(),
