@@ -33,6 +33,7 @@ type Props = {
 /** Stripe Payment Element inkl. Apple Pay / Google Pay (geräteabhängig). */
 export function StripePaymentSection(props: Props) {
   const stripePromise = useMemo(() => getStripe(props.publishableKey), [props.publishableKey]);
+  const isTestMode = props.publishableKey.startsWith("pk_test_");
   return (
     <Elements
       stripe={stripePromise}
@@ -41,12 +42,14 @@ export function StripePaymentSection(props: Props) {
         appearance: { theme: "night", variables: { colorPrimary: "#f59e0b", borderRadius: "12px" } },
       }}
     >
-      <PaymentForm {...props} />
+      <PaymentForm {...props} isTestMode={isTestMode} />
     </Elements>
   );
 }
 
-function PaymentForm({ returnUrl, amountLabel, onPaid }: Props) {
+type PaymentFormProps = Props & { isTestMode: boolean };
+
+function PaymentForm({ returnUrl, amountLabel, onPaid, isTestMode }: PaymentFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const [busy, setBusy] = useState(false);
@@ -58,7 +61,12 @@ function PaymentForm({ returnUrl, amountLabel, onPaid }: Props) {
     <div className="mt-4 space-y-4 rounded-2xl border border-border bg-card p-4">
       <div className={expressAvailable ? "space-y-3" : "hidden"}>
         <ExpressCheckoutElement
-          options={{ buttonTheme: { applePay: "black", googlePay: "black" } }}
+          options={{
+            buttonTheme: { applePay: "black", googlePay: "black" },
+            ...(isTestMode && {
+              paymentMethods: { applePay: "always", googlePay: "always" },
+            }),
+          }}
           onReady={(event) => {
             setExpressAvailable(Object.keys(event.availablePaymentMethods ?? {}).length > 0);
           }}
