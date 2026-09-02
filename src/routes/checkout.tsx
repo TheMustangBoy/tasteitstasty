@@ -442,12 +442,21 @@ function CheckoutPage() {
               onPaid={async () => {
                 setSubmitError(null);
                 const status = await waitForPaidReservation(intent.reservationId, intent.token);
+                if (status === "refunded" || status === "slot_full_after_expiry") {
+                  setSubmitError(
+                    "Die Abholzeit war leider vergeben, bevor die Zahlung bestätigt wurde. Der Betrag wurde vollständig zurückerstattet – bitte wähle eine andere Zeit.",
+                  );
+                  setIntent(null);
+                  void refresh();
+                  return;
+                }
                 if (status !== "paid") {
                   setSubmitError(
                     "Die Zahlung wird noch bestätigt. Bitte kurz warten und die Seite nicht schließen.",
                   );
                   return;
                 }
+
                 placeOrder({
                   reference: intent.reference,
                   pickupLabel,
