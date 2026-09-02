@@ -52,10 +52,8 @@ export const cartLineSchema = z.object({
 });
 
 export const createIntentSchema = z.object({
-  reference: z
-    .string()
-    .trim()
-    .regex(/^TIT-\d{4}$/, "Ungültige Referenz"),
+  /** Idempotenzschlüssel des Browsers für genau diesen Checkout-Snapshot. */
+  checkoutKey: z.string().regex(/^[0-9a-f]{32,64}$/, "Ungültiger Checkout-Schlüssel"),
   name: z.string().trim().min(2).max(80),
   phone: z.string().trim().min(5).max(40),
   note: z.string().trim().max(500).default(""),
@@ -71,6 +69,7 @@ export type CreateIntentResponse = {
   clientSecret: string;
   reservationId: string;
   token: string;
+  /** Serverseitig vergebene, kollisionsfreie Bestellnummer. */
   reference: string;
 };
 
@@ -79,7 +78,17 @@ export const reservationStatusSchema = z.object({
   token: z.string().min(32).max(200),
 });
 
+export type ReservationStatusValue =
+  | "pending"
+  | "paid"
+  | "failed"
+  | "cancelled"
+  | "expired"
+  | "refunded"
+  | "slot_full_after_expiry";
+
 export type ReservationStatus = {
-  status: "pending" | "paid" | "failed" | "cancelled" | "expired";
+  status: ReservationStatusValue;
   reference: string;
 };
+
