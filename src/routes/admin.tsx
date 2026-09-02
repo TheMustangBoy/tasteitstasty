@@ -80,6 +80,49 @@ export const Route = createFileRoute("/admin")({
 });
 
 const LINK_ERROR = "Der Link ist ungültig oder abgelaufen. Bitte fordere einen neuen Link an.";
+const PASSWORD_POLICY_ERROR =
+  "Dieses Passwort ist zu schwach oder als leicht zu erraten bekannt. Bitte wähle ein anderes Passwort mit mindestens 8 Zeichen, Groß- und Kleinbuchstaben, Zahl und Sonderzeichen.";
+
+/** Übersetzt Auth-Fehler in sichere, hilfreiche Meldungen ohne Backend-Details offenzulegen. */
+function recoveryErrorMessage(error: {
+  code?: unknown;
+  message?: unknown;
+  status?: unknown;
+}) {
+  const code = typeof error.code === "string" ? error.code.toLowerCase() : "";
+  const message = typeof error.message === "string" ? error.message.toLowerCase() : "";
+
+  if (
+    code === "weak_password" ||
+    code === "same_password" ||
+    message.includes("password is known to be weak") ||
+    message.includes("password should be")
+  )
+    return PASSWORD_POLICY_ERROR;
+
+  if (error.status === 429 || code.includes("rate_limit"))
+    return "Zu viele Versuche. Bitte warte einen Moment und versuche es dann erneut.";
+
+  if (
+    error.status === 401 ||
+    [
+      "bad_jwt",
+      "flow_state_expired",
+      "invalid_jwt",
+      "reauthentication_needed",
+      "refresh_token_not_found",
+      "refresh_token_already_used",
+      "session_expired",
+      "session_not_found",
+    ].includes(code) ||
+    message.includes("jwt") ||
+    message.includes("session") ||
+    message.includes("token")
+  )
+    return LINK_ERROR;
+
+  return "Das Passwort konnte nicht gespeichert werden. Bitte erneut versuchen.";
+}
 
 /** Erkennt beide Supabase-Linkvarianten: Hash/implicit und PKCE/query. */
 function readRecoveryUrl() {
@@ -236,9 +279,7 @@ function ResetPasswordForm({ onDone }: { onDone: () => void }) {
                   }
                   const { error: err } = await supabase.auth.updateUser({ password: pw1 });
                   if (err) {
-                    setError(
-                      "Das Passwort konnte nicht gespeichert werden. Bitte erneut versuchen.",
-                    );
+                    setError(recoveryErrorMessage(err));
                     setBusy(false);
                     return;
                   }
