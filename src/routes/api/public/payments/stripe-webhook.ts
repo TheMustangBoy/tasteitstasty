@@ -54,21 +54,41 @@ export const Route = createFileRoute("/api/public/payments/stripe-webhook")({
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
         if (event.type === "payment_intent.succeeded") {
-          const { error } = await supabaseAdmin
-            .rpc("finalize_payment_reservation", {
-              p_reservation_id: reservationId,
-              p_payment_intent_id: intent.id,
-              p_amount_cents: intent.amount_received || intent.amount,
-              p_currency: intent.currency,
-            });
+          const { error } = await supabaseAdmin.rpc("finalize_payment_reservation", {
+            p_reservation_id: reservationId,
+            p_payment_intent_id: intent.id,
+            p_amount_cents: intent.amount_received || intent.amount,
+            p_currency: intent.currency,
+          });
 
-          if (error) {
-            console.error("[payments] finalize failed");
-            // 500 => Stripe wiederholt die Zustellung (Finalisierung ist idempotent).
-            return new Response("Finalize failed", { status: 500 });
+          if (!error) return Response.json({ received: true });
+
+          // Slot war nach Ablauf der Reservierung belegt -> Geld zurueckerstatten.
+          if ((error.message ?? "").includes("SLOT_FULL_AFTER_EXPIRY")) {
+            try {
+              const stripe = createStripeClient(env.secretKey);
+              await stripe.refunds.create(
+                { payment_intent: intent.id, reason: "requested_by_customer" },
+                { idempotencyKey: `late-slot-refund-${intent.id}` },
+              );
+            } catch {
+              console.error("[payments] late-slot refund failed");
+              // 500 => Stripe wiederholt die Zustellung, Refund ist idempotent.
+              return new Response("Refund failed", { status: 500 });
+            }
+            await supabaseAdmin.rpc("mark_payment_reservation", {
+              p_reservation_id: reservationId,
+              p_status: "refunded",
+              p_error: "slot_full_after_expiry",
+            });
+            return Response.json({ received: true, refunded: true });
           }
-          return Response.json({ received: true });
+
+          console.error("[payments] finalize failed");
+          // 500 => Stripe wiederholt die Zustellung (Finalisierung ist idempotent).
+          return new Response("Finalize failed", { status: 500 });
         }
+
 
         await supabaseAdmin.rpc("mark_payment_reservation", {
           p_reservation_id: reservationId,

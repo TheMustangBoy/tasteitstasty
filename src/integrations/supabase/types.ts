@@ -211,6 +211,7 @@ export type Database = {
       }
       payment_reservations: {
         Row: {
+          checkout_key: string | null
           created_at: string
           currency: string
           customer_name: string
@@ -232,6 +233,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          checkout_key?: string | null
           created_at?: string
           currency?: string
           customer_name?: string
@@ -253,6 +255,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          checkout_key?: string | null
           created_at?: string
           currency?: string
           customer_name?: string
@@ -435,18 +438,19 @@ export type Database = {
       }
       create_payment_reservation: {
         Args: {
+          p_checkout_key: string
           p_customer_name: string
           p_lines: Json
           p_note?: string
           p_phone: string
           p_pickup_at: string
           p_pickup_label: string
-          p_reference: string
           p_token: string
           p_total: number
           p_ttl_minutes?: number
         }
         Returns: {
+          checkout_key: string | null
           created_at: string
           currency: string
           customer_name: string
@@ -523,6 +527,7 @@ export type Database = {
         Args: { p_error?: string; p_reservation_id: string; p_status: string }
         Returns: undefined
       }
+      next_order_reference: { Args: never; Returns: string }
       place_order: {
         Args: {
           p_customer_name: string
@@ -564,6 +569,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      slot_has_capacity_excluding: {
+        Args: { p_pickup_at: string; p_reservation_id: string }
+        Returns: boolean
       }
       validate_order_payload: {
         Args: { p_lines: Json; p_pickup_at: string; p_total: number }

@@ -11,6 +11,8 @@ function createToken(): string {
 /**
  * Legt eine Reservierung an (Validierung + Slot-Kapazität in der Datenbank)
  * und erzeugt dazu einen Stripe-PaymentIntent im Testmodus.
+ * Idempotent über `checkoutKey`: derselbe Snapshot liefert dieselbe
+ * Reservierung und denselben PaymentIntent.
  * Es entsteht KEINE Bestellung – die entsteht erst über den Webhook.
  */
 export const Route = createFileRoute("/api/public/payments/create-intent")({
@@ -41,10 +43,11 @@ export const Route = createFileRoute("/api/public/payments/create-intent")({
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const token = createToken();
 
-        const { data: reservation, error } = await supabaseAdmin
-          .rpc("create_payment_reservation", {
+        const { data: reservation, error } = await supabaseAdmin.rpc(
+          "create_payment_reservation",
+          {
             p_token: token,
-            p_reference: input.reference,
+            p_checkout_key: input.checkoutKey,
             p_customer_name: input.name,
             p_phone: input.phone,
             p_pickup_at: input.pickupISO,
@@ -53,18 +56,37 @@ export const Route = createFileRoute("/api/public/payments/create-intent")({
             p_total: input.total,
             p_note: input.note,
             p_ttl_minutes: 20,
-          });
+          },
+        );
 
         if (error || !reservation) {
           const { orderErrorMessage } = await import("@/lib/payments/errors");
-          return Response.json(
-            { error: orderErrorMessage(error?.message ?? "") },
-            { status: 409 },
-          );
+          return Response.json({ error: orderErrorMessage(error?.message ?? "") }, { status: 409 });
         }
 
         try {
           const stripe = createStripeClient(env.secretKey);
+
+          // Bestehender Intent zur selben Reservierung -> wiederverwenden.
+          if (reservation.stripe_payment_intent_id) {
+            const existing = await stripe.paymentIntents.retrieve(
+              reservation.stripe_payment_intent_id,
+            );
+            if (
+              existing.client_secret &&
+              existing.status !== "canceled" &&
+              existing.amount === Math.round(Number(reservation.total) * 100)
+            ) {
+              const body: CreateIntentResponse = {
+                clientSecret: existing.client_secret,
+                reservationId: reservation.id,
+                token: reservation.token,
+                reference: reservation.reference,
+              };
+              return Response.json(body, { headers: { "cache-control": "no-store" } });
+            }
+          }
+
           const intent = await stripe.paymentIntents.create(
             {
               amount: Math.round(Number(reservation.total) * 100),
@@ -76,7 +98,8 @@ export const Route = createFileRoute("/api/public/payments/create-intent")({
                 reference: reservation.reference,
               },
             },
-            { idempotencyKey: `reservation-${reservation.id}` },
+            // Idempotenz an den Checkout-Key gebunden.
+            { idempotencyKey: `checkout-${input.checkoutKey}` },
           );
 
           if (!intent.client_secret) throw new Error("missing client secret");
@@ -89,7 +112,7 @@ export const Route = createFileRoute("/api/public/payments/create-intent")({
           const body: CreateIntentResponse = {
             clientSecret: intent.client_secret,
             reservationId: reservation.id,
-            token,
+            token: reservation.token,
             reference: reservation.reference,
           };
           return Response.json(body, { headers: { "cache-control": "no-store" } });
