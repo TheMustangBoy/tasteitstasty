@@ -31,7 +31,7 @@ export async function primeAudio(): Promise<boolean> {
   try {
     if (ctx.state === "running") return true;
     await ctx.resume();
-    return ctx.state === "running";
+    return (ctx.state as AudioContextState) === "running";
   } catch {
     /* Priming abgelehnt – Toasts bleiben als Fallback */
     return false;
