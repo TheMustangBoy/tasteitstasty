@@ -87,11 +87,24 @@ function CheckoutPage() {
   const phoneValid = isValidPhone(phone);
 
   // Verfügbarkeitsprüfung: Produkt aktiv, nicht ausverkauft, Kategorie nicht pausiert.
-  const orderableIds = useMemo(
-    () => new Set(orderableProducts.map((p) => p.id)),
+  const productById = useMemo(
+    () => new Map(orderableProducts.map((p) => [p.id, p])),
     [orderableProducts],
   );
-  const unavailableLines = lines.filter((l) => !orderableIds.has(l.itemId));
+  const unavailableLines = lines.filter((l) => !productById.has(l.itemId));
+
+  // Extras und Auswahl-Optionen müssen im Katalog noch existieren (inkl. Preis).
+  const staleLines = lines.filter((l) => {
+    const product = productById.get(l.itemId);
+    if (!product) return false;
+    const extrasOk = (l.extras ?? []).every((e) =>
+      product.extras.some((x) => x.id === e.id && x.price === e.price),
+    );
+    const optionsOk = lineOptions(l).every((o) =>
+      (product.options ?? []).some((x) => x.id === o.id && x.priceDelta === o.priceDelta),
+    );
+    return !extrasOk || !optionsOk || product.price !== l.basePrice;
+  });
 
   const selectedSlot =
     slots.find((s) => s.key === slotKey && !s.full) ??
@@ -102,7 +115,10 @@ function CheckoutPage() {
     name.trim().length > 1 &&
     phoneValid &&
     unavailableLines.length === 0 &&
+    staleLines.length === 0 &&
+    !submitting &&
     !settings.ordersPaused;
+
 
   if (lines.length === 0) {
     return (
