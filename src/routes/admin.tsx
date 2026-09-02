@@ -107,14 +107,26 @@ function cleanRecoveryUrl() {
 
 function AdminPage() {
   const { adminAuthed, authLoading } = useShop();
-  const [recovering, setRecovering] = useState(() => Boolean(readRecoveryUrl()));
+  const [recoveryChecked, setRecoveryChecked] = useState(false);
+  const [recovering, setRecovering] = useState(false);
 
   useEffect(() => {
+    const params = readRecoveryUrl();
+    setRecovering(Boolean(params));
+    setRecoveryChecked(true);
+
     const { data } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") setRecovering(true);
     });
     return () => data.subscription.unsubscribe();
   }, []);
+
+  if (!recoveryChecked)
+    return (
+      <div className="mx-auto max-w-md px-4 py-24 text-center text-sm text-muted-foreground sm:px-6">
+        Zugang wird geprüft …
+      </div>
+    );
 
   if (recovering)
     return (
