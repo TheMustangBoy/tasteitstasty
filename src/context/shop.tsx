@@ -338,12 +338,46 @@ const initialState: ShopState = {
   soundOn: true,
 };
 
+const SOUND_KEY = "tit-admin-sound-on";
+
 export function ShopProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<ShopState>(initialState);
   const [hydrated, setHydrated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  /**
+   * Bereits bekannte Bestell-IDs (Dedup für Benachrichtigungen).
+   * Bewusst ein Ref und kein State: kein Re-Render, keine Race-Conditions
+   * zwischen initialem Fetch und Realtime-INSERT.
+   */
+  const knownOrderIds = useRef<Set<string>>(new Set());
+  /** Aktueller Ton-Wunsch ohne Neuaufbau des Realtime-Channels. */
+  const soundOnRef = useRef(state.soundOn);
+  soundOnRef.current = state.soundOn;
+
+  /** Bestellungen aus einem Vollabruf als „bekannt“ markieren – ohne Meldung. */
+  const markKnown = useCallback((orders: ShopOrder[]) => {
+    for (const o of orders) knownOrderIds.current.add(o.id);
+  }, []);
+
+  /** Zentrale Benachrichtigung: Toast, optional Ton, kurzer Titel-Hinweis. */
+  const notifyNewOrder = useCallback((order: ShopOrder) => {
+    toast.success("Neue Bestellung eingegangen", {
+      description: `${order.reference} · Abholung ${order.pickupLabel} · ${order.total.toFixed(2).replace(".", ",")} €`,
+      duration: 8000,
+    });
+    if (soundOnRef.current) playNotificationSound();
+    if (typeof document !== "undefined") {
+      const original = document.title;
+      document.title = "🔔 Neue Bestellung!";
+      setTimeout(() => {
+        document.title = original;
+      }, 5000);
+    }
+  }, []);
+
 
   const applySnapshot = useCallback((snap: ShopSnapshot) => {
     setState((prev) => ({
