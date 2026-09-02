@@ -82,16 +82,28 @@ export const refundAndCloseOrder = createServerFn({ method: "POST" })
       }
       const stripe = createStripeClient(env.secretKey);
 
+      const PENDING_MESSAGE =
+        "Die Rückerstattung wird von Stripe noch verarbeitet. Bitte später erneut prüfen.";
+
       try {
         const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
         const amount = intent.amount_received || intent.amount;
         const refunds = await stripe.refunds.list({ payment_intent: paymentIntentId, limit: 20 });
-        const alreadyRefunded = refunds.data
-          .filter((r) => r.status !== "failed" && r.status !== "canceled")
-          .reduce((sum, r) => sum + (r.amount ?? 0), 0);
+        const sumBy = (status: string) =>
+          refunds.data
+            .filter((r) => r.status === status)
+            .reduce((sum, r) => sum + (r.amount ?? 0), 0);
 
-        if (alreadyRefunded < amount) {
-          await stripe.refunds.create(
+        const succeeded = sumBy("succeeded");
+        const pendingAmount = sumBy("pending") + sumBy("requires_action");
+
+        if (succeeded < amount) {
+          // Bereits laufende, noch nicht finale Erstattung: nicht als Erfolg werten.
+          if (succeeded + pendingAmount >= amount) {
+            return { ok: false, error: PENDING_MESSAGE };
+          }
+
+          const refund = await stripe.refunds.create(
             {
               payment_intent: paymentIntentId,
               reason: "requested_by_customer",
@@ -99,6 +111,17 @@ export const refundAndCloseOrder = createServerFn({ method: "POST" })
             },
             { idempotencyKey: `admin-refund-${order.id}-${paymentIntentId}` },
           );
+
+          if (refund.status === "failed" || refund.status === "canceled") {
+            return {
+              ok: false,
+              error:
+                "Stripe hat die Rückerstattung abgelehnt. Bitte im Stripe-Dashboard prüfen.",
+            };
+          }
+          if (refund.status !== "succeeded") {
+            return { ok: false, error: PENDING_MESSAGE };
+          }
         }
       } catch (error) {
         const message = stripeErrorMessage(error);
