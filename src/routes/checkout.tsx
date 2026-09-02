@@ -114,6 +114,7 @@ function CheckoutPage() {
   const [phone, setPhone] = useState("");
   const [note, setNote] = useState("");
   const [phoneTouched, setPhoneTouched] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const phoneValid = isValidPhone(phone);
   const onlineReady = paymentConfig?.configured === true && Boolean(paymentConfig.publishableKey);
 
@@ -173,6 +174,7 @@ function CheckoutPage() {
     staleLines.length === 0 &&
     !submitting &&
     !settings.ordersPaused &&
+    termsAccepted &&
     (payment !== "online" || onlineReady);
 
   if (lines.length === 0) {
@@ -558,18 +560,29 @@ function CheckoutPage() {
               ? "Die Bestellung wird erst nach bestätigter Zahlung angelegt."
               : "Bezahlt wird direkt am Truck bei der Abholung."}
           </p>
+          <label className="mt-4 flex items-start gap-3 rounded-xl border border-border bg-card/60 p-3 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={termsAccepted}
+              onChange={(event) => setTermsAccepted(event.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[hsl(var(--primary))]"
+            />
+            <span>
+              Ich akzeptiere die{" "}
+              <Link to="/agb" className="text-primary hover:underline">
+                AGB
+              </Link>{" "}
+              und habe die Informationen zum{" "}
+              <Link to="/widerruf" className="text-primary hover:underline">
+                Widerrufsrecht
+              </Link>{" "}
+              zur Kenntnis genommen.
+            </span>
+          </label>
           <p className="mt-2 text-center text-xs text-muted-foreground">
-            Mit der Bestellung gelten unsere{" "}
-            <Link to="/agb" className="text-primary hover:underline">
-              AGB
-            </Link>
-            ,{" "}
+            Hinweise zur Datenverarbeitung findest du in den{" "}
             <Link to="/datenschutz" className="text-primary hover:underline">
-              Datenschutzhinweise
-            </Link>{" "}
-            und Informationen zum{" "}
-            <Link to="/widerruf" className="text-primary hover:underline">
-              Widerrufsrecht
+              Datenschutzhinweisen
             </Link>
             .
           </p>
