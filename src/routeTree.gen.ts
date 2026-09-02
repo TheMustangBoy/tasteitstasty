@@ -20,6 +20,10 @@ import { Route as OeffnungszeitenRouteImport } from './routes/oeffnungszeiten'
 import { Route as SpeisekarteRouteImport } from './routes/speisekarte'
 import { Route as StandortRouteImport } from './routes/standort'
 import { Route as ApiPublicOrderPushRouteImport } from './routes/api/public/order-push'
+import { Route as ApiPublicPaymentsConfigRouteImport } from './routes/api/public/payments/config'
+import { Route as ApiPublicPaymentsCreateIntentRouteImport } from './routes/api/public/payments/create-intent'
+import { Route as ApiPublicPaymentsStatusRouteImport } from './routes/api/public/payments/status'
+import { Route as ApiPublicPaymentsStripeWebhookRouteImport } from './routes/api/public/payments/stripe-webhook'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -76,6 +80,28 @@ const ApiPublicOrderPushRoute = ApiPublicOrderPushRouteImport.update({
   path: '/api/public/order-push',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicPaymentsConfigRoute = ApiPublicPaymentsConfigRouteImport.update({
+  id: '/api/public/payments/config',
+  path: '/api/public/payments/config',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicPaymentsCreateIntentRoute =
+  ApiPublicPaymentsCreateIntentRouteImport.update({
+    id: '/api/public/payments/create-intent',
+    path: '/api/public/payments/create-intent',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicPaymentsStatusRoute = ApiPublicPaymentsStatusRouteImport.update({
+  id: '/api/public/payments/status',
+  path: '/api/public/payments/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicPaymentsStripeWebhookRoute =
+  ApiPublicPaymentsStripeWebhookRouteImport.update({
+    id: '/api/public/payments/stripe-webhook',
+    path: '/api/public/payments/stripe-webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -89,6 +115,10 @@ export interface FileRoutesByFullPath {
   '/speisekarte': typeof SpeisekarteRoute
   '/standort': typeof StandortRoute
   '/api/public/order-push': typeof ApiPublicOrderPushRoute
+  '/api/public/payments/config': typeof ApiPublicPaymentsConfigRoute
+  '/api/public/payments/create-intent': typeof ApiPublicPaymentsCreateIntentRoute
+  '/api/public/payments/status': typeof ApiPublicPaymentsStatusRoute
+  '/api/public/payments/stripe-webhook': typeof ApiPublicPaymentsStripeWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -102,6 +132,10 @@ export interface FileRoutesByTo {
   '/speisekarte': typeof SpeisekarteRoute
   '/standort': typeof StandortRoute
   '/api/public/order-push': typeof ApiPublicOrderPushRoute
+  '/api/public/payments/config': typeof ApiPublicPaymentsConfigRoute
+  '/api/public/payments/create-intent': typeof ApiPublicPaymentsCreateIntentRoute
+  '/api/public/payments/status': typeof ApiPublicPaymentsStatusRoute
+  '/api/public/payments/stripe-webhook': typeof ApiPublicPaymentsStripeWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -116,6 +150,10 @@ export interface FileRoutesById {
   '/speisekarte': typeof SpeisekarteRoute
   '/standort': typeof StandortRoute
   '/api/public/order-push': typeof ApiPublicOrderPushRoute
+  '/api/public/payments/config': typeof ApiPublicPaymentsConfigRoute
+  '/api/public/payments/create-intent': typeof ApiPublicPaymentsCreateIntentRoute
+  '/api/public/payments/status': typeof ApiPublicPaymentsStatusRoute
+  '/api/public/payments/stripe-webhook': typeof ApiPublicPaymentsStripeWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -131,6 +169,10 @@ export interface FileRouteTypes {
     | '/speisekarte'
     | '/standort'
     | '/api/public/order-push'
+    | '/api/public/payments/config'
+    | '/api/public/payments/create-intent'
+    | '/api/public/payments/status'
+    | '/api/public/payments/stripe-webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -144,6 +186,10 @@ export interface FileRouteTypes {
     | '/speisekarte'
     | '/standort'
     | '/api/public/order-push'
+    | '/api/public/payments/config'
+    | '/api/public/payments/create-intent'
+    | '/api/public/payments/status'
+    | '/api/public/payments/stripe-webhook'
   id:
     | '__root__'
     | '/'
@@ -157,6 +203,10 @@ export interface FileRouteTypes {
     | '/speisekarte'
     | '/standort'
     | '/api/public/order-push'
+    | '/api/public/payments/config'
+    | '/api/public/payments/create-intent'
+    | '/api/public/payments/status'
+    | '/api/public/payments/stripe-webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -171,6 +221,10 @@ export interface RootRouteChildren {
   SpeisekarteRoute: typeof SpeisekarteRoute
   StandortRoute: typeof StandortRoute
   ApiPublicOrderPushRoute: typeof ApiPublicOrderPushRoute
+  ApiPublicPaymentsConfigRoute: typeof ApiPublicPaymentsConfigRoute
+  ApiPublicPaymentsCreateIntentRoute: typeof ApiPublicPaymentsCreateIntentRoute
+  ApiPublicPaymentsStatusRoute: typeof ApiPublicPaymentsStatusRoute
+  ApiPublicPaymentsStripeWebhookRoute: typeof ApiPublicPaymentsStripeWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -252,6 +306,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicOrderPushRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/payments/config': {
+      id: '/api/public/payments/config'
+      path: '/api/public/payments/config'
+      fullPath: '/api/public/payments/config'
+      preLoaderRoute: typeof ApiPublicPaymentsConfigRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/payments/create-intent': {
+      id: '/api/public/payments/create-intent'
+      path: '/api/public/payments/create-intent'
+      fullPath: '/api/public/payments/create-intent'
+      preLoaderRoute: typeof ApiPublicPaymentsCreateIntentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/payments/status': {
+      id: '/api/public/payments/status'
+      path: '/api/public/payments/status'
+      fullPath: '/api/public/payments/status'
+      preLoaderRoute: typeof ApiPublicPaymentsStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/payments/stripe-webhook': {
+      id: '/api/public/payments/stripe-webhook'
+      path: '/api/public/payments/stripe-webhook'
+      fullPath: '/api/public/payments/stripe-webhook'
+      preLoaderRoute: typeof ApiPublicPaymentsStripeWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -267,6 +349,10 @@ const rootRouteChildren: RootRouteChildren = {
   SpeisekarteRoute: SpeisekarteRoute,
   StandortRoute: StandortRoute,
   ApiPublicOrderPushRoute: ApiPublicOrderPushRoute,
+  ApiPublicPaymentsConfigRoute: ApiPublicPaymentsConfigRoute,
+  ApiPublicPaymentsCreateIntentRoute: ApiPublicPaymentsCreateIntentRoute,
+  ApiPublicPaymentsStatusRoute: ApiPublicPaymentsStatusRoute,
+  ApiPublicPaymentsStripeWebhookRoute: ApiPublicPaymentsStripeWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

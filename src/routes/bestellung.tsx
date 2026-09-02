@@ -1,9 +1,11 @@
+import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { CheckCircle2, Clock, MapPin } from "lucide-react";
+import { CheckCircle2, Clock, Loader2, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { BUSINESS, formatPrice } from "@/data/menu";
 import { linePrice, useCart } from "@/context/cart";
+import { waitForPaidReservation } from "@/lib/payments/client";
 
 export const Route = createFileRoute("/bestellung")({
   head: () => ({
@@ -22,6 +24,68 @@ export const Route = createFileRoute("/bestellung")({
 
 function OrderPage() {
   const { lastOrder } = useCart();
+  // Rückkehr aus einem Stripe-Redirect (z. B. 3-D-Secure) ohne lokalen Bestellstand.
+  const [redirectState, setRedirectState] = useState<
+    { phase: "idle" } | { phase: "checking" } | { phase: "done"; reference: string; paid: boolean }
+  >({ phase: "idle" });
+
+  useEffect(() => {
+    if (lastOrder) return;
+    const params = new URLSearchParams(window.location.search);
+    const reservation = params.get("reservation");
+    const token = params.get("token");
+    if (!reservation || !token) return;
+    let active = true;
+    setRedirectState({ phase: "checking" });
+    void waitForPaidReservation(reservation, token).then((status) => {
+      if (!active) return;
+      setRedirectState({
+        phase: "done",
+        reference: params.get("ref") ?? "",
+        paid: status === "paid",
+      });
+    });
+    return () => {
+      active = false;
+    };
+  }, [lastOrder]);
+
+  if (!lastOrder && redirectState.phase === "checking") {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-20 text-center sm:px-6">
+        <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
+        <h1 className="mt-4 text-3xl">Zahlung wird bestätigt</h1>
+        <p className="mt-3 text-muted-foreground">
+          Bitte dieses Fenster kurz geöffnet lassen – das dauert nur wenige Sekunden.
+        </p>
+      </div>
+    );
+  }
+
+  if (!lastOrder && redirectState.phase === "done") {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-20 text-center sm:px-6">
+        <h1 className="text-3xl">
+          {redirectState.paid ? "Zahlung erfolgreich" : "Zahlung nicht abgeschlossen"}
+        </h1>
+        <p className="mt-3 text-muted-foreground">
+          {redirectState.paid
+            ? "Deine Bestellung ist beim Truck eingegangen."
+            : "Es wurde keine Zahlung gebucht. Du kannst die Bestellung erneut starten."}
+        </p>
+        {redirectState.paid && redirectState.reference && (
+          <p className="mt-5 font-display text-4xl">{redirectState.reference}</p>
+        )}
+
+        <Button
+          asChild
+          className="mt-6 h-14 rounded-xl bg-flame px-8 font-bold uppercase text-primary-foreground"
+        >
+          <Link to="/speisekarte">Zur Speisekarte</Link>
+        </Button>
+      </div>
+    );
+  }
 
   if (!lastOrder) {
     return (
@@ -99,10 +163,6 @@ function OrderPage() {
           </span>
           <span className="font-display text-2xl">{formatPrice(lastOrder.total)}</span>
         </div>
-
-        <p className="mt-6 rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
-          Demo-Zustand: Die Bestellung wurde nicht übermittelt und es erfolgte keine Zahlung.
-        </p>
 
         <Button asChild variant="outline" className="mt-6 h-12 w-full rounded-xl">
           <Link to="/speisekarte">Neue Bestellung</Link>

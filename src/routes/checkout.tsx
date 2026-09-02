@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { AlertCircle, Clock, CreditCard, Smartphone, Wallet, Banknote } from "lucide-react";
+import { AlertCircle, Banknote, Clock, CreditCard, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,13 +18,35 @@ import {
   nextOpeningLabel,
 } from "@/lib/pickup";
 import { isValidPhone, PHONE_ERROR, sanitizePhoneInput } from "@/lib/phone";
+import { PAYMENT_ON_SITE, type PaymentConfig } from "@/lib/payments/config";
+import {
+  createPaymentIntent,
+  fetchPaymentConfig,
+  waitForPaidReservation,
+} from "@/lib/payments/client";
+import { StripePaymentSection } from "@/components/shop/stripe-payment";
+
+type PaymentChoice = "cash" | "terminal" | "online";
 
 const PAYMENTS = [
-  { id: "card", label: "Kreditkarte", icon: CreditCard, hint: "Online bezahlen" },
-  { id: "apple", label: "Apple Pay", icon: Smartphone, hint: "Online bezahlen" },
-  { id: "google", label: "Google Pay", icon: Wallet, hint: "Online bezahlen" },
-  { id: "cash", label: "Barzahlung bei Abholung", icon: Banknote, hint: "Am Truck" },
-  { id: "terminal", label: "Kartenzahlung bei Abholung", icon: CreditCard, hint: "Am Truck" },
+  {
+    id: "cash",
+    label: PAYMENT_ON_SITE.cash,
+    icon: Banknote,
+    hint: "Am Truck",
+  },
+  {
+    id: "terminal",
+    label: PAYMENT_ON_SITE.terminal,
+    icon: CreditCard,
+    hint: "Am Truck",
+  },
+  {
+    id: "online",
+    label: "Online bezahlen",
+    icon: Globe,
+    hint: "Karte · Apple Pay · Google Pay",
+  },
 ] as const;
 
 export const Route = createFileRoute("/checkout")({
@@ -79,12 +101,31 @@ function CheckoutPage() {
     ? dayKey
     : (suggested?.dayKey ?? slotDays[0]?.dayKey ?? "");
   const activeDay = slotDays.find((d) => d.dayKey === activeDayKey);
-  const [payment, setPayment] = useState<string>("card");
+  const [payment, setPayment] = useState<PaymentChoice>("cash");
+  const [paymentConfig, setPaymentConfig] = useState<PaymentConfig | null>(null);
+  const [intent, setIntent] = useState<{
+    clientSecret: string;
+    reservationId: string;
+    token: string;
+    reference: string;
+  } | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [note, setNote] = useState("");
   const [phoneTouched, setPhoneTouched] = useState(false);
   const phoneValid = isValidPhone(phone);
+  const onlineReady = paymentConfig?.configured === true && Boolean(paymentConfig.publishableKey);
+
+  // Verfügbarkeit der Online-Zahlung einmalig serverseitig erfragen.
+  useEffect(() => {
+    let active = true;
+    void fetchPaymentConfig().then((config) => {
+      if (active) setPaymentConfig(config);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Verfügbarkeitsprüfung: Produkt aktiv, nicht ausverkauft, Kategorie nicht pausiert.
   const productById = useMemo(
@@ -109,6 +150,19 @@ function CheckoutPage() {
   const selectedSlot =
     slots.find((s) => s.key === slotKey && !s.full) ??
     (activeDay ? (activeDay.slots.find((s) => !s.full) ?? suggested) : suggested);
+  const pickupLabel = selectedSlot ? `${selectedSlot.dayLabel}, ${selectedSlot.label} Uhr` : "";
+
+  // Ändern sich Warenkorb, Zeit oder Kontaktdaten, wird eine offene
+  // Zahlungssitzung verworfen (verhindert Zahlungen auf veraltete Daten).
+  const intentSignature = `${total}|${selectedSlot?.key ?? ""}|${name.trim()}|${phone.trim()}|${note.trim()}|${lines.length}`;
+  const [intentKey, setIntentKey] = useState("");
+  useEffect(() => {
+    setIntentKey((prev) => {
+      if (prev && prev !== intentSignature) setIntent(null);
+      return intentSignature;
+    });
+  }, [intentSignature]);
+
   const canSubmit =
     lines.length > 0 &&
     Boolean(selectedSlot) &&
@@ -117,7 +171,8 @@ function CheckoutPage() {
     unavailableLines.length === 0 &&
     staleLines.length === 0 &&
     !submitting &&
-    !settings.ordersPaused;
+    !settings.ordersPaused &&
+    (payment !== "online" || onlineReady);
 
   if (lines.length === 0) {
     return (
@@ -215,15 +270,24 @@ function CheckoutPage() {
               {PAYMENTS.map((option) => {
                 const Icon = option.icon;
                 const active = payment === option.id;
+                const disabled = option.id === "online" && !onlineReady;
                 return (
                   <button
                     key={option.id}
                     type="button"
-                    onClick={() => setPayment(option.id)}
+                    disabled={disabled}
+                    aria-disabled={disabled}
+                    onClick={() => {
+                      if (disabled) return;
+                      setPayment(option.id);
+                      setSubmitError(null);
+                    }}
                     className={`flex items-center gap-3 rounded-xl border p-4 text-left transition-colors ${
-                      active
-                        ? "border-primary bg-primary/10"
-                        : "border-border bg-card hover:border-primary/50"
+                      disabled
+                        ? "cursor-not-allowed border-border bg-card opacity-50"
+                        : active
+                          ? "border-primary bg-primary/10"
+                          : "border-border bg-card hover:border-primary/50"
                     }`}
                   >
                     <Icon className="h-5 w-5 shrink-0 text-primary" />
@@ -235,6 +299,13 @@ function CheckoutPage() {
                 );
               })}
             </div>
+            {paymentConfig && !onlineReady && (
+              <p className="mt-3 flex items-start gap-2 rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                Stripe-Testmodus noch nicht verbunden – Online-Zahlung ist deaktiviert. Bestellungen
+                mit Zahlung am Truck sind weiterhin möglich.
+              </p>
+            )}
           </section>
 
           <section>
@@ -360,55 +431,114 @@ function CheckoutPage() {
               {submitError}
             </p>
           )}
-          <Button
-            size="lg"
-            disabled={!canSubmit}
-            aria-busy={submitting}
-            className="mt-5 h-14 w-full rounded-xl bg-flame text-base font-bold uppercase tracking-wide text-primary-foreground shadow-flame hover:opacity-90"
-            onClick={async () => {
-              // Letzte Prüfung direkt vor dem Absenden.
-              if (!selectedSlot || selectedSlot.full || submitting) return;
-              if (settings.ordersPaused || unavailableLines.length > 0 || staleLines.length > 0)
-                return;
-              const paymentLabel = PAYMENTS.find((p) => p.id === payment)?.label ?? "";
-              const pickupLabel = `${selectedSlot.dayLabel}, ${selectedSlot.label} Uhr`;
-              const reference = `TIT-${Math.floor(1000 + Math.random() * 9000)}`;
-              setSubmitting(true);
-              setSubmitError(null);
-              try {
-                // Erst speichern (inkl. serverseitiger Kapazitätsprüfung), dann bestätigen.
-                await addOrder({
-                  reference,
-                  createdAt: new Date().toISOString(),
-                  pickupISO: selectedSlot.key,
+          {intent && paymentConfig?.publishableKey ? (
+            <StripePaymentSection
+              publishableKey={paymentConfig.publishableKey}
+              clientSecret={intent.clientSecret}
+              amountLabel={formatPrice(total)}
+              returnUrl={`${typeof window === "undefined" ? "" : window.location.origin}/bestellung?reservation=${intent.reservationId}&token=${intent.token}&ref=${intent.reference}`}
+              onPaid={async () => {
+                setSubmitError(null);
+                const status = await waitForPaidReservation(intent.reservationId, intent.token);
+                if (status !== "paid") {
+                  setSubmitError(
+                    "Die Zahlung wird noch bestätigt. Bitte kurz warten und die Seite nicht schließen.",
+                  );
+                  return;
+                }
+                placeOrder({
+                  reference: intent.reference,
                   pickupLabel,
+                  payment: "Online bezahlt",
                   name: name.trim(),
-                  phone: phone.trim(),
-                  note: note.trim(),
-                  payment: paymentLabel,
-                  lines,
-                  total,
                 });
-                placeOrder({ reference, pickupLabel, payment: paymentLabel, name: name.trim() });
-                navigate({ to: "/bestellung" });
-              } catch (error) {
-                // Warenkorb bleibt erhalten – nur Meldung anzeigen und Slots neu laden.
-                setSubmitError(
-                  error instanceof Error
-                    ? error.message
-                    : "Die Bestellung konnte nicht gespeichert werden. Bitte versuche es erneut.",
-                );
                 void refresh();
-              } finally {
-                setSubmitting(false);
-              }
-            }}
-          >
-            {submitting ? "Wird gesendet …" : "Bestellung abschließen"}
-          </Button>
+                navigate({ to: "/bestellung" });
+              }}
+            />
+          ) : (
+            <Button
+              size="lg"
+              disabled={!canSubmit}
+              aria-busy={submitting}
+              className="mt-5 h-14 w-full rounded-xl bg-flame text-base font-bold uppercase tracking-wide text-primary-foreground shadow-flame hover:opacity-90"
+              onClick={async () => {
+                // Letzte Prüfung direkt vor dem Absenden.
+                if (!selectedSlot || selectedSlot.full || submitting) return;
+                if (settings.ordersPaused || unavailableLines.length > 0 || staleLines.length > 0)
+                  return;
+                const reference = `TIT-${Math.floor(1000 + Math.random() * 9000)}`;
+                setSubmitting(true);
+                setSubmitError(null);
+                try {
+                  if (payment === "online") {
+                    // Es entsteht nur eine Reservierung – die Bestellung erzeugt
+                    // erst der Stripe-Webhook nach bestätigter Zahlung.
+                    const created = await createPaymentIntent({
+                      reference,
+                      name: name.trim(),
+                      phone: phone.trim(),
+                      note: note.trim(),
+                      pickupISO: new Date(selectedSlot.key).toISOString(),
+                      pickupLabel,
+                      lines: lines.map((l) => ({
+                        lineId: l.lineId,
+                        itemId: l.itemId,
+                        name: l.name,
+                        basePrice: l.basePrice,
+                        quantity: l.quantity,
+                        removed: l.removed,
+                        bacon: l.bacon,
+                        extras: l.extras ?? [],
+                        options: lineOptions(l),
+                      })),
+                      total,
+                    });
+                    setIntent(created);
+                    return;
+                  }
+
+                  const paymentLabel = PAYMENT_ON_SITE[payment];
+                  // Erst speichern (inkl. serverseitiger Kapazitätsprüfung), dann bestätigen.
+                  await addOrder({
+                    reference,
+                    createdAt: new Date().toISOString(),
+                    pickupISO: selectedSlot.key,
+                    pickupLabel,
+                    name: name.trim(),
+                    phone: phone.trim(),
+                    note: note.trim(),
+                    payment: paymentLabel,
+                    lines,
+                    total,
+                  });
+                  placeOrder({ reference, pickupLabel, payment: paymentLabel, name: name.trim() });
+                  navigate({ to: "/bestellung" });
+                } catch (error) {
+                  // Warenkorb bleibt erhalten – nur Meldung anzeigen und Slots neu laden.
+                  setSubmitError(
+                    error instanceof Error
+                      ? error.message
+                      : "Die Bestellung konnte nicht gespeichert werden. Bitte versuche es erneut.",
+                  );
+                  void refresh();
+                } finally {
+                  setSubmitting(false);
+                }
+              }}
+            >
+              {submitting
+                ? "Wird gesendet …"
+                : payment === "online"
+                  ? "Weiter zur Zahlung"
+                  : "Bestellung abschließen"}
+            </Button>
+          )}
 
           <p className="mt-3 text-center text-xs text-muted-foreground">
-            Demo: Es wird keine echte Zahlung ausgeführt.
+            {payment === "online"
+              ? "Die Bestellung wird erst nach bestätigter Zahlung angelegt."
+              : "Bezahlt wird direkt am Truck bei der Abholung."}
           </p>
         </aside>
       </div>
