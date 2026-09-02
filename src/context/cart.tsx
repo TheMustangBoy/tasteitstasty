@@ -162,6 +162,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
           lines,
           total,
         };
+        // Synchron persistieren, damit ein Reload/Navigation direkt nach der
+        // Bestellung die Bestätigung noch findet (Effect läuft erst später).
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({ lines: [], lastOrder: order }));
+        } catch {
+          /* ignore */
+        }
         setLastOrder(order);
         setLines([]);
         return order;
