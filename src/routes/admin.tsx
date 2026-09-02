@@ -1073,13 +1073,6 @@ function AdminConsole() {
                 />
                 {settings.ordersPaused ? "Online-Bestellungen aus" : "Online-Bestellungen an"}
               </label>
-              <label className="flex items-center gap-3 text-sm">
-                <Switch
-                  checked={settings.wheelSoundOn !== false}
-                  onCheckedChange={(v) => setSettings({ wheelSoundOn: v })}
-                />
-                Tick-Ton im Zeit-Picker
-              </label>
             </div>
           </section>
 
