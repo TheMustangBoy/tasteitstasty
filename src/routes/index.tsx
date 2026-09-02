@@ -94,10 +94,14 @@ function Index() {
                 <Clock className="h-4 w-4" /> Öffnungszeiten
               </dt>
               <dd className="mt-2 text-sm text-muted-foreground">
-                Mo – Sa: 11:00 – 18:00 Uhr
-                <br />
-                Sonntag: geschlossen
+                {groupHours(settings.hours).map((g, i) => (
+                  <span key={g.label} className="block">
+                    {g.label}: {g.value}
+                    {i < 0 ? null : null}
+                  </span>
+                ))}
               </dd>
+
             </div>
             <div className="rounded-2xl border border-border bg-card/80 p-5">
               <dt className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-primary">
