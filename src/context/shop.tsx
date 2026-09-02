@@ -44,7 +44,6 @@ import {
 } from "@/lib/repository";
 import type { CartLine } from "@/context/cart";
 
-
 export const ORDER_STATUSES = [
   "neu",
   "angenommen",
@@ -264,7 +263,6 @@ function demoLine(
   };
 }
 
-
 type ShopContextValue = ShopState & {
   /** Für die Kundenansicht aufbereitete Produkte (aktiv + inaktiv). */
   products: MenuItem[];
@@ -303,7 +301,6 @@ type ShopContextValue = ShopState & {
   loading: boolean;
   loadError: string | null;
   refresh: () => Promise<void>;
-
 };
 
 /** Setzt den Status und schreibt den passenden Zeitstempel fort. */
@@ -405,9 +402,6 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     },
     [refresh],
   );
-
-
-
 
   const value = useMemo<ShopContextValue>(() => {
     const extraById = new Map(state.catalog.extras.map((e) => [e.id, e]));
@@ -652,10 +646,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
             orderById.has(r.id) ? { ...r, sortOrder: orderById.get(r.id)! } : r,
           ),
         }));
-        persist(
-          () => saveProductOrder(ordered),
-          "Reihenfolge konnte nicht gespeichert werden.",
-        );
+        persist(() => saveProductOrder(ordered), "Reihenfolge konnte nicht gespeichert werden.");
       },
       setProductSoldOut: (id, soldOut) => {
         const row = state.productRows.find((r) => r.id === id);
@@ -672,7 +663,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         patch((prev) => ({
           ...prev,
           productRows: prev.productRows.map((r) =>
-            r.categoryId === categoryId && rank.has(r.id) ? { ...r, sortOrder: rank.get(r.id)! } : r,
+            r.categoryId === categoryId && rank.has(r.id)
+              ? { ...r, sortOrder: rank.get(r.id)! }
+              : r,
           ),
         }));
         persist(
@@ -809,7 +802,6 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       setSoundOn: (on) => patch((prev) => ({ ...prev, soundOn: on })),
     };
   }, [state, patch, persist, refresh, loading, loadError]);
-
 
   return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>;
 }

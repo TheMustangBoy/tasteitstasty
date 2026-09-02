@@ -204,7 +204,9 @@ export async function saveProduct(row: ProductRecord) {
 export async function saveProductOrder(rows: { id: string; sortOrder: number }[]) {
   await Promise.all(
     rows.map(async (r) =>
-      check((await supabase.from("products").update({ sort_order: r.sortOrder }).eq("id", r.id)).error),
+      check(
+        (await supabase.from("products").update({ sort_order: r.sortOrder }).eq("id", r.id)).error,
+      ),
     ),
   );
 }
@@ -237,8 +239,11 @@ export async function removeCategory(id: string) {
 
 export async function saveIngredient(row: IngredientRecord) {
   check(
-    (await supabase.from("ingredients").upsert({ id: row.id, name: row.name, sort_order: row.sortOrder }))
-      .error,
+    (
+      await supabase
+        .from("ingredients")
+        .upsert({ id: row.id, name: row.name, sort_order: row.sortOrder })
+    ).error,
   );
 }
 
@@ -268,7 +273,9 @@ export async function removeExtra(id: string, productIds: { id: string; extraIds
   check((await supabase.from("extras").delete().eq("id", id)).error);
   await Promise.all(
     productIds.map(async (p) =>
-      check((await supabase.from("products").update({ extra_ids: p.extraIds }).eq("id", p.id)).error),
+      check(
+        (await supabase.from("products").update({ extra_ids: p.extraIds }).eq("id", p.id)).error,
+      ),
     ),
   );
 }
@@ -327,7 +334,9 @@ export async function placeOrderRemote(input: {
   });
   if (error) {
     if (error.message.includes("SLOT_FULL"))
-      throw new Error("Dieses Abholfenster ist leider gerade ausgebucht. Bitte wähle eine andere Zeit.");
+      throw new Error(
+        "Dieses Abholfenster ist leider gerade ausgebucht. Bitte wähle eine andere Zeit.",
+      );
     if (error.message.includes("ORDERS_PAUSED"))
       throw new Error("Online-Bestellungen sind aktuell pausiert.");
     throw new Error("Die Bestellung konnte nicht gespeichert werden. Bitte versuche es erneut.");
@@ -352,5 +361,12 @@ export async function saveOrderPatch(id: string, patch: OrderPatch) {
   if (patch.timestamps !== undefined) payload["status_timestamps"] = patch.timestamps;
   if (patch.cancelReason !== undefined) payload["cancel_reason"] = patch.cancelReason;
   if (patch.cancelNote !== undefined) payload["cancel_note"] = patch.cancelNote;
-  check((await supabase.from("orders").update(payload as never).eq("id", id)).error);
+  check(
+    (
+      await supabase
+        .from("orders")
+        .update(payload as never)
+        .eq("id", id)
+    ).error,
+  );
 }

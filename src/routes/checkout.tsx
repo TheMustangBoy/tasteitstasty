@@ -119,7 +119,6 @@ function CheckoutPage() {
     !submitting &&
     !settings.ordersPaused;
 
-
   if (lines.length === 0) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-20 text-center sm:px-6">

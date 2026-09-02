@@ -308,9 +308,7 @@ function AdminConsole() {
         </div>
       </header>
 
-      {loading && (
-        <p className="mt-4 text-sm text-muted-foreground">Daten werden geladen …</p>
-      )}
+      {loading && <p className="mt-4 text-sm text-muted-foreground">Daten werden geladen …</p>}
       {loadError && (
         <p
           role="alert"
