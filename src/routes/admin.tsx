@@ -79,11 +79,35 @@ export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
+const LINK_ERROR = "Der Link ist ungültig oder abgelaufen. Bitte fordere einen neuen Link an.";
+
+/** Erkennt beide Supabase-Linkvarianten: Hash/implicit und PKCE/query. */
+function readRecoveryUrl() {
+  if (typeof window === "undefined") return null;
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const query = new URLSearchParams(window.location.search);
+  const accessToken = hash.get("access_token");
+  const refreshToken = hash.get("refresh_token");
+  const code = query.get("code");
+  const isRecovery =
+    hash.get("type") === "recovery" || query.get("type") === "recovery" || Boolean(code);
+  if (!isRecovery) return null;
+  return { accessToken, refreshToken, code };
+}
+
+/** Entfernt Recovery-Parameter aus der URL, ohne zu navigieren. */
+function cleanRecoveryUrl() {
+  if (typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  for (const key of ["code", "type", "token_hash", "error", "error_description"])
+    url.searchParams.delete(key);
+  url.hash = "";
+  window.history.replaceState({}, "", url.pathname + url.search);
+}
+
 function AdminPage() {
   const { adminAuthed, authLoading } = useShop();
-  const [recovering, setRecovering] = useState(
-    () => typeof window !== "undefined" && window.location.hash.includes("type=recovery"),
-  );
+  const [recovering, setRecovering] = useState(() => Boolean(readRecoveryUrl()));
 
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((event) => {
@@ -92,13 +116,21 @@ function AdminPage() {
     return () => data.subscription.unsubscribe();
   }, []);
 
+  if (recovering)
+    return (
+      <ResetPasswordForm
+        onDone={() => {
+          cleanRecoveryUrl();
+          setRecovering(false);
+        }}
+      />
+    );
   if (authLoading)
     return (
       <div className="mx-auto max-w-md px-4 py-24 text-center text-sm text-muted-foreground sm:px-6">
         Zugang wird geprüft …
       </div>
     );
-  if (recovering) return <ResetPasswordForm onDone={() => setRecovering(false)} />;
   return adminAuthed ? <AdminConsole /> : <AdminLogin />;
 }
 
@@ -108,81 +140,144 @@ function ResetPasswordForm({ onDone }: { onDone: () => void }) {
   const [pw2, setPw2] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const params = readRecoveryUrl();
+      const { data } = await supabase.auth.getSession();
+      let session = data.session;
+
+      if (!session && params) {
+        if (params.code) {
+          const res = await supabase.auth.exchangeCodeForSession(params.code);
+          session = res.data.session ?? null;
+        } else if (params.accessToken && params.refreshToken) {
+          const res = await supabase.auth.setSession({
+            access_token: params.accessToken,
+            refresh_token: params.refreshToken,
+          });
+          session = res.data.session ?? null;
+        }
+      }
+
+      if (cancelled) return;
+      if (session) {
+        setReady(true);
+      } else {
+        setError(LINK_ERROR);
+      }
+      setChecking(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div className="mx-auto max-w-md px-4 py-16 sm:px-6">
       <div className="rounded-3xl border border-border bg-card p-6 sm:p-8">
         <ShieldCheck className="h-10 w-10 text-primary" />
         <h1 className="mt-4 text-3xl">Neues Passwort setzen</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Bitte vergeben Sie ein neues Passwort für Ihr Admin-Konto.
-        </p>
-        <form
-          className="mt-6 space-y-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (busy) return;
-            if (pw1.length < 8) {
-              setError("Das Passwort muss mindestens 8 Zeichen lang sein.");
-              return;
-            }
-            if (pw1 !== pw2) {
-              setError("Die Passwörter stimmen nicht überein.");
-              return;
-            }
-            setBusy(true);
-            setError(null);
-            void (async () => {
-              const { error: err } = await supabase.auth.updateUser({ password: pw1 });
-              if (err) {
-                setError("Das Passwort konnte nicht gespeichert werden. Bitte erneut versuchen.");
-                setBusy(false);
-                return;
-              }
-              toast.success("Passwort wurde aktualisiert.");
-              onDone();
-            })();
-          }}
-        >
-          <div>
-            <Label htmlFor="pw-new">Neues Passwort</Label>
-            <Input
-              id="pw-new"
-              type="password"
-              required
-              minLength={8}
-              value={pw1}
-              onChange={(e) => setPw1(e.target.value)}
-              autoComplete="new-password"
-              className="mt-2 h-12"
-            />
-          </div>
-          <div>
-            <Label htmlFor="pw-repeat">Passwort wiederholen</Label>
-            <Input
-              id="pw-repeat"
-              type="password"
-              required
-              minLength={8}
-              value={pw2}
-              onChange={(e) => setPw2(e.target.value)}
-              autoComplete="new-password"
-              className="mt-2 h-12"
-            />
-          </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          <Button
-            type="submit"
-            disabled={busy}
-            className="h-13 w-full rounded-xl bg-flame py-4 font-bold uppercase tracking-wide text-primary-foreground"
-          >
-            {busy ? "Speichern läuft …" : "Passwort speichern"}
-          </Button>
-        </form>
+        {checking ? (
+          <p className="mt-4 text-sm text-muted-foreground">Recovery-Link wird geprüft …</p>
+        ) : !ready ? (
+          <>
+            <p className="mt-4 text-sm text-destructive">{error ?? LINK_ERROR}</p>
+            <Button
+              type="button"
+              onClick={onDone}
+              className="mt-6 h-12 w-full rounded-xl bg-flame font-bold uppercase tracking-wide text-primary-foreground"
+            >
+              Zurück zum Login
+            </Button>
+          </>
+        ) : (
+          <>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Bitte vergeben Sie ein neues Passwort für Ihr Admin-Konto.
+            </p>
+            <form
+              className="mt-6 space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (busy) return;
+                if (pw1.length < 8) {
+                  setError("Das Passwort muss mindestens 8 Zeichen lang sein.");
+                  return;
+                }
+                if (pw1 !== pw2) {
+                  setError("Die Passwörter stimmen nicht überein.");
+                  return;
+                }
+                setBusy(true);
+                setError(null);
+                void (async () => {
+                  const { data } = await supabase.auth.getSession();
+                  if (!data.session) {
+                    setError(LINK_ERROR);
+                    setReady(false);
+                    setBusy(false);
+                    return;
+                  }
+                  const { error: err } = await supabase.auth.updateUser({ password: pw1 });
+                  if (err) {
+                    setError(
+                      "Das Passwort konnte nicht gespeichert werden. Bitte erneut versuchen.",
+                    );
+                    setBusy(false);
+                    return;
+                  }
+                  toast.success("Passwort wurde aktualisiert.");
+                  setBusy(false);
+                  onDone();
+                })();
+              }}
+            >
+              <div>
+                <Label htmlFor="pw-new">Neues Passwort</Label>
+                <Input
+                  id="pw-new"
+                  type="password"
+                  required
+                  minLength={8}
+                  value={pw1}
+                  onChange={(e) => setPw1(e.target.value)}
+                  autoComplete="new-password"
+                  className="mt-2 h-12"
+                />
+              </div>
+              <div>
+                <Label htmlFor="pw-repeat">Passwort wiederholen</Label>
+                <Input
+                  id="pw-repeat"
+                  type="password"
+                  required
+                  minLength={8}
+                  value={pw2}
+                  onChange={(e) => setPw2(e.target.value)}
+                  autoComplete="new-password"
+                  className="mt-2 h-12"
+                />
+              </div>
+              {error && <p className="text-sm text-destructive">{error}</p>}
+              <Button
+                type="submit"
+                disabled={busy}
+                className="h-13 w-full rounded-xl bg-flame py-4 font-bold uppercase tracking-wide text-primary-foreground"
+              >
+                {busy ? "Speichern läuft …" : "Passwort speichern"}
+              </Button>
+            </form>
+          </>
+        )}
       </div>
     </div>
   );
 }
+
 
 function AdminLogin() {
   const { login } = useShop();
