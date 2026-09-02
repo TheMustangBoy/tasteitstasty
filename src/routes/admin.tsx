@@ -318,6 +318,13 @@ function AdminLogin() {
           >
             {busy ? "Anmeldung läuft …" : "Anmelden"}
           </Button>
+          <button
+            type="button"
+            onClick={() => setResetMode(true)}
+            className="w-full text-center text-sm text-muted-foreground underline underline-offset-4 hover:text-primary"
+          >
+            Passwort vergessen?
+          </button>
         </form>
       </div>
     </div>
