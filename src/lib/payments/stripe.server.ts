@@ -86,7 +86,7 @@ export function createStripeClient(connectionApiKey: string): Stripe {
   const lovableApiKey = readEnv("LOVABLE_API_KEY");
 
   return new Stripe(connectionApiKey, {
-    apiVersion: "2026-03-25.dahlia",
+    apiVersion: "2026-08-26.dahlia",
     maxNetworkRetries: 2,
     appInfo: { name: "Taste It's Tasty" },
     httpClient: Stripe.createFetchHttpClient((input, init) => {
