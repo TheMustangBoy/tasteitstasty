@@ -22,23 +22,32 @@ function getCtx(): AudioContext | null {
 /**
  * Muss aus einer Nutzergeste heraus aufgerufen werden (Login, Ton-Schalter …),
  * damit spätere, automatisch ausgelöste Töne nicht vom Browser blockiert werden.
+ * Wirft nie und erzeugt keine unhandled Promise-Rejection.
+ * @returns true, wenn der AudioContext danach `running` ist.
  */
-export function primeAudio() {
+export async function primeAudio(): Promise<boolean> {
   const ctx = getCtx();
-  if (!ctx) return;
+  if (!ctx) return false;
   try {
-    if (ctx.state === "suspended") void ctx.resume();
+    if (ctx.state === "running") return true;
+    await ctx.resume();
+    return ctx.state === "running";
   } catch {
-    /* Priming nicht möglich – Toasts bleiben als Fallback */
+    /* Priming abgelehnt – Toasts bleiben als Fallback */
+    return false;
   }
 }
 
-/** Kurzer Benachrichtigungston (WebAudio, ohne Asset-Datei). Wirft nie. */
-export function playNotificationSound() {
+/**
+ * Kurzer Benachrichtigungston (WebAudio, ohne Asset-Datei). Wirft nie.
+ * Plant Oszillatoren nur, wenn der Context tatsächlich läuft.
+ * @returns true, wenn ein Ton geplant wurde.
+ */
+export async function playNotificationSound(): Promise<boolean> {
   const ctx = getCtx();
-  if (!ctx) return;
+  if (!ctx) return false;
+  if (!(await primeAudio())) return false;
   try {
-    if (ctx.state === "suspended") void ctx.resume();
     const now = ctx.currentTime;
     [880, 1320].forEach((freq, i) => {
       const osc = ctx.createOscillator();
@@ -52,8 +61,10 @@ export function playNotificationSound() {
       osc.start(now + i * 0.18);
       osc.stop(now + i * 0.18 + 0.18);
     });
+    return true;
   } catch {
     /* Ton nicht verfügbar – kein Fehler nach außen */
+    return false;
   }
 }
 
