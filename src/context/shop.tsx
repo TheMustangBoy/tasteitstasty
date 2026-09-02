@@ -264,38 +264,6 @@ function demoLine(
   };
 }
 
-function seedOrders(): ShopOrder[] {
-  const now = Date.now();
-  const statuses: OrderStatus[] = [
-    "neu",
-    "zubereitung",
-    "abholbereit",
-    "abgeschlossen",
-    "abgeschlossen",
-  ];
-  return statuses.map((status, i) => {
-    const items = [MENU[i % MENU.length]!, MENU[(i + 3) % MENU.length]!];
-    const lines = [demoLine(items[0]!, 1 + (i % 2), i % 2 === 0), demoLine(items[1]!, 1)];
-    const total = lines.reduce((s, l) => s + (l.basePrice + (l.bacon ? 1 : 0)) * l.quantity, 0);
-    // Demo-Abholzeiten über den Tag verteilen, damit kein Slot künstlich voll wirkt.
-    const pickup = demoPickupDate(new Date(now + (i - 2) * 25 * 60_000), i * 20);
-    return {
-      id: `demo-${i}`,
-      reference: `TIT-${1200 + i * 37}`,
-      createdAt: new Date(now - (i + 1) * 18 * 60_000).toISOString(),
-      pickupISO: pickup.toISOString(),
-      pickupLabel: `${String(pickup.getHours()).padStart(2, "0")}:${String(pickup.getMinutes()).padStart(2, "0")} Uhr`,
-      status,
-      name: DEMO_NAMES[i % DEMO_NAMES.length]!,
-      phone: "0151 2345678",
-      note: i === 1 ? "Bitte gut durch" : "",
-      internalNote: "",
-      payment: DEMO_PAYMENTS[i % DEMO_PAYMENTS.length]!,
-      lines,
-      total,
-    };
-  });
-}
 
 type ShopContextValue = ShopState & {
   /** Für die Kundenansicht aufbereitete Produkte (aktiv + inaktiv). */
