@@ -38,15 +38,17 @@ function urlBase64ToUint8Array(base64: string): Uint8Array {
   return out;
 }
 
-function encodeKey(buffer: ArrayBuffer | null): string {
-  if (!buffer) return "";
-  const bytes = new Uint8Array(buffer);
-  let binary = "";
-  bytes.forEach((b) => {
-    binary += String.fromCharCode(b);
-  });
-  return btoa(binary);
+/** Liest die Schlüssel im Web-Push-Format (base64url) direkt aus der Subscription. */
+function readSubscriptionKeys(
+  subscription: PushSubscription,
+): { p256dh: string; auth: string } | null {
+  const keys = subscription.toJSON().keys;
+  const p256dh = keys?.["p256dh"] ?? "";
+  const auth = keys?.["auth"] ?? "";
+  if (!p256dh || !auth) return null;
+  return { p256dh, auth };
 }
+
 
 /** Registriert den Messaging-Service-Worker (nur auf Nutzergeste aufrufen). */
 export async function ensureServiceWorker(): Promise<ServiceWorkerRegistration | null> {
