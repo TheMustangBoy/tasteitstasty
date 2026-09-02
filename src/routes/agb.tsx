@@ -63,11 +63,12 @@ export const Route = createFileRoute("/agb")({
       </p>
 
       <p>
-        <strong>5. Preise und Umsatzsteuer</strong>
+        <strong>5. Preise</strong>
         <br />
-        Alle angegebenen Preise sind Endpreise in Euro und enthalten die gesetzliche Umsatzsteuer.
-        Maßgeblich ist der zum Zeitpunkt des Bestellabschlusses serverseitig berechnete Preis.
+        Alle angegebenen Preise sind Endpreise in Euro. {LEGAL.taxNote} Maßgeblich ist der zum
+        Zeitpunkt des Bestellabschlusses serverseitig berechnete Preis.
       </p>
+
 
       <p>
         <strong>6. Zahlung</strong>
