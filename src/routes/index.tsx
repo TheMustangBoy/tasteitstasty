@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Clock, MapPin, Flame, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import heroBurger from "@/assets/hero-burger.jpg";
-import { BUSINESS, formatPrice } from "@/data/menu";
+import { BUSINESS, formatPrice, groupHours } from "@/data/menu";
 import { useShop } from "@/context/shop";
 
 export const Route = createFileRoute("/")({
@@ -25,7 +25,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const { products } = useShop();
+  const { products, settings } = useShop();
   const highlights = products.filter((i) =>
     ["smash-burger", "tripple-smash", "trueffel-smash"].includes(i.id),
   );
@@ -94,9 +94,11 @@ function Index() {
                 <Clock className="h-4 w-4" /> Öffnungszeiten
               </dt>
               <dd className="mt-2 text-sm text-muted-foreground">
-                Mo – Sa: 11:00 – 18:00 Uhr
-                <br />
-                Sonntag: geschlossen
+                {groupHours(settings.hours).map((g) => (
+                  <span key={g.label} className="block">
+                    {g.label}: {g.value}
+                  </span>
+                ))}
               </dd>
             </div>
             <div className="rounded-2xl border border-border bg-card/80 p-5">

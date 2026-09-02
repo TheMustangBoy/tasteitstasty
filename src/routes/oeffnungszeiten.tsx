@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { WEEKDAYS, formatDayHours } from "@/data/menu";
+import { WEEKDAYS, formatDayHours, formatHoursSentence } from "@/data/menu";
 import { useShop } from "@/context/shop";
 import { nextOpeningLabel } from "@/lib/pickup";
 
@@ -26,7 +26,7 @@ function HoursPage() {
     <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 sm:py-16">
       <h1 className="text-3xl sm:text-5xl">Öffnungszeiten</h1>
       <p className="mt-3 text-muted-foreground">
-        Montag bis Samstag 11:00 – 18:00 Uhr, Sonntag geschlossen. Pflegbar im Adminbereich.
+        {formatHoursSentence(settings.hours)}. Pflegbar im Adminbereich.
       </p>
       <ul className="mt-8 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
         {order.map((index) => {
