@@ -66,6 +66,8 @@ function PaymentForm({ returnUrl, amountLabel, onPaid, isTestMode }: PaymentForm
   const [error, setError] = useState<string | null>(null);
   // Apple Pay / Google Pay / Link – nur anzeigen, wenn der Browser sie anbietet.
   const [expressAvailable, setExpressAvailable] = useState(false);
+  const [isApple, setIsApple] = useState(false);
+  useEffect(() => setIsApple(isAppleDevice()), []);
 
   return (
     <div className="mt-4 space-y-4 rounded-2xl border border-border bg-card p-4">
@@ -73,9 +75,10 @@ function PaymentForm({ returnUrl, amountLabel, onPaid, isTestMode }: PaymentForm
         <ExpressCheckoutElement
           options={{
             buttonTheme: { applePay: "black", googlePay: "black" },
-            ...(isTestMode && {
-              paymentMethods: { applePay: "always", googlePay: "auto" },
-            }),
+            paymentMethods: {
+              applePay: isTestMode ? "always" : "auto",
+              googlePay: isApple ? "never" : "auto",
+            },
           }}
           onReady={(event) => {
             const methods = (event.availablePaymentMethods ?? {}) as Record<string, unknown>;
