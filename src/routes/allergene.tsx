@@ -5,7 +5,6 @@ import { LEGAL } from "@/data/legal";
 import {
   ALLERGEN_CROSS_CONTACT_NOTE,
   ALLERGEN_GROUPS,
-  ALLERGEN_PLACEHOLDER,
   allergensForProduct,
 } from "@/data/allergens";
 
@@ -29,14 +28,8 @@ function AllergenePage() {
   return (
     <PageShell
       title="Allergene"
-      intro="Übersicht der allergenen Zutaten je Produkt. Die Angaben werden vor Vertragsschluss bereitgestellt."
+      intro="Übersicht der allergenen Zutaten je Produkt. Die Angaben werden zentral gepflegt und vor Vertragsschluss bereitgestellt."
     >
-      <p className="rounded-lg border border-dashed border-primary/60 bg-primary/5 p-4 text-sm">
-        <strong>Wichtig:</strong> Die konkreten Allergenangaben sind noch nicht eingetragen. Vor dem
-        Livebetrieb müssen alle mit „{ALLERGEN_PLACEHOLDER}“ markierten Felder durch die tatsächlich
-        verwendeten Allergene ersetzt werden. Es dürfen keine Angaben geschätzt werden.
-      </p>
-
       {CATEGORIES.map((category) => {
         const items = MENU.filter((item) => item.category === category.id);
         if (items.length === 0) return null;

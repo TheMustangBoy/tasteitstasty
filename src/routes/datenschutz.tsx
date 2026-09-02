@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageShell } from "@/components/shop/page-shell";
-import { LEGAL, LEGAL_PLACEHOLDER_NOTE } from "@/data/legal";
+import { LEGAL } from "@/data/legal";
 
 export const Route = createFileRoute("/datenschutz")({
   head: () => ({
@@ -15,7 +15,10 @@ export const Route = createFileRoute("/datenschutz")({
     ],
   }),
   component: () => (
-    <PageShell title="Datenschutzerklärung" intro={LEGAL_PLACEHOLDER_NOTE}>
+    <PageShell
+      title="Datenschutzerklärung"
+      intro="Informationen zur Verarbeitung personenbezogener Daten bei Abholbestellungen."
+    >
       <p>
         <strong>1. Verantwortliche Stelle (Art. 4 Nr. 7 DSGVO)</strong>
         <br />
@@ -33,7 +36,8 @@ export const Route = createFileRoute("/datenschutz")({
       <p>
         <strong>2. Aufruf der Website (Hosting und Zugriffsdaten)</strong>
         <br />
-        Beim Aufruf der Website verarbeitet unser Hosting-Dienstleister technisch notwendige
+        Diese Website wird über die Plattform Lovable bereitgestellt. Beim Aufruf verarbeitet der
+        Hosting-Dienstleister technisch notwendige
         Zugriffsdaten (z. B. IP-Adresse, Zeitpunkt, aufgerufene Adresse, übertragene Datenmenge,
         Browser- und Geräteinformationen). Zweck ist die Auslieferung der Seite, die Stabilität und
         die IT-Sicherheit. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an
@@ -62,7 +66,8 @@ export const Route = createFileRoute("/datenschutz")({
       <p>
         <strong>5. Zahlungsabwicklung bei Onlinezahlung</strong>
         <br />
-        Bei Zahlung im Voraus wird die Zahlung über den Zahlungsdienstleister Stripe abgewickelt.
+        Bei Zahlung im Voraus wird die Zahlung über den Zahlungsdienstleister Stripe abgewickelt;
+        dies umfasst auch die Wallet-Verfahren Apple Pay und Google Pay.
         Dabei werden die für die Zahlung erforderlichen Daten (u. a. Betrag, Bestellreferenz,
         Zahlungs- und Gerätedaten) direkt an Stripe übermittelt und dort eigenverantwortlich
         verarbeitet. Vollständige Karten- oder Wallet-Daten werden von dieser Website nicht erhoben
