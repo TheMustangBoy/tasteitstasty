@@ -1,12 +1,44 @@
-/** Kurzer Benachrichtigungston (WebAudio, ohne Asset-Datei). */
-export function playNotificationSound() {
-  if (typeof window === "undefined") return;
+/**
+ * Zentrales Audio-Handling für den Adminbereich.
+ * Ein einziger, wiederverwendeter AudioContext (Browser limitieren die Anzahl),
+ * der per Nutzergeste „geprimt“ (resumed) werden muss.
+ */
+let sharedCtx: AudioContext | null = null;
+
+function getCtx(): AudioContext | null {
+  if (typeof window === "undefined") return null;
   const Ctx =
     window.AudioContext ??
     (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-  if (!Ctx) return;
+  if (!Ctx) return null;
   try {
-    const ctx = new Ctx();
+    sharedCtx ??= new Ctx();
+    return sharedCtx;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Muss aus einer Nutzergeste heraus aufgerufen werden (Login, Ton-Schalter …),
+ * damit spätere, automatisch ausgelöste Töne nicht vom Browser blockiert werden.
+ */
+export function primeAudio() {
+  const ctx = getCtx();
+  if (!ctx) return;
+  try {
+    if (ctx.state === "suspended") void ctx.resume();
+  } catch {
+    /* Priming nicht möglich – Toasts bleiben als Fallback */
+  }
+}
+
+/** Kurzer Benachrichtigungston (WebAudio, ohne Asset-Datei). Wirft nie. */
+export function playNotificationSound() {
+  const ctx = getCtx();
+  if (!ctx) return;
+  try {
+    if (ctx.state === "suspended") void ctx.resume();
     const now = ctx.currentTime;
     [880, 1320].forEach((freq, i) => {
       const osc = ctx.createOscillator();
@@ -20,11 +52,11 @@ export function playNotificationSound() {
       osc.start(now + i * 0.18);
       osc.stop(now + i * 0.18 + 0.18);
     });
-    setTimeout(() => void ctx.close(), 900);
   } catch {
-    /* Ton nicht verfügbar */
+    /* Ton nicht verfügbar – kein Fehler nach außen */
   }
 }
+
 
 let tickCtx: AudioContext | null = null;
 
