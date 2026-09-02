@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ApplicationServerKeys, generatePushHTTPRequest } from "webpush-webcrypto";
+import { ApplicationServerKeys, generatePushHTTPRequest, setWebCrypto } from "webpush-webcrypto";
 import { z } from "zod";
 
 /**
@@ -84,6 +84,8 @@ export const Route = createFileRoute("/api/public/order-push")({
           tag: `order-${order.reference}`,
         });
 
+        // Die Bibliothek erwartet eine explizite WebCrypto-Instanz (Worker/Node).
+        setWebCrypto(globalThis.crypto);
         const keys = await ApplicationServerKeys.fromJSON({ publicKey, privateKey });
         const stale: string[] = [];
         let sent = 0;
