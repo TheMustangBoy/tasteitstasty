@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+// UI-/Auth-Polish: Passwort-Recovery & Passwort-Änderung ohne Code-Secrets.
 import { createFileRoute } from "@tanstack/react-router";
 import {
   BarChart3,
@@ -993,6 +994,8 @@ function AdminConsole() {
               bleiben im 5-Minuten-Takt.
             </p>
           </section>
+
+          <SecuritySection />
         </TabsContent>
       </Tabs>
     </div>
