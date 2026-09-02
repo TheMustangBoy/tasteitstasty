@@ -98,7 +98,7 @@ function CheckoutPage() {
     const product = productById.get(l.itemId);
     if (!product) return false;
     const extrasOk = (l.extras ?? []).every((e) =>
-      product.extras.some((x) => x.id === e.id && x.price === e.price),
+      (product.extras ?? []).some((x) => x.id === e.id && x.price === e.price),
     );
     const optionsOk = lineOptions(l).every((o) =>
       (product.options ?? []).some((x) => x.id === o.id && x.priceDelta === o.priceDelta),
