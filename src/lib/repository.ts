@@ -355,6 +355,19 @@ export async function saveSettings(settings: ShopSettings) {
   );
 }
 
+/**
+ * Notfall-Schließung für „heute“ setzen oder aufheben.
+ * Das Datum wird serverseitig in Europe/Berlin bestimmt (keine Race-Conditions,
+ * kein Überschreiben anderer Einstellungen).
+ */
+export async function setEmergencyClosure(closed: boolean): Promise<string | null> {
+  const { data, error } = await supabase.rpc("set_emergency_closure", { p_closed: closed });
+  if (error) throw error;
+  return (data as string | null) ?? null;
+}
+
+
+
 export async function saveHours(hours: DayHours[]) {
   check(
     (
