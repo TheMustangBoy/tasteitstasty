@@ -91,10 +91,15 @@ export function ProductDialog({
           <DialogDescription>
             {item.description
               ? item.description
-              : pattyLabel(item)
-                ? `${pattyLabel(item)} · frisch gesmasht`
-                : "Frisch frittiert"}
+              : item.vegetarian
+                ? "Veggie Patty · frisch zubereitet"
+                : pattyLabel(item)
+                  ? `${pattyLabel(item)} · frisch gesmasht`
+                  : item.category === "burger"
+                    ? "Frisch zubereitet"
+                    : "Frisch frittiert"}
           </DialogDescription>
+
         </DialogHeader>
 
         <div className="space-y-5">

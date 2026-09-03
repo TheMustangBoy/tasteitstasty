@@ -1,0 +1,2 @@
+REVOKE ALL ON FUNCTION public.place_order(text, text, text, timestamptz, text, text, jsonb, numeric, text, text, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.place_order(text, text, text, timestamptz, text, text, jsonb, numeric, text, text, text) TO anon, authenticated, service_role;

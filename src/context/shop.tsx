@@ -283,8 +283,9 @@ type ShopContextValue = ShopState & {
   setProductSoldOut: (id: string, soldOut: boolean) => void;
   setCategoryPaused: (id: string, paused: boolean) => void;
   addOrder: (
-    order: Omit<ShopOrder, "id" | "status"> & { checkoutKey?: string },
+    order: Omit<ShopOrder, "id" | "status"> & { checkoutKey?: string; statusToken?: string },
   ) => Promise<ShopOrder>;
+
   setOrderStatus: (id: string, status: OrderStatus) => void;
   cancelOrder: (id: string, reason: CancelReason, cancelNote?: string) => void;
   restoreOrder: (id: string, status: OrderStatus) => void;
@@ -890,6 +891,8 @@ export function ShopProvider({ children }: { children: ReactNode }) {
           total: order.total,
           note: order.note ?? "",
           ...(order.checkoutKey ? { checkoutKey: order.checkoutKey } : {}),
+          ...(order.statusToken ? { statusToken: order.statusToken } : {}),
+
         });
         patch((prev) => ({
           ...prev,
