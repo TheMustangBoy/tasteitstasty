@@ -1,6 +1,13 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { BACON_EXTRA, type Extra, type MenuItem, type SelectionOption } from "@/data/menu";
-import { closedReasonFor, fetchOrderStatus, type OrderClosedReason } from "@/lib/order-status";
+import {
+  closedReasonFor,
+  fetchOrderStatus,
+  statusLabel,
+  type CustomerOrderStatus,
+  type OrderClosedReason,
+  type OrderStatusLabel,
+} from "@/lib/order-status";
 
 const STORAGE_KEY = "tit-cart-v1";
 
@@ -106,9 +113,13 @@ type CartContextValue = {
   lastOrder: PlacedOrder | null;
   /** Bestellung nur, solange sie innerhalb des 2-Stunden-Fensters liegt. */
   activeOrder: PlacedOrder | null;
-  /** Grund, warum die lokale Bestellung serverseitig beendet wurde. */
+  /** Grund, warum die lokale Bestellung serverseitig beendet wurde (Hinweis). */
   orderClosedReason: OrderClosedReason | null;
   dismissOrderClosed: () => void;
+  /** Zuletzt abgefragter Serverstatus der getrackten Bestellung. */
+  serverOrderStatus: CustomerOrderStatus | null;
+  /** Anzeigelabel zum Serverstatus (null, solange kein Status bekannt ist). */
+  orderStatusLabel: OrderStatusLabel | null;
   placeOrder: (
     data: Omit<PlacedOrder, "reference" | "lines" | "total"> & {
       reference?: string;
@@ -128,6 +139,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
   const [nowTick, setNowTick] = useState(0);
   const [orderClosedReason, setOrderClosedReason] = useState<OrderClosedReason | null>(null);
+  const [closedDismissed, setClosedDismissed] = useState(false);
+  const [serverOrderStatus, setServerStatus] = useState<CustomerOrderStatus | null>(null);
 
   // Erst nach dem Mount lesen, damit SSR und erster Client-Render identisch sind.
   useEffect(() => {
@@ -303,11 +316,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
       remove: (lineId) => setLines((prev) => prev.filter((l) => l.lineId !== lineId)),
       clear: () => setLines([]),
       lastOrder,
-      activeOrder: lastOrder && isOrderActive(lastOrder) ? lastOrder : null,
-      orderClosedReason,
-      dismissOrderClosed: () => setOrderClosedReason(null),
+      // Aktiv nur innerhalb der TTL und solange der Serverstatus offen ist.
+      activeOrder:
+        lastOrder && isOrderActive(lastOrder) && !orderClosedReason ? lastOrder : null,
+      orderClosedReason: closedDismissed ? null : orderClosedReason,
+      dismissOrderClosed: () => setClosedDismissed(true),
+      serverOrderStatus,
+      orderStatusLabel: serverOrderStatus ? statusLabel(serverOrderStatus) : null,
       placeOrder: (data) => {
         setOrderClosedReason(null);
+        setClosedDismissed(false);
+        setServerStatus(null);
 
         // Eine neue Bestellung ersetzt immer die vorherige (nur eine aktive).
         const order: PlacedOrder = {
@@ -328,7 +347,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return order;
       },
     };
-  }, [lines, isOpen, lastOrder, orderClosedReason]);
+  }, [lines, isOpen, lastOrder, orderClosedReason, closedDismissed, serverOrderStatus]);
 
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
