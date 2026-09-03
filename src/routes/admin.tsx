@@ -641,6 +641,17 @@ function AdminConsole() {
     };
   }, [orders]);
 
+  const emergencyClosedToday = isEmergencyClosedToday(settings.emergencyClosedDate);
+  // Offene Bestellungen mit Abholung am heutigen Berliner Tag.
+  const openOrdersToday = useMemo(() => {
+    const today = berlinDayKey();
+    return orders.filter(
+      (o) => !CLOSED_STATUSES.includes(o.status) && berlinDayKey(new Date(o.pickupAt)) === today,
+    ).length;
+  }, [orders]);
+
+
+
   return (
     <div className="mx-auto max-w-6xl px-3 py-8 sm:px-6 sm:py-12">
       <header className="flex flex-wrap items-center justify-between gap-3">
