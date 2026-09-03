@@ -2,6 +2,7 @@
  * Browser-Zugriff auf die Zahlungs-Endpunkte. Enthält keine Secrets.
  */
 import type {
+  CancelReservationResponse,
   CreateIntentInput,
   CreateIntentResponse,
   PaymentConfig,
@@ -121,6 +122,27 @@ export async function createPaymentIntent(snapshot: IntentSnapshot): Promise<Cre
   return body;
 }
 
+
+/**
+ * Bricht eine offene Zahlungssitzung ab (best effort) und gibt den Slot frei.
+ * Netzfehler werden bewusst geschluckt – die UI darf davon nie abhängen.
+ */
+export async function cancelPaymentReservation(
+  reservationId: string,
+  token: string,
+): Promise<CancelReservationResponse | null> {
+  try {
+    const res = await fetch("/api/public/payments/cancel", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ reservationId, token }),
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as CancelReservationResponse;
+  } catch {
+    return null;
+  }
+}
 
 export async function fetchReservationStatus(
   reservationId: string,
