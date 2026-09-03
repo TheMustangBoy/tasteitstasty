@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { WEEKDAYS, formatDayHours, formatHoursSentence } from "@/data/menu";
 import { useShop } from "@/context/shop";
-import { nextOpeningLabel } from "@/lib/pickup";
+
 
 export const Route = createFileRoute("/oeffnungszeiten")({
   head: () => ({
