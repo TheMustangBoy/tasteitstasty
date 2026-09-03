@@ -7,7 +7,9 @@ import { BUSINESS, formatPrice } from "@/data/menu";
 import { linePrice, useCart, type CartLine } from "@/context/cart";
 import {
   clearPendingPayment,
+  pendingTakesPrecedence,
   readPendingPayment,
+  resolvePendingTicket,
   writePendingPayment,
   type PendingPayment,
 } from "@/lib/pending-order";
