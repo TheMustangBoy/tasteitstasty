@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { CheckCircle2, Clock, Loader2, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { BUSINESS, formatPrice } from "@/data/menu";
 import { linePrice, useCart } from "@/context/cart";
 import { waitForPaidReservation } from "@/lib/payments/client";
+import type { ReservationStatusValue } from "@/lib/payments/config";
 
 export const Route = createFileRoute("/bestellung")({
   head: () => ({
@@ -22,38 +23,49 @@ export const Route = createFileRoute("/bestellung")({
   component: OrderPage,
 });
 
+type RedirectPhase =
+  | { phase: "idle" }
+  | { phase: "checking" }
+  | { phase: "pending" }
+  | { phase: "done"; status: ReservationStatusValue };
+
 function OrderPage() {
   const { lastOrder, clear } = useCart();
   // Rückkehr aus einem Stripe-Redirect (z. B. 3-D-Secure) ohne lokalen Bestellstand.
-  const [redirectState, setRedirectState] = useState<
-    { phase: "idle" } | { phase: "checking" } | { phase: "done"; reference: string; paid: boolean }
-  >({ phase: "idle" });
+  const [redirectState, setRedirectState] = useState<RedirectPhase>({ phase: "idle" });
+  // Reservierungsdaten intern halten, damit die URL bereinigt werden kann,
+  // ein späterer erneuter Check aber weiterhin möglich bleibt.
+  const ticketRef = useRef<{ reservation: string; token: string; reference: string } | null>(null);
+  const [reference, setReference] = useState("");
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (lastOrder) return;
-    const params = new URLSearchParams(window.location.search);
-    const reservation = params.get("reservation");
-    const token = params.get("token");
-    if (!reservation || !token) return;
+    if (!ticketRef.current) {
+      const params = new URLSearchParams(window.location.search);
+      const reservation = params.get("reservation");
+      const token = params.get("token");
+      if (!reservation || !token) return;
+      ticketRef.current = { reservation, token, reference: params.get("ref") ?? "" };
+      setReference(params.get("ref") ?? "");
+      // Erst jetzt – die Daten liegen sicher intern für Retrys vor.
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+    const ticket = ticketRef.current;
     let active = true;
     setRedirectState({ phase: "checking" });
-    void waitForPaidReservation(reservation, token).then((status) => {
+    void waitForPaidReservation(ticket.reservation, ticket.token).then((status) => {
       if (!active) return;
       // Nur bei serverseitig bestätigter Zahlung den Warenkorb leeren.
       if (status === "paid") clear();
-      setRedirectState({
-        phase: "done",
-        reference: params.get("ref") ?? "",
-        paid: status === "paid",
-      });
-      // Reservierungs-Parameter aus der URL entfernen.
-      window.history.replaceState({}, "", window.location.pathname);
+      setRedirectState(
+        status === "pending" ? { phase: "pending" } : { phase: "done", status },
+      );
     });
     return () => {
       active = false;
     };
-  }, [lastOrder, clear]);
-
+  }, [lastOrder, clear, attempt]);
 
   if (!lastOrder && redirectState.phase === "checking") {
     return (
@@ -67,20 +79,49 @@ function OrderPage() {
     );
   }
 
-  if (!lastOrder && redirectState.phase === "done") {
+  if (!lastOrder && redirectState.phase === "pending") {
     return (
       <div className="mx-auto max-w-2xl px-4 py-20 text-center sm:px-6">
-        <h1 className="text-3xl">
-          {redirectState.paid ? "Zahlung erfolgreich" : "Zahlung nicht abgeschlossen"}
-        </h1>
+        <Clock className="mx-auto h-10 w-10 text-primary" />
+        <h1 className="mt-4 text-3xl">Zahlung wird noch bestätigt</h1>
         <p className="mt-3 text-muted-foreground">
-          {redirectState.paid
-            ? "Deine Bestellung ist beim Truck eingegangen."
-            : "Es wurde keine Zahlung gebucht. Du kannst die Bestellung erneut starten."}
+          Deine Zahlung ist unterwegs, die endgültige Bestätigung deiner Bank bzw. von Stripe steht
+          aber noch aus. Das kann einen Moment dauern. Bitte starte keine zweite Zahlung.
         </p>
-        {redirectState.paid && redirectState.reference && (
-          <p className="mt-5 font-display text-4xl">{redirectState.reference}</p>
+        {reference && (
+          <p className="mt-5 text-sm text-muted-foreground">
+            Vorgemerkte Bestellnummer: <strong className="text-foreground">{reference}</strong>
+          </p>
         )}
+        <Button
+          className="mt-6 h-14 rounded-xl bg-flame px-8 font-bold uppercase text-primary-foreground"
+          onClick={() => setAttempt((n) => n + 1)}
+        >
+          Erneut prüfen
+        </Button>
+      </div>
+    );
+  }
+
+  if (!lastOrder && redirectState.phase === "done") {
+    const status = redirectState.status;
+    const paid = status === "paid";
+    const refunded = status === "refunded" || status === "slot_full_after_expiry";
+    const title = paid
+      ? "Zahlung erfolgreich"
+      : refunded
+        ? "Betrag wurde zurückerstattet"
+        : "Zahlung nicht abgeschlossen";
+    const text = paid
+      ? "Deine Bestellung ist beim Truck eingegangen."
+      : refunded
+        ? "Die Abholzeit war leider bereits vergeben, bevor die Zahlung bestätigt werden konnte. Der Betrag wurde vollständig zurückerstattet."
+        : "Es wurde keine Zahlung gebucht. Du kannst die Bestellung jederzeit erneut starten.";
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-20 text-center sm:px-6">
+        <h1 className="text-3xl">{title}</h1>
+        <p className="mt-3 text-muted-foreground">{text}</p>
+        {paid && reference && <p className="mt-5 font-display text-4xl">{reference}</p>}
 
         <Button
           asChild
@@ -91,6 +132,7 @@ function OrderPage() {
       </div>
     );
   }
+
 
   if (!lastOrder) {
     return (

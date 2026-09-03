@@ -141,6 +141,7 @@ export type Database = {
         Row: {
           cancel_note: string | null
           cancel_reason: string | null
+          checkout_key: string | null
           created_at: string
           customer_name: string
           id: string
@@ -164,6 +165,7 @@ export type Database = {
         Insert: {
           cancel_note?: string | null
           cancel_reason?: string | null
+          checkout_key?: string | null
           created_at?: string
           customer_name?: string
           id?: string
@@ -187,6 +189,7 @@ export type Database = {
         Update: {
           cancel_note?: string | null
           cancel_reason?: string | null
+          checkout_key?: string | null
           created_at?: string
           customer_name?: string
           id?: string
@@ -488,6 +491,7 @@ export type Database = {
         Returns: {
           cancel_note: string | null
           cancel_reason: string | null
+          checkout_key: string | null
           created_at: string
           customer_name: string
           id: string
@@ -527,6 +531,10 @@ export type Database = {
         Args: { p_error?: string; p_reservation_id: string; p_status: string }
         Returns: undefined
       }
+      mark_refunded_by_payment_intent: {
+        Args: { p_payment_intent_id: string }
+        Returns: boolean
+      }
       next_order_reference: { Args: never; Returns: string }
       note_payment_failure: {
         Args: { p_error: string; p_reservation_id: string }
@@ -534,6 +542,7 @@ export type Database = {
       }
       place_order: {
         Args: {
+          p_checkout_key?: string
           p_customer_name: string
           p_lines: Json
           p_note?: string
@@ -547,6 +556,7 @@ export type Database = {
         Returns: {
           cancel_note: string | null
           cancel_reason: string | null
+          checkout_key: string | null
           created_at: string
           customer_name: string
           id: string

@@ -92,3 +92,24 @@ export type ReservationStatus = {
   reference: string;
 };
 
+
+/** Antwort von `/api/public/payments/cancel`. */
+export type CancelReservationResponse = {
+  status: ReservationStatusValue;
+  /** true = Reservierung wurde jetzt abgebrochen und der Slot freigegeben. */
+  cancelled: boolean;
+};
+
+/** Terminale Reservierungszustände – hier ist kein weiteres Warten sinnvoll. */
+export const TERMINAL_RESERVATION_STATUS: ReservationStatusValue[] = [
+  "paid",
+  "failed",
+  "cancelled",
+  "expired",
+  "refunded",
+  "slot_full_after_expiry",
+];
+
+export function isTerminalReservationStatus(status: ReservationStatusValue): boolean {
+  return TERMINAL_RESERVATION_STATUS.includes(status);
+}
