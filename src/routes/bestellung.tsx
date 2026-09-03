@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { CheckCircle2, Clock, Loader2, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { BUSINESS, formatPrice } from "@/data/menu";
 import { linePrice, useCart } from "@/context/cart";
 import { waitForPaidReservation } from "@/lib/payments/client";
+import type { ReservationStatusValue } from "@/lib/payments/config";
 
 export const Route = createFileRoute("/bestellung")({
   head: () => ({
