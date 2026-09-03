@@ -12,7 +12,10 @@ export function orderErrorMessage(raw: string): string {
   if (raw.includes("SLOT_FULL"))
     return "Dieses Abholfenster ist leider gerade ausgebucht. Bitte wähle eine andere Zeit.";
 
+  if (raw.includes("DAY_CLOSED"))
+    return "Heute nehmen wir leider keine Bestellungen mehr an. Bestellungen für die nächsten Tage sind weiterhin möglich.";
   if (raw.includes("ORDERS_PAUSED")) return "Online-Bestellungen sind aktuell pausiert.";
+
   if (raw.includes("EMPTY_CART")) return "Dein Warenkorb ist leer.";
   if (raw.includes("PAYMENT_NOT_ALLOWED"))
     return "Diese Zahlungsart ist für diesen Bestellweg nicht zulässig.";
