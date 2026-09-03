@@ -538,17 +538,8 @@ function CheckoutPage() {
                   return;
                 setSubmitting(true);
                 setSubmitError(null);
-                const orderLines = lines.map((l) => ({
-                  lineId: l.lineId,
-                  itemId: l.itemId,
-                  name: l.name,
-                  basePrice: l.basePrice,
-                  quantity: l.quantity,
-                  removed: l.removed,
-                  bacon: l.bacon,
-                  extras: l.extras ?? [],
-                  options: lineOptions(l),
-                }));
+                // orderLines stammt zentral aus dem Memo oben.
+
                 try {
                   if (payment === "online") {
                     // Es entsteht nur eine Reservierung – die Bestellung erzeugt
