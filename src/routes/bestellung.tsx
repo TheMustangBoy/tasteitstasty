@@ -7,7 +7,9 @@ import { BUSINESS, formatPrice } from "@/data/menu";
 import { linePrice, useCart, type CartLine } from "@/context/cart";
 import {
   clearPendingPayment,
+  pendingTakesPrecedence,
   readPendingPayment,
+  resolvePendingTicket,
   writePendingPayment,
   type PendingPayment,
 } from "@/lib/pending-order";
@@ -49,35 +51,38 @@ function OrderPage() {
   const actionsRef = useRef({ clear, placeOrder });
   actionsRef.current = { clear, placeOrder };
 
+  // Eine frische Onlinezahlung hat immer Vorrang vor einer älteren Bestellung.
+  const [dismissedFailure, setDismissedFailure] = useState(false);
+
   useEffect(() => {
-    if (lastOrder) return;
     if (!ticketRef.current) {
       const params = new URLSearchParams(window.location.search);
-      const reservation = params.get("reservation");
-      const token = params.get("token");
+      const fromUrl = {
+        reservation: params.get("reservation"),
+        token: params.get("token"),
+        reference: params.get("ref"),
+      };
       const stored = readPendingPayment();
-      if (reservation && token) {
-        const ticket: PendingPayment = {
-          reservation,
-          token,
-          reference: params.get("ref") ?? stored?.reference ?? "",
-          createdAt: stored?.createdAt ?? Date.now(),
-          // Anzeige-Snapshot aus dem Checkout übernehmen, falls vorhanden.
-          snapshot:
-            stored && stored.reservation === reservation ? stored.snapshot : undefined,
-        };
+      const ticket = resolvePendingTicket(fromUrl, stored);
+      if (!ticket) {
+        setRedirectState({ phase: "idle" });
+        return;
+      }
+      if (fromUrl.reservation && fromUrl.token) {
         // Erst dauerhaft sichern, dann die URL bereinigen – ein Reload
         // während `pending` verliert den Token dadurch nicht mehr.
         writePendingPayment(ticket);
-        ticketRef.current = ticket;
         window.history.replaceState({}, "", window.location.pathname);
-      } else {
-        ticketRef.current = stored;
       }
-      if (!ticketRef.current) return;
-      setReference(ticketRef.current.reference);
+      ticketRef.current = ticket;
+      setReference(ticket.reference);
     }
     const ticket = ticketRef.current;
+    if (!pendingTakesPrecedence(ticket, !!lastOrder)) {
+      ticketRef.current = null;
+      setRedirectState({ phase: "idle" });
+      return;
+    }
     let active = true;
     setRedirectState({ phase: "checking" });
     void waitForPaidReservation(ticket.reservation, ticket.token).then((status) => {
@@ -106,9 +111,17 @@ function OrderPage() {
     return () => {
       active = false;
     };
-  }, [lastOrder, attempt]);
+  }, [attempt]);
 
-  if (!lastOrder && redirectState.phase === "checking") {
+  const paidDone = redirectState.phase === "done" && redirectState.status === "paid";
+  // Während Prüfung/Pending nie die alte Bestellung zeigen.
+  const blockOldOrder =
+    redirectState.phase === "checking" ||
+    redirectState.phase === "pending" ||
+    (redirectState.phase === "done" && !paidDone && !dismissedFailure);
+
+  if (redirectState.phase === "checking") {
+
     return (
       <div className="mx-auto max-w-2xl px-4 py-20 text-center sm:px-6">
         <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
@@ -120,7 +133,7 @@ function OrderPage() {
     );
   }
 
-  if (!lastOrder && redirectState.phase === "pending") {
+  if (redirectState.phase === "pending") {
     return (
       <div className="mx-auto max-w-2xl px-4 py-20 text-center sm:px-6">
         <Clock className="mx-auto h-10 w-10 text-primary" />
@@ -144,7 +157,7 @@ function OrderPage() {
     );
   }
 
-  if (!lastOrder && redirectState.phase === "done") {
+  if (redirectState.phase === "done" && (!lastOrder || blockOldOrder)) {
     const status = redirectState.status;
     const paid = status === "paid";
     const refunded = status === "refunded" || status === "slot_full_after_expiry";
@@ -164,18 +177,35 @@ function OrderPage() {
         <p className="mt-3 text-muted-foreground">{text}</p>
         {paid && reference && <p className="mt-5 font-display text-4xl">{reference}</p>}
 
-        <Button
-          asChild
-          className="mt-6 h-14 rounded-xl bg-flame px-8 font-bold uppercase text-primary-foreground"
-        >
-          <Link to="/speisekarte">Zur Speisekarte</Link>
-        </Button>
+        {!paid && lastOrder && (
+          <p className="mt-4 text-sm text-muted-foreground">
+            Deine frühere Bestellung {lastOrder.reference} ist weiterhin gültig.
+          </p>
+        )}
+
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
+          {!paid && lastOrder && (
+            <Button
+              variant="outline"
+              className="h-14 rounded-xl px-8 font-bold uppercase"
+              onClick={() => setDismissedFailure(true)}
+            >
+              Bestehende Bestellung anzeigen
+            </Button>
+          )}
+          <Button
+            asChild
+            className="h-14 rounded-xl bg-flame px-8 font-bold uppercase text-primary-foreground"
+          >
+            <Link to="/speisekarte">Zur Speisekarte</Link>
+          </Button>
+        </div>
       </div>
     );
   }
 
-
   if (!lastOrder) {
+
     return (
       <div className="mx-auto max-w-2xl px-4 py-20 text-center sm:px-6">
         <h1 className="text-3xl">Keine Bestellung gefunden</h1>

@@ -86,3 +86,40 @@ export function clearPendingPayment() {
     /* nichts zu tun */
   }
 }
+
+/**
+ * Ermittelt aus URL-Rückkehrwerten und gespeichertem Eintrag das aktuell
+ * gültige Zahlungsticket. Reine Funktion, damit sie offline prüfbar ist.
+ */
+export function resolvePendingTicket(
+  url: { reservation?: string | null; token?: string | null; reference?: string | null } | null,
+  stored: PendingPayment | null,
+  now = Date.now(),
+): PendingPayment | null {
+  const reservation = url?.reservation ?? "";
+  const token = url?.token ?? "";
+  if (reservation && token) {
+    const sameSession = stored?.reservation === reservation;
+    return {
+      reservation,
+      token,
+      reference: url?.reference || (sameSession ? stored?.reference ?? "" : ""),
+      createdAt: sameSession && stored ? stored.createdAt : now,
+      snapshot: sameSession ? stored?.snapshot : undefined,
+    };
+  }
+  if (stored && isPendingFresh(stored, now)) return stored;
+  return null;
+}
+
+/**
+ * Eine frische Onlinezahlung hat auf /bestellung immer Vorrang vor einer
+ * älteren, noch aktiven lokalen Bestellung.
+ */
+export function pendingTakesPrecedence(
+  ticket: PendingPayment | null,
+  _hasActiveOrder: boolean,
+  now = Date.now(),
+): boolean {
+  return !!ticket && isPendingFresh(ticket, now);
+}
