@@ -296,7 +296,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return order;
       },
     };
-  }, [lines, isOpen, lastOrder]);
+  }, [lines, isOpen, lastOrder, orderClosedReason]);
 
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
