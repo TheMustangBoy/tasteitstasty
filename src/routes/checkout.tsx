@@ -22,10 +22,12 @@ import { PAYMENT_ON_SITE, type PaymentConfig } from "@/lib/payments/config";
 import {
   cancelPaymentReservation,
   checkoutKeyFor,
+  checkoutSnapshotSignature,
   createPaymentIntent,
   fetchPaymentConfig,
   waitForPaidReservation,
 } from "@/lib/payments/client";
+
 import { StripePaymentSection } from "@/components/shop/stripe-payment";
 
 type PaymentChoice = "cash" | "terminal" | "online";
