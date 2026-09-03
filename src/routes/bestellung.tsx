@@ -45,6 +45,9 @@ function OrderPage() {
   const ticketRef = useRef<PendingPayment | null>(null);
   const [reference, setReference] = useState("");
   const [attempt, setAttempt] = useState(0);
+  // Stabile Referenzen: der Statuscheck darf nicht bei jeder Warenkorbänderung neu starten.
+  const actionsRef = useRef({ clear, placeOrder });
+  actionsRef.current = { clear, placeOrder };
 
   useEffect(() => {
     if (lastOrder) return;
@@ -83,7 +86,7 @@ function OrderPage() {
         // Bezahlte Bestellung lokal sichtbar machen und Warenkorb leeren.
         const snap = ticket.snapshot;
         if (snap) {
-          placeOrder({
+          actionsRef.current.placeOrder({
             reference: ticket.reference || snap.reference,
             lines: (snap.lines ?? []) as CartLine[],
             total: snap.total,
@@ -93,7 +96,7 @@ function OrderPage() {
             name: snap.name,
           });
         } else {
-          clear();
+          actionsRef.current.clear();
         }
       }
       // Terminaler Status: der Token wird nicht mehr gebraucht.
@@ -103,7 +106,7 @@ function OrderPage() {
     return () => {
       active = false;
     };
-  }, [lastOrder, clear, placeOrder, attempt]);
+  }, [lastOrder, attempt]);
 
   if (!lastOrder && redirectState.phase === "checking") {
     return (
