@@ -49,35 +49,38 @@ function OrderPage() {
   const actionsRef = useRef({ clear, placeOrder });
   actionsRef.current = { clear, placeOrder };
 
+  // Eine frische Onlinezahlung hat immer Vorrang vor einer älteren Bestellung.
+  const [dismissedFailure, setDismissedFailure] = useState(false);
+
   useEffect(() => {
-    if (lastOrder) return;
     if (!ticketRef.current) {
       const params = new URLSearchParams(window.location.search);
-      const reservation = params.get("reservation");
-      const token = params.get("token");
+      const fromUrl = {
+        reservation: params.get("reservation"),
+        token: params.get("token"),
+        reference: params.get("ref"),
+      };
       const stored = readPendingPayment();
-      if (reservation && token) {
-        const ticket: PendingPayment = {
-          reservation,
-          token,
-          reference: params.get("ref") ?? stored?.reference ?? "",
-          createdAt: stored?.createdAt ?? Date.now(),
-          // Anzeige-Snapshot aus dem Checkout übernehmen, falls vorhanden.
-          snapshot:
-            stored && stored.reservation === reservation ? stored.snapshot : undefined,
-        };
+      const ticket = resolvePendingTicket(fromUrl, stored);
+      if (!ticket) {
+        setRedirectState({ phase: "idle" });
+        return;
+      }
+      if (fromUrl.reservation && fromUrl.token) {
         // Erst dauerhaft sichern, dann die URL bereinigen – ein Reload
         // während `pending` verliert den Token dadurch nicht mehr.
         writePendingPayment(ticket);
-        ticketRef.current = ticket;
         window.history.replaceState({}, "", window.location.pathname);
-      } else {
-        ticketRef.current = stored;
       }
-      if (!ticketRef.current) return;
-      setReference(ticketRef.current.reference);
+      ticketRef.current = ticket;
+      setReference(ticket.reference);
     }
     const ticket = ticketRef.current;
+    if (!pendingTakesPrecedence(ticket, !!lastOrder)) {
+      ticketRef.current = null;
+      setRedirectState({ phase: "idle" });
+      return;
+    }
     let active = true;
     setRedirectState({ phase: "checking" });
     void waitForPaidReservation(ticket.reservation, ticket.token).then((status) => {
@@ -106,9 +109,17 @@ function OrderPage() {
     return () => {
       active = false;
     };
-  }, [lastOrder, attempt]);
+  }, [attempt]);
 
-  if (!lastOrder && redirectState.phase === "checking") {
+  const paidDone = redirectState.phase === "done" && redirectState.status === "paid";
+  // Während Prüfung/Pending nie die alte Bestellung zeigen.
+  const blockOldOrder =
+    redirectState.phase === "checking" ||
+    redirectState.phase === "pending" ||
+    (redirectState.phase === "done" && !paidDone && !dismissedFailure);
+
+  if (redirectState.phase === "checking") {
+
     return (
       <div className="mx-auto max-w-2xl px-4 py-20 text-center sm:px-6">
         <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
