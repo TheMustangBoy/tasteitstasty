@@ -646,7 +646,7 @@ function AdminConsole() {
   const openOrdersToday = useMemo(() => {
     const today = berlinDayKey();
     return orders.filter(
-      (o) => !CLOSED_STATUSES.includes(o.status) && berlinDayKey(new Date(o.pickupAt)) === today,
+      (o) => !CLOSED_STATUSES.includes(o.status) && berlinDayKey(new Date(o.pickupISO)) === today,
     ).length;
   }, [orders]);
 
