@@ -279,3 +279,38 @@ assert.equal(activeFor({ status: "storniert" }), null);
 assert.equal(activeFor({ status: "angenommen" }), trackedOrder);
 
 console.log("status-token-checks: OK");
+
+/* ------------------------------------------------ Zutaten-Synchronisation */
+import {
+  removeFromList,
+  removeFromProduct,
+  renameInList,
+  renameInProduct,
+} from "../src/lib/ingredient-sync";
+
+// Rename ersetzt exakte Treffer und dedupliziert.
+assert.deepEqual(renameInList(["Gurke", "Tomate"], "Gurke", "Salatgurke"), [
+  "Salatgurke",
+  "Tomate",
+]);
+assert.deepEqual(renameInList(["Gurke", "Salatgurke"], "Gurke", "Salatgurke"), ["Salatgurke"]);
+// Teilstrings bleiben unberührt.
+assert.deepEqual(renameInList(["Essig Gurke"], "Gurke", "Salatgurke"), ["Essig Gurke"]);
+
+// Delete entfernt nur exakte Treffer.
+assert.deepEqual(removeFromList(["Gurke", "Essig Gurke"], "Gurke"), ["Essig Gurke"]);
+
+const burger = {
+  ingredients: ["Zwiebel", "Gurke", "Essig Gurke"],
+  removable: ["Gurke", "Essig Gurke"],
+};
+assert.deepEqual(renameInProduct(burger, "Gurke", "Salatgurke"), {
+  ingredients: ["Zwiebel", "Salatgurke", "Essig Gurke"],
+  removable: ["Salatgurke", "Essig Gurke"],
+});
+assert.deepEqual(removeFromProduct(burger, "Gurke"), {
+  ingredients: ["Zwiebel", "Essig Gurke"],
+  removable: ["Essig Gurke"],
+});
+
+console.log("ingredient-sync-checks: OK");
