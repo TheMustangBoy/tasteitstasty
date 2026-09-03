@@ -1022,8 +1022,15 @@ function AdminConsole() {
                             Ausverkauft
                           </label>
                         </div>
-                      </div>
-                    ))}
+                                </>
+                              )}
+                            </SortableRow>
+                          ))}
+                        </div>
+                      </SortableContext>
+                    </DndContext>
+                  )}
+
                 </section>
               );
             })}
