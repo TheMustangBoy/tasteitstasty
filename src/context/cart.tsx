@@ -69,6 +69,20 @@ export const linePrice = (line: CartLine) => {
 export const lineOptions = (line: CartLine): SelectionOption[] =>
   (line.options ?? []).length > 0 ? line.options! : line.variant ? [line.variant] : [];
 
+/** Anzeigenamen der Optionen – getrimmt und ohne Leereinträge. */
+export const optionNames = (line: CartLine): string[] =>
+  lineOptions(line)
+    .map((o) => (o?.name ?? "").trim())
+    .filter((n) => n.length > 0);
+
+/** Anzeigenamen der Extras (inkl. Legacy-Bacon), getrimmt und dedupliziert. */
+export const extraNames = (line: CartLine): string[] => {
+  const list = (line.extras ?? []).map((e) => (e?.name ?? "").trim()).filter(Boolean);
+  if (list.length === 0 && line.bacon) return [BACON_EXTRA.name];
+  return Array.from(new Set(list));
+};
+
+
 export type CartLineOptions = {
   removed: string[];
   bacon: boolean;
@@ -161,15 +175,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
     };
     void check();
-    const timer = setInterval(() => void check(), 60_000);
+    // Alle 30 Sekunden sowie bei Fokus/Sichtbarkeit nachziehen.
+    const timer = setInterval(() => void check(), 30_000);
     const onFocus = () => void check();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void check();
+    };
     window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       active = false;
       clearInterval(timer);
       window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [hydrated, statusToken]);
+
 
 
 

@@ -173,6 +173,20 @@ export function ProductEditor({
                   className="mt-2 h-12"
                 />
               </div>
+              <div>
+                <Label htmlFor="p-tag">Badge / Label (optional)</Label>
+                <Input
+                  id="p-tag"
+                  value={draft.tag}
+                  onChange={(e) => set({ tag: e.target.value })}
+                  className="mt-2 h-12"
+                  placeholder="z. B. Klassiker – leer = kein Badge"
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Leeres Feld blendet das Badge auf der Karte aus.
+                </p>
+              </div>
+
               <div className="sm:col-span-2">
                 <Label htmlFor="p-img">Bild-URL (optional)</Label>
                 <Input
@@ -484,7 +498,13 @@ export function ProductEditor({
                   toast.error("Bitte Pflichtfelder ausfüllen");
                   return;
                 }
-                const saved = { ...draft, name: draft.name.trim(), price: parsePrice(priceText) };
+                const saved = {
+                  ...draft,
+                  name: draft.name.trim(),
+                  tag: draft.tag.trim(),
+                  price: parsePrice(priceText),
+                };
+
                 upsertProduct(saved);
                 toast.success("✓ Gespeichert", {
                   description: `${saved.name} · ${formatPrice(saved.price)}`,

@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { WheelField } from "@/components/ui/wheel-picker";
 import { formatPrice, BUSINESS } from "@/data/menu";
-import { lineOptions, linePrice, useCart } from "@/context/cart";
+import { extraNames, lineOptions, linePrice, optionNames, useCart } from "@/context/cart";
 import { useShop } from "@/context/shop";
 import {
   buildSlotDays,
@@ -30,6 +30,7 @@ import {
 
 import { StripePaymentSection } from "@/components/shop/stripe-payment";
 import { clearPendingPayment, writePendingPayment } from "@/lib/pending-order";
+import { createStatusToken } from "@/lib/order-status";
 
 type PaymentChoice = "cash" | "terminal" | "online";
 
@@ -189,6 +190,17 @@ function CheckoutPage() {
     payment,
   });
   const [intentKey, setIntentKey] = useState("");
+
+  // Status-Token für Bar-/Kartenzahlung: bleibt je Snapshot stabil, damit ein
+  // Retry (gleicher checkout_key) dieselbe Bestellung mit demselben Token trifft.
+  const statusTokenRef = useRef<{ signature: string; token: string } | null>(null);
+  const statusTokenFor = useCallback((signature: string) => {
+    if (statusTokenRef.current?.signature !== signature) {
+      statusTokenRef.current = { signature, token: createStatusToken() };
+    }
+    return statusTokenRef.current.token;
+  }, []);
+
 
 
   // Aktuelle Sitzung als Ref, damit der Abbruch auch aus Effects sicher greift.
@@ -425,21 +437,17 @@ function CheckoutPage() {
                   <span className="block truncate font-semibold">
                     {line.quantity}× {line.name}
                   </span>
-                  {lineOptions(line).length > 0 && (
+                  {optionNames(line).length > 0 && (
                     <span className="block text-xs text-muted-foreground">
-                      {lineOptions(line)
-                        .map((o) => o.name)
-                        .join(", ")}
+                      {optionNames(line).join(", ")}
                     </span>
                   )}
-                  {(line.extras?.length || line.bacon) && (
+                  {extraNames(line).length > 0 && (
                     <span className="block text-xs text-primary">
-                      +{" "}
-                      {(line.extras?.length ? line.extras.map((e) => e.name) : ["Bacon"]).join(
-                        ", ",
-                      )}
+                      + {extraNames(line).join(", ")}
                     </span>
                   )}
+
                   {line.removed.length > 0 && (
                     <span className="block text-xs text-muted-foreground">
                       ohne {line.removed.join(", ")}
@@ -525,7 +533,10 @@ function CheckoutPage() {
                   pickupISO: selectedSlot ? new Date(selectedSlot.key).toISOString() : "",
                   payment: "Online bezahlt",
                   name: name.trim(),
+                  // Der Reservierungstoken wird serverseitig als Statustoken übernommen.
+                  statusToken: intent.token,
                 });
+
                 void refresh();
                 navigate({ to: "/bestellung" });
               }}
@@ -593,6 +604,8 @@ function CheckoutPage() {
                     note: note.trim(),
                     payment: paymentLabel,
                   });
+                  // Kundenseitiger Statustoken (kein PII, nie in der URL).
+                  const statusToken = statusTokenFor(checkoutKey);
                   // Erst speichern (inkl. serverseitiger Kapazitätsprüfung), dann bestätigen.
                   // Die Bestellnummer vergibt ausschließlich der Server.
                   const saved = await addOrder({
@@ -607,6 +620,7 @@ function CheckoutPage() {
                     lines,
                     total,
                     checkoutKey,
+                    statusToken,
                   });
                   placeOrder({
                     reference: saved.reference,
@@ -614,7 +628,9 @@ function CheckoutPage() {
                     pickupISO: new Date(selectedSlot.key).toISOString(),
                     payment: paymentLabel,
                     name: name.trim(),
+                    statusToken,
                   });
+
                   navigate({ to: "/bestellung" });
 
                 } catch (error) {

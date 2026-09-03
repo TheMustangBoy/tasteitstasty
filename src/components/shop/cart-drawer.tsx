@@ -1,21 +1,29 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
+import { Minus, Pencil, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { formatPrice } from "@/data/menu";
-import { linePrice, useCart } from "@/context/cart";
+import { extraNames, linePrice, optionNames, useCart, type CartLine } from "@/context/cart";
+import { useShop } from "@/context/shop";
+import { ProductDialog } from "@/components/shop/product-dialog";
 
 export function CartDrawer() {
   const { lines, isOpen, setOpen, setQuantity, remove, total, count } = useCart();
+  const { orderableProducts } = useShop();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const [editLine, setEditLine] = useState<CartLine | null>(null);
 
   // Drawer schließt nach Navigation – nicht im Klick-Handler, sonst bricht der Link ab.
   useEffect(() => {
     setOpen(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
+
+  const editItem = editLine
+    ? (orderableProducts.find((p) => p.id === editLine.itemId) ?? null)
+    : null;
 
   return (
     <Sheet open={isOpen} onOpenChange={setOpen}>
@@ -36,68 +44,77 @@ export function CartDrawer() {
             </div>
           ) : (
             <ul className="space-y-4">
-              {lines.map((line) => (
-                <li key={line.lineId} className="rounded-xl border border-border bg-card p-4">
-                  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold">{line.name}</p>
-                      {line.variant && (
-                        <p className="text-xs text-muted-foreground">{line.variant.name}</p>
-                      )}
-                      {(line.extras?.length
-                        ? line.extras.map((e) => e.name)
-                        : line.bacon
-                          ? ["Bacon"]
-                          : []
-                      ).length > 0 && (
-                        <p className="text-xs text-primary">
-                          +{" "}
-                          {(line.extras?.length ? line.extras.map((e) => e.name) : ["Bacon"]).join(
-                            ", ",
-                          )}
-                        </p>
-                      )}
-                      {line.removed.length > 0 && (
-                        <p className="text-xs text-muted-foreground">
-                          ohne {line.removed.join(", ")}
-                        </p>
-                      )}
+              {lines.map((line) => {
+                const options = optionNames(line);
+                const extras = extraNames(line);
+                const editable = orderableProducts.some((p) => p.id === line.itemId);
+                return (
+                  <li key={line.lineId} className="rounded-xl border border-border bg-card p-4">
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold">{line.name}</p>
+                        {options.length > 0 && (
+                          <p className="text-xs text-muted-foreground">{options.join(", ")}</p>
+                        )}
+                        {extras.length > 0 && (
+                          <p className="text-xs text-primary">+ {extras.join(", ")}</p>
+                        )}
+                        {line.removed.length > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            ohne {line.removed.join(", ")}
+                          </p>
+                        )}
+                      </div>
+                      <span className="shrink-0 font-display">{formatPrice(linePrice(line))}</span>
                     </div>
-                    <span className="shrink-0 font-display">{formatPrice(linePrice(line))}</span>
-                  </div>
-                  <div className="mt-3 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setQuantity(line.lineId, line.quantity - 1)}
-                        aria-label="Menge verringern"
-                      >
-                        <Minus className="h-3.5 w-3.5" />
-                      </Button>
-                      <span className="w-5 text-center text-sm font-semibold">{line.quantity}</span>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setQuantity(line.lineId, line.quantity + 1)}
-                        aria-label="Menge erhöhen"
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                      </Button>
+                    <div className="mt-3 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => setQuantity(line.lineId, line.quantity - 1)}
+                          aria-label="Menge verringern"
+                        >
+                          <Minus className="h-3.5 w-3.5" />
+                        </Button>
+                        <span className="w-5 text-center text-sm font-semibold">
+                          {line.quantity}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => setQuantity(line.lineId, line.quantity + 1)}
+                          aria-label="Menge erhöhen"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-muted-foreground"
+                          disabled={!editable}
+                          onClick={() => setEditLine(line)}
+                        >
+                          <Pencil className="mr-1 h-4 w-4" /> Bearbeiten
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-muted-foreground"
+                          onClick={() => remove(line.lineId)}
+                          aria-label="Entfernen"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-muted-foreground"
-                      onClick={() => remove(line.lineId)}
-                    >
-                      <Trash2 className="mr-1 h-4 w-4" /> Entfernen
-                    </Button>
-                  </div>
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
@@ -123,6 +140,15 @@ export function CartDrawer() {
           </div>
         )}
       </SheetContent>
+
+      <ProductDialog
+        item={editItem}
+        editLine={editLine}
+        open={Boolean(editItem)}
+        onOpenChange={(next) => {
+          if (!next) setEditLine(null);
+        }}
+      />
     </Sheet>
   );
 }

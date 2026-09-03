@@ -4,7 +4,8 @@ import { CheckCircle2, Clock, Loader2, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { BUSINESS, formatPrice } from "@/data/menu";
-import { linePrice, useCart, type CartLine } from "@/context/cart";
+import { extraNames, linePrice, optionNames, useCart, type CartLine } from "@/context/cart";
+import { closedReasonMessage } from "@/lib/order-status";
 import {
   clearPendingPayment,
   pendingTakesPrecedence,
@@ -38,8 +39,9 @@ type RedirectPhase =
   | { phase: "done"; status: ReservationStatusValue };
 
 function OrderPage() {
-  const { activeOrder, clear, placeOrder } = useCart();
+  const { activeOrder, clear, placeOrder, orderClosedReason, dismissOrderClosed } = useCart();
   const lastOrder = activeOrder;
+
   // Rückkehr aus einem Stripe-Redirect (z. B. 3-D-Secure) ohne lokalen Bestellstand.
   const [redirectState, setRedirectState] = useState<RedirectPhase>({ phase: "idle" });
   // Reservierungsdaten intern halten, damit die URL bereinigt werden kann,
@@ -99,7 +101,10 @@ function OrderPage() {
             pickupISO: snap.pickupISO,
             payment: snap.payment,
             name: snap.name,
+            // Der Reservierungstoken ist zugleich der kundenseitige Statustoken.
+            statusToken: ticket.token,
           });
+
         } else {
           actionsRef.current.clear();
         }
@@ -205,19 +210,46 @@ function OrderPage() {
   }
 
   if (!lastOrder) {
-
     return (
       <div className="mx-auto max-w-2xl px-4 py-20 text-center sm:px-6">
-        <h1 className="text-3xl">Keine Bestellung gefunden</h1>
-        <p className="mt-3 text-muted-foreground">Starte eine neue Bestellung.</p>
-        <Button
-          asChild
-          className="mt-6 h-14 rounded-xl bg-flame px-8 font-bold uppercase text-primary-foreground"
-        >
-          <Link to="/speisekarte">Zur Speisekarte</Link>
-        </Button>
+        {orderClosedReason ? (
+          <>
+            <h1 className="text-3xl">Bestellung beendet</h1>
+            <p className="mt-3 text-muted-foreground">
+              {closedReasonMessage(orderClosedReason)}
+            </p>
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <Button
+                asChild
+                className="h-14 rounded-xl bg-flame px-8 font-bold uppercase text-primary-foreground"
+                onClick={dismissOrderClosed}
+              >
+                <Link to="/speisekarte">Zur Speisekarte</Link>
+              </Button>
+              <Button
+                variant="outline"
+                className="h-14 rounded-xl px-8 font-bold uppercase"
+                onClick={dismissOrderClosed}
+              >
+                Hinweis schließen
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <h1 className="text-3xl">Keine Bestellung gefunden</h1>
+            <p className="mt-3 text-muted-foreground">Starte eine neue Bestellung.</p>
+            <Button
+              asChild
+              className="mt-6 h-14 rounded-xl bg-flame px-8 font-bold uppercase text-primary-foreground"
+            >
+              <Link to="/speisekarte">Zur Speisekarte</Link>
+            </Button>
+          </>
+        )}
       </div>
     );
+
   }
 
   return (
@@ -259,7 +291,14 @@ function OrderPage() {
         <ul className="space-y-3 text-sm">
           {(Array.isArray(lastOrder.lines) ? lastOrder.lines : []).map((line, index) => {
             const removed = Array.isArray(line?.removed) ? line.removed : [];
-            const safeLine = { ...line, removed, quantity: line?.quantity ?? 1, basePrice: line?.basePrice ?? 0 };
+            const safeLine = {
+              ...line,
+              removed,
+              quantity: line?.quantity ?? 1,
+              basePrice: line?.basePrice ?? 0,
+            } as CartLine;
+            const options = optionNames(safeLine);
+            const extras = extraNames(safeLine);
             return (
               <li
                 key={line?.lineId ?? index}
@@ -269,7 +308,14 @@ function OrderPage() {
                   <span className="block truncate font-semibold">
                     {safeLine.quantity}× {line?.name ?? "Artikel"}
                   </span>
-                  {line?.bacon && <span className="block text-xs text-primary">+ Bacon</span>}
+                  {options.length > 0 && (
+                    <span className="block text-xs text-muted-foreground">
+                      {options.join(", ")}
+                    </span>
+                  )}
+                  {extras.length > 0 && (
+                    <span className="block text-xs text-primary">+ {extras.join(", ")}</span>
+                  )}
                   {removed.length > 0 && (
                     <span className="block text-xs text-muted-foreground">
                       ohne {removed.join(", ")}
@@ -280,6 +326,7 @@ function OrderPage() {
               </li>
             );
           })}
+
         </ul>
         <Separator className="my-6" />
         <div className="flex items-center justify-between">

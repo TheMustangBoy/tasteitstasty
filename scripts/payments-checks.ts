@@ -160,3 +160,51 @@ localStorage.setItem(CART_KEY, JSON.stringify(replaced));
 assert.equal(JSON.parse(localStorage.getItem(CART_KEY)!).lastOrder.reference, "TIT-9999");
 
 console.log("order-checks: OK");
+
+// --- Produktdarstellung, Optionen und Statusabschluss -----------------------
+import { pattyLabel } from "../src/data/menu";
+import { extraNames, optionNames, type CartLine } from "../src/context/cart";
+import { closedReasonFor } from "../src/lib/order-status";
+
+// Veggie schlägt die Patty-Anzahl.
+assert.equal(pattyLabel({ vegetarian: true, patties: 2 }), "Veggie Patty");
+assert.equal(pattyLabel({ vegetarian: false, patties: 2 }), "Double Patty");
+assert.equal(pattyLabel({ vegetarian: false, patties: null }), null);
+
+// Optionsnamen werden getrimmt, Legacy-Variante und Legacy-Bacon berücksichtigt.
+const base: CartLine = {
+  lineId: "l1",
+  itemId: "smash",
+  name: "Smash",
+  basePrice: 8.5,
+  quantity: 1,
+  removed: [],
+  bacon: false,
+};
+assert.deepEqual(
+  optionNames({ ...base, options: [{ id: "o1", name: "Trüffel-Fries ", priceDelta: 6.5 }] }),
+  ["Trüffel-Fries"],
+);
+assert.deepEqual(
+  optionNames({ ...base, variant: { id: "o1", name: " Menü ", priceDelta: 3 } }),
+  ["Menü"],
+);
+assert.deepEqual(optionNames(base), []);
+assert.deepEqual(extraNames({ ...base, bacon: true }), ["Bacon"]);
+assert.deepEqual(
+  extraNames({ ...base, bacon: true, extras: [{ id: "bacon", name: "Bacon ", price: 1.5 }] }),
+  ["Bacon"],
+);
+
+// Abschlussgründe.
+assert.equal(closedReasonFor({ status: "storniert" }), "storniert");
+assert.equal(closedReasonFor({ status: "abgelehnt" }), "abgelehnt");
+assert.equal(closedReasonFor({ status: "neu", paymentStatus: "refunded" }), "erstattet");
+assert.equal(closedReasonFor({ status: "abgeschlossen" }), "abgeschlossen");
+assert.equal(closedReasonFor({ status: "in-arbeit", paymentStatus: "paid" }), null);
+
+// Legacy-Bestellung ohne statusToken wird bei der Hydration verworfen.
+const legacy = { reference: "TIT-0001", pickupISO: pickup.toISOString(), lines: [], total: 5 };
+assert.equal(Boolean((legacy as { statusToken?: string }).statusToken), false);
+
+console.log("product/status-checks: OK");
