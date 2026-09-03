@@ -92,7 +92,7 @@ export function ProductDialog({
             {item.description
               ? item.description
               : item.vegetarian
-                ? "Veggie Patty · frisch zubereitet"
+                ? "Blumenkohl-Karotten Patty · frisch zubereitet"
                 : pattyLabel(item)
                   ? `${pattyLabel(item)} · frisch gesmasht`
                   : item.category === "burger"

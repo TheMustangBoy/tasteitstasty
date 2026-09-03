@@ -21,12 +21,16 @@ export function SiteFooter() {
         </div>
         <div className="text-sm">
           <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Kontakt</h2>
-          <p className="mt-3 text-muted-foreground">
-            {LEGAL.phone}
-            <br />
-            {LEGAL.email}
+          <p className="mt-3 flex flex-col gap-1 text-muted-foreground">
+            <a href={`tel:${LEGAL.phone}`} className="hover:text-primary">
+              {LEGAL.phone}
+            </a>
+            <a href={`mailto:${LEGAL.email}`} className="break-all hover:text-primary">
+              {LEGAL.email}
+            </a>
           </p>
         </div>
+
         <div className="text-sm">
           <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Rechtliches</h2>
           <ul className="mt-3 space-y-2 text-muted-foreground">
