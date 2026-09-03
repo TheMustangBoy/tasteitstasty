@@ -58,3 +58,53 @@ for (const status of ["paid", "failed", "cancelled", "expired", "refunded", "slo
 }
 
 console.log("payments-checks: OK");
+
+// --- „Meine Bestellung“: Aktivfenster, Ersetzung, Legacy-Bereinigung ---------
+const localStore = new Map<string, string>();
+(globalThis as { localStorage?: unknown }).localStorage = {
+  getItem: (k: string) => localStore.get(k) ?? null,
+  setItem: (k: string, v: string) => void localStore.set(k, v),
+  removeItem: (k: string) => void localStore.delete(k),
+};
+(globalThis as { window?: unknown }).window = { localStorage: globalThis.localStorage };
+
+const { isOrderActive, orderExpiresAt, ORDER_ACTIVE_WINDOW_MS } = await import("../src/context/cart");
+const pending = await import("../src/lib/pending-order");
+
+const pickup = new Date("2026-09-03T15:00:00.000Z");
+const before = pickup.getTime() + ORDER_ACTIVE_WINDOW_MS - 60_000;
+const after = pickup.getTime() + ORDER_ACTIVE_WINDOW_MS + 60_000;
+
+// Vor Ablauf aktiv, nach 2 Stunden abgelaufen.
+assert.equal(isOrderActive({ pickupISO: pickup.toISOString() }, before), true);
+assert.equal(isOrderActive({ pickupISO: pickup.toISOString() }, after), false);
+assert.equal(
+  orderExpiresAt({ pickupISO: pickup.toISOString() })?.getTime(),
+  pickup.getTime() + ORDER_ACTIVE_WINDOW_MS,
+);
+
+// Legacy-Bestellung ohne pickupISO gilt als abgelaufen und wird bereinigt.
+assert.equal(isOrderActive({ pickupISO: "" }), false);
+assert.equal(isOrderActive(null), false);
+assert.equal(isOrderActive({ pickupISO: "kein-datum" }), false);
+
+// Pending-Daten: frisch lesbar, nach TTL bzw. terminalem Status entfernt.
+pending.writePendingPayment({
+  reservation: "res_1",
+  token: "tok_1",
+  reference: "TIT-1234",
+  createdAt: Date.now(),
+});
+assert.equal(pending.readPendingPayment()?.reservation, "res_1");
+pending.clearPendingPayment();
+assert.equal(pending.readPendingPayment(), null);
+
+pending.writePendingPayment({
+  reservation: "res_2",
+  token: "tok_2",
+  reference: "TIT-2345",
+  createdAt: Date.now() - pending.PENDING_TTL_MS - 1000,
+});
+assert.equal(pending.readPendingPayment(), null);
+
+console.log("order-checks: OK");
