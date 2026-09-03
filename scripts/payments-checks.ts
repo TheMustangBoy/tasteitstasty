@@ -208,3 +208,50 @@ const legacy = { reference: "TIT-0001", pickupISO: pickup.toISOString(), lines: 
 assert.equal(Boolean((legacy as { statusToken?: string }).statusToken), false);
 
 console.log("product/status-checks: OK");
+
+/* ------------------------------------------------- Statusabgleich / Token */
+
+// `gone` (404) entfernt die lokale Bestellung; `null` (Netz/5xx) nicht.
+function shouldDropLocalOrder(result: unknown): boolean {
+  return result === "gone";
+}
+assert.equal(shouldDropLocalOrder("gone"), true);
+assert.equal(shouldDropLocalOrder(null), false);
+assert.equal(shouldDropLocalOrder({ status: "neu", paymentStatus: "paid" }), false);
+
+// OrderRow -> ShopOrder mappt den serverseitigen Statustoken.
+const tokenHex = "a".repeat(64);
+const mapped = toOrder({
+  id: "1",
+  reference: "TIT-0002",
+  customer_name: "",
+  phone: "",
+  pickup_at: pickup.toISOString(),
+  pickup_label: "",
+  payment: "Barzahlung bei Abholung",
+  lines: [],
+  total: 0,
+  status: "neu",
+  note: "",
+  internal_note: "",
+  cancel_reason: null,
+  cancel_note: null,
+  status_timestamps: {},
+  created_at: new Date().toISOString(),
+  customer_status_token: tokenHex,
+});
+assert.equal(mapped.customerStatusToken, tokenHex);
+// Idempotenz: bei bestehender Bestellung gewinnt der gespeicherte Token.
+assert.equal(mapped.customerStatusToken ?? "neu-token", tokenHex);
+assert.equal(toOrder({ ...({} as never), ...{
+  id: "2", reference: "TIT-0003", customer_name: "", phone: "",
+  pickup_at: pickup.toISOString(), pickup_label: "", payment: "", lines: [], total: 0,
+  status: "neu", note: "", internal_note: "", cancel_reason: null, cancel_note: null,
+  status_timestamps: {}, created_at: new Date().toISOString(),
+} }).customerStatusToken, null);
+
+// Tokenformat: Reservierungs- und Statustoken sind 64 Hex-Zeichen.
+assert.match(createStatusToken(), /^[0-9a-f]{64}$/);
+assert.match(tokenHex, /^[0-9a-f]{32,128}$/);
+
+console.log("status-token-checks: OK");
