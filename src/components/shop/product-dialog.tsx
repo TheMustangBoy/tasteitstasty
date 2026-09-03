@@ -254,20 +254,27 @@ export function ProductDialog({
             size="lg"
             className="h-14 w-full rounded-xl bg-flame text-base font-bold uppercase tracking-wide text-primary-foreground shadow-flame hover:opacity-90"
             onClick={() => {
-              add(item, {
+              const opts = {
                 removed,
                 bacon: extraIds.includes(BACON_EXTRA.id),
                 quantity,
                 extras: selectedExtras,
                 options: selectedOptions,
-              });
+              };
+              if (editLine) {
+                updateLine(editLine.lineId, item, opts);
+                onOpenChange(false);
+                toast.success("Änderungen gespeichert", { description: item.name });
+                return;
+              }
+              add(item, opts);
               onOpenChange(false);
               toast.success("Zum Warenkorb hinzugefügt", {
                 description: `${quantity}× ${item.name}`,
               });
             }}
           >
-            In den Warenkorb
+            {isEditing ? "Änderungen speichern" : "In den Warenkorb"}
           </Button>
         </div>
       </DialogContent>
