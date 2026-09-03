@@ -27,7 +27,7 @@ export type PendingPayment = {
   token: string;
   reference: string;
   createdAt: number;
-  snapshot?: PendingOrderSnapshot;
+  snapshot?: PendingOrderSnapshot | undefined;
 };
 
 const storage = (): Storage | null => {
