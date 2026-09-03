@@ -17,6 +17,8 @@ import {
   nextAvailableSlot,
   nextOpeningLabel,
 } from "@/lib/pickup";
+import { isEmergencyClosedToday } from "@/lib/berlin-day";
+
 import { isValidPhone, PHONE_ERROR, sanitizePhoneInput } from "@/lib/phone";
 import { PAYMENT_ON_SITE, type PaymentConfig } from "@/lib/payments/config";
 import {
