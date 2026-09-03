@@ -39,6 +39,43 @@ export const Route = createFileRoute("/api/public/payments/stripe-webhook")({
           return new Response("Invalid signature", { status: 400 });
         }
 
+        // Erstattungen (auch direkt im Stripe-Dashboard ausgeloest) nachziehen.
+        const refundEvents = ["charge.refunded", "refund.updated", "refund.created"];
+        if (refundEvents.includes(event.type)) {
+          const object = event.data.object as { payment_intent?: string | { id: string } | null };
+          const pi = object.payment_intent;
+          const intentId = typeof pi === "string" ? pi : (pi?.id ?? null);
+          if (!intentId) return Response.json({ received: true, ignored: true });
+
+          const stripeClient = createStripeClient(env.secretKey);
+          try {
+            const paymentIntent = await stripeClient.paymentIntents.retrieve(intentId);
+            const refunds = await stripeClient.refunds.list({
+              payment_intent: intentId,
+              limit: 100,
+            });
+            // Nur tatsaechlich erfolgreiche Erstattungen zaehlen (kein pending).
+            const refunded = refunds.data
+              .filter((r) => r.status === "succeeded")
+              .reduce((sum, r) => sum + (r.amount ?? 0), 0);
+            const charged = paymentIntent.amount_received || paymentIntent.amount || 0;
+
+            // Teilerstattungen bleiben bewusst unberuecksichtigt.
+            if (charged > 0 && refunded >= charged) {
+              const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+              await supabaseAdmin.rpc("mark_refunded_by_payment_intent", {
+                p_payment_intent_id: intentId,
+              });
+              return Response.json({ received: true, refunded: true });
+            }
+            return Response.json({ received: true, refunded: false });
+          } catch {
+            console.error("[payments] refund sync failed");
+            // 500 => Stripe wiederholt; die Verarbeitung ist idempotent.
+            return new Response("Refund sync failed", { status: 500 });
+          }
+        }
+
         const relevant = [
           "payment_intent.succeeded",
           "payment_intent.payment_failed",
