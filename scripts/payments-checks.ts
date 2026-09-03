@@ -169,7 +169,7 @@ import { createStatusToken } from "../src/lib/order-status";
 import { toOrder } from "../src/lib/repository";
 
 // Veggie schlägt die Patty-Anzahl.
-assert.equal(pattyLabel({ vegetarian: true, patties: 2 }), "Veggie Patty");
+assert.equal(pattyLabel({ vegetarian: true, patties: 2 }), "Blumenkohl-Karotten Patty");
 assert.equal(pattyLabel({ vegetarian: false, patties: 2 }), "Double Patty");
 assert.equal(pattyLabel({ vegetarian: false, patties: null }), null);
 
