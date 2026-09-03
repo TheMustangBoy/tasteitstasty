@@ -26,7 +26,10 @@ export type SlotConfig = {
   maxOrdersPerSlot?: number;
   bookings?: Record<string, number>;
   daysAhead?: number;
+  /** Notfall-Schließung: `YYYY-MM-DD` (Europe/Berlin) ohne Abholzeiten. */
+  emergencyClosedDate?: string | null;
 };
+
 
 const pad = (n: number) => String(n).padStart(2, "0");
 export const dayKeyOf = (d: Date) =>
