@@ -46,6 +46,8 @@ import {
   saveProduct,
   saveProductOrder,
   saveSettings,
+  setEmergencyClosure,
+
   toOrder,
   type OrderPatch,
   type ShopSnapshot,
@@ -193,7 +195,10 @@ export type ShopSettings = {
   ordersPaused: boolean;
   /** Tick-Ton beim Scrollen im Wheel Picker. */
   wheelSoundOn: boolean;
+  /** Notfall-Schließung: gesperrter Tag als `YYYY-MM-DD` (Europe/Berlin). */
+  emergencyClosedDate: string | null;
 };
+
 
 type ShopState = {
   settings: ShopSettings;
@@ -215,7 +220,9 @@ const DEFAULT_SETTINGS: ShopSettings = {
   minLeadMinutes: DEFAULT_MIN_LEAD_MINUTES,
   ordersPaused: false,
   wheelSoundOn: true,
+  emergencyClosedDate: null,
 };
+
 
 function seedCatalog(): Catalog {
   const names = new Set<string>();
@@ -269,6 +276,9 @@ type ShopContextValue = ShopState & {
   overrides: Record<string, ProductOverride>;
   bookings: Record<string, number>;
   setSettings: (patch: Partial<ShopSettings>) => void;
+  /** Notfall-Schließung für heute setzen/aufheben (serverseitig abgesichert). */
+  setEmergencyClosed: (closed: boolean) => Promise<{ ok: boolean; error?: string }>;
+
   setDayHours: (index: number, patch: Partial<DayHours>) => void;
   setOverride: (id: string, patch: ProductOverride) => void;
   upsertProduct: (row: ProductRecord) => void;
@@ -677,6 +687,21 @@ export function ShopProvider({ children }: { children: ReactNode }) {
           if (p.hours) await saveHours(next.hours);
         }, "Einstellungen konnten nicht gespeichert werden.");
       },
+      setEmergencyClosed: async (closed) => {
+        try {
+          const date = await setEmergencyClosure(closed);
+          // Optimistisch übernehmen; der Server bleibt die maßgebliche Quelle.
+          patch((prev) => ({
+            ...prev,
+            settings: { ...prev.settings, emergencyClosedDate: date },
+          }));
+          void refresh();
+          return { ok: true };
+        } catch {
+          return { ok: false, error: "Der Status konnte nicht gespeichert werden." };
+        }
+      },
+
       setDayHours: (index, p) => {
         const hours = state.settings.hours.map((h, i) => (i === index ? { ...h, ...p } : h));
         patch((prev) => ({ ...prev, settings: { ...prev.settings, hours } }));

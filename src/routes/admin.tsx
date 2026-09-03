@@ -61,6 +61,10 @@ import {
 import { OrderCard } from "@/components/admin/order-card";
 import { ProductEditor } from "@/components/admin/product-editor";
 import { CatalogManager } from "@/components/admin/catalog-manager";
+import { EmergencyClosure } from "@/components/admin/emergency-closure";
+import { PaymentsHealth } from "@/components/admin/payments-health";
+import { berlinDayKey, isEmergencyClosedToday } from "@/lib/berlin-day";
+
 import { supabase } from "@/integrations/supabase/client";
 import { formatPrice, WEEKDAYS } from "@/data/menu";
 import {
@@ -506,6 +510,8 @@ function AdminConsole() {
     setSoundOn,
     setOverride,
     setSettings,
+    setEmergencyClosed,
+
     setDayHours,
     setOrderStatus,
     setOrderNote,
@@ -634,6 +640,17 @@ function AdminConsole() {
       top,
     };
   }, [orders]);
+
+  const emergencyClosedToday = isEmergencyClosedToday(settings.emergencyClosedDate);
+  // Offene Bestellungen mit Abholung am heutigen Berliner Tag.
+  const openOrdersToday = useMemo(() => {
+    const today = berlinDayKey();
+    return orders.filter(
+      (o) => !CLOSED_STATUSES.includes(o.status) && berlinDayKey(new Date(o.pickupISO)) === today,
+    ).length;
+  }, [orders]);
+
+
 
   return (
     <div className="mx-auto max-w-6xl px-3 py-8 sm:px-6 sm:py-12">
@@ -1091,6 +1108,16 @@ function AdminConsole() {
               </label>
             </div>
           </section>
+
+          <EmergencyClosure
+            closedToday={emergencyClosedToday}
+            closedDate={settings.emergencyClosedDate}
+            openOrdersToday={openOrdersToday}
+            onToggle={setEmergencyClosed}
+          />
+
+          <PaymentsHealth />
+
 
           <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
             <h2 className="text-xl">Öffnungszeiten</h2>

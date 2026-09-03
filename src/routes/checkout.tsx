@@ -17,6 +17,8 @@ import {
   nextAvailableSlot,
   nextOpeningLabel,
 } from "@/lib/pickup";
+import { isEmergencyClosedToday } from "@/lib/berlin-day";
+
 import { isValidPhone, PHONE_ERROR, sanitizePhoneInput } from "@/lib/phone";
 import { PAYMENT_ON_SITE, type PaymentConfig } from "@/lib/payments/config";
 import {
@@ -95,10 +97,13 @@ function CheckoutPage() {
             minLeadMinutes: settings.minLeadMinutes,
             maxOrdersPerSlot: settings.maxOrdersPerSlot,
             bookings,
+            emergencyClosedDate: settings.emergencyClosedDate,
           })
         : [],
     [now, settings, bookings],
   );
+  const closedToday = isEmergencyClosedToday(settings.emergencyClosedDate, now ?? new Date());
+
   const slots = useMemo(() => flattenSlots(slotDays), [slotDays]);
   const suggested = nextAvailableSlot(slotDays);
   const [slotKey, setSlotKey] = useState("");
@@ -283,12 +288,20 @@ function CheckoutPage() {
               </p>
             )}
 
+            {now && closedToday && (
+              <p className="mt-4 flex items-start gap-2 rounded-lg border border-destructive/60 bg-destructive/10 p-4 text-sm text-destructive">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                Heute geschlossen – Bestellungen für die nächsten Tage sind weiterhin möglich.
+              </p>
+            )}
+
             {now && slotDays.length === 0 && (
               <p className="mt-4 flex items-start gap-2 rounded-lg border border-primary/40 bg-primary/10 p-4 text-sm">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                 Aktuell sind keine Abholzeiten verfügbar.
               </p>
             )}
+
 
             {now && !isOpenNow(now, settings.hours) && slotDays.length > 0 && (
               <p className="mt-4 flex items-start gap-2 rounded-lg border border-primary/40 bg-primary/10 p-4 text-sm">

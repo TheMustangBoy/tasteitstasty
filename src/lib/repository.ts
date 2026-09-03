@@ -194,6 +194,7 @@ export async function fetchPublicSnapshot(): Promise<ShopSnapshot> {
       minLeadMinutes: settings.data?.min_lead_minutes ?? 15,
       ordersPaused: settings.data?.orders_paused ?? false,
       wheelSoundOn: settings.data?.wheel_sound_on ?? true,
+      emergencyClosedDate: settings.data?.emergency_closed_date ?? null,
     },
   };
 }
@@ -353,6 +354,19 @@ export async function saveSettings(settings: ShopSettings) {
     ).error,
   );
 }
+
+/**
+ * Notfall-Schließung für „heute“ setzen oder aufheben.
+ * Das Datum wird serverseitig in Europe/Berlin bestimmt (keine Race-Conditions,
+ * kein Überschreiben anderer Einstellungen).
+ */
+export async function setEmergencyClosure(closed: boolean): Promise<string | null> {
+  const { data, error } = await supabase.rpc("set_emergency_closure", { p_closed: closed });
+  if (error) throw error;
+  return (data as string | null) ?? null;
+}
+
+
 
 export async function saveHours(hours: DayHours[]) {
   check(

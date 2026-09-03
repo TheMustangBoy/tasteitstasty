@@ -402,6 +402,7 @@ export type Database = {
       shop_settings: {
         Row: {
           created_at: string
+          emergency_closed_date: string | null
           id: number
           max_orders_per_slot: number
           min_lead_minutes: number
@@ -411,6 +412,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          emergency_closed_date?: string | null
           id?: number
           max_orders_per_slot?: number
           min_lead_minutes?: number
@@ -420,6 +422,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          emergency_closed_date?: string | null
           id?: number
           max_orders_per_slot?: number
           min_lead_minutes?: number
@@ -603,6 +606,7 @@ export type Database = {
         }
         Returns: number
       }
+      set_emergency_closure: { Args: { p_closed: boolean }; Returns: string }
       slot_has_capacity_excluding: {
         Args: { p_pickup_at: string; p_reservation_id: string }
         Returns: boolean
