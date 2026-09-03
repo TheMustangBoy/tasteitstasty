@@ -1,4 +1,6 @@
 import { DEFAULT_HOURS, WEEKDAYS, type DayHours } from "@/data/menu";
+import { berlinDayKey } from "@/lib/berlin-day";
+
 
 /** Abholzeiten-Logik: Vorlauf + 5-Minuten-Takt, immer innerhalb der Öffnungszeiten. */
 export const SLOT_STEP_MINUTES = 5;
