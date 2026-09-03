@@ -218,7 +218,9 @@ const DEFAULT_SETTINGS: ShopSettings = {
   minLeadMinutes: DEFAULT_MIN_LEAD_MINUTES,
   ordersPaused: false,
   wheelSoundOn: true,
+  emergencyClosedDate: null,
 };
+
 
 function seedCatalog(): Catalog {
   const names = new Set<string>();
