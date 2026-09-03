@@ -22,6 +22,7 @@ import {
 } from "@/data/menu";
 import { DEFAULT_MAX_ORDERS_PER_SLOT, DEFAULT_MIN_LEAD_MINUTES } from "@/lib/pickup";
 import { toast } from "sonner";
+import { removeFromProduct, renameInProduct } from "@/lib/ingredient-sync";
 import { refundAndCloseOrderRemote } from "@/lib/payments/refund-client";
 import {
   checkIsAdmin,
@@ -38,6 +39,7 @@ import {
   saveExtra,
   saveExtraOrder,
   saveHours,
+  renameIngredientRefs,
   saveIngredient,
   saveIngredientOrder,
   saveOrderPatch,
