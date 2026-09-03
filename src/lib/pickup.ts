@@ -59,6 +59,7 @@ export function buildSlotDays(config: SlotConfig = {}): SlotDay[] {
   const maxPerSlot = config.maxOrdersPerSlot ?? DEFAULT_MAX_ORDERS_PER_SLOT;
   const bookings = config.bookings ?? {};
   const daysAhead = config.daysAhead ?? 6;
+  const emergencyClosedDate = config.emergencyClosedDate ?? null;
 
   const earliest = new Date(now.getTime() + minLead * 60_000);
   earliest.setSeconds(0, 0);
@@ -68,8 +69,11 @@ export function buildSlotDays(config: SlotConfig = {}): SlotDay[] {
   const days: SlotDay[] = [];
   for (let offset = 0; offset <= daysAhead; offset++) {
     const base = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset);
+    // Notfall-Schließung betrifft ausschließlich den markierten Berliner Tag.
+    if (emergencyClosedDate && berlinDayKey(base) === emergencyClosedDate) continue;
     const dayHours = hours[base.getDay()] ?? DEFAULT_HOURS[base.getDay()]!;
     if (dayHours.closed) continue;
+
 
     const open = parseTime(dayHours.open);
     const close = parseTime(dayHours.close);
