@@ -163,7 +163,7 @@ console.log("order-checks: OK");
 
 // --- Produktdarstellung, Optionen und Statusabschluss -----------------------
 import { pattyLabel } from "../src/data/menu";
-import { extraNames, isOrderActive, optionNames, type CartLine } from "../src/context/cart";
+import { extraNames,  optionNames, type CartLine } from "../src/context/cart";
 import { closedReasonFor, statusLabel } from "../src/lib/order-status";
 import { createStatusToken } from "../src/lib/order-status";
 import { toOrder } from "../src/lib/repository";
