@@ -159,7 +159,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [hydrated, lastOrder, nowTick]);
 
   // Serverstatus der lokalen Bestellung nachziehen: beim Laden, bei Fokus
-  // und in Intervallen. Storniert/abgelehnt/erstattet entfernt die Anzeige.
+  // und in Intervallen. Die Bestellung bleibt getrackt, auch wenn der Status
+  // vorübergehend geschlossen ist – so wird eine Reaktivierung sichtbar.
   const statusToken = lastOrder?.statusToken ?? "";
   useEffect(() => {
     if (!hydrated || !statusToken) return;
@@ -167,18 +168,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const check = async () => {
       const result = await fetchOrderStatus(statusToken);
       if (!active || !result) return;
-      // 404: Bestellung serverseitig unbekannt -> lokal entfernen, ohne Grund zu raten.
-      // Netz-/Serverfehler liefern `null` und lassen die Bestellung unangetastet.
+      // 404: Bestellung serverseitig unbekannt -> lokal entfernen.
+      // Netz-/Serverfehler liefern `null` und lassen alles unangetastet.
       if (result === "gone") {
+        setServerStatus(null);
         setOrderClosedReason(null);
+        setClosedDismissed(false);
         setLastOrder(null);
         return;
       }
+      setServerStatus(result);
       const reason = closedReasonFor(result);
-      if (reason) {
-        setOrderClosedReason(reason);
-        setLastOrder(null);
-      }
+      setOrderClosedReason(reason);
+      // Reaktivierung: Hinweis automatisch wieder einblendbar machen.
+      if (!reason) setClosedDismissed(false);
     };
     void check();
     // Alle 30 Sekunden sowie bei Fokus/Sichtbarkeit nachziehen.
@@ -196,6 +199,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [hydrated, statusToken]);
+
 
 
 
