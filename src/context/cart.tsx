@@ -28,7 +28,10 @@ export type PlacedOrder = {
   pickupISO: string;
   payment: string;
   name: string;
+  /** Zufälliger Token für die kundenseitige Statusabfrage (kein PII). */
+  statusToken?: string;
 };
+
 
 /** Eine Bestellung bleibt bis 2 Stunden nach der Abholzeit lokal sichtbar. */
 export const ORDER_ACTIVE_WINDOW_MS = 2 * 60 * 60 * 1000;
