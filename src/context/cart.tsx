@@ -24,9 +24,32 @@ export type PlacedOrder = {
   lines: CartLine[];
   total: number;
   pickupLabel: string;
+  /** ISO-Zeitpunkt der Abholung – Basis für die 2-Stunden-Regel. */
+  pickupISO: string;
   payment: string;
   name: string;
 };
+
+/** Eine Bestellung bleibt bis 2 Stunden nach der Abholzeit lokal sichtbar. */
+export const ORDER_ACTIVE_WINDOW_MS = 2 * 60 * 60 * 1000;
+
+/** Ablaufzeitpunkt der lokalen Anzeige (null bei fehlendem/ungültigem pickupISO). */
+export function orderExpiresAt(order: Pick<PlacedOrder, "pickupISO"> | null | undefined) {
+  if (!order?.pickupISO) return null;
+  const pickup = new Date(order.pickupISO).getTime();
+  if (!Number.isFinite(pickup)) return null;
+  return new Date(pickup + ORDER_ACTIVE_WINDOW_MS);
+}
+
+/** Legacy-Bestellungen ohne pickupISO gelten als abgelaufen und werden bereinigt. */
+export function isOrderActive(
+  order: Pick<PlacedOrder, "pickupISO"> | null | undefined,
+  now: number = Date.now(),
+): boolean {
+  const expires = orderExpiresAt(order);
+  return expires ? expires.getTime() > now : false;
+}
+
 
 export const linePrice = (line: CartLine) => {
   const extras = line.extras ?? [];
