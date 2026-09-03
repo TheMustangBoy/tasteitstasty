@@ -1092,6 +1092,16 @@ function AdminConsole() {
             </div>
           </section>
 
+          <EmergencyClosure
+            closedToday={emergencyClosedToday}
+            closedDate={settings.emergencyClosedDate}
+            openOrdersToday={openOrdersToday}
+            onToggle={setEmergencyClosed}
+          />
+
+          <PaymentsHealth />
+
+
           <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
             <h2 className="text-xl">Öffnungszeiten</h2>
             <div className="mt-4 space-y-3">
