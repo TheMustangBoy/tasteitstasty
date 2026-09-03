@@ -102,6 +102,7 @@ type OrderRow = {
   payment_provider?: string | null;
   payment_status?: string | null;
   paid_at?: string | null;
+  customer_status_token?: string | null;
 };
 
 export function toOrder(row: OrderRow): ShopOrder {
@@ -124,6 +125,7 @@ export function toOrder(row: OrderRow): ShopOrder {
     paymentProvider: (row.payment_provider ?? null) as "manual" | "stripe" | null,
     paymentStatus: (row.payment_status ?? null) as "pay_on_pickup" | "paid" | "refunded" | null,
     paidAt: row.paid_at ?? null,
+    customerStatusToken: row.customer_status_token ?? null,
   };
   if (row.cancel_reason) order.cancelReason = row.cancel_reason as CancelReason;
   if (row.cancel_note) order.cancelNote = row.cancel_note;
