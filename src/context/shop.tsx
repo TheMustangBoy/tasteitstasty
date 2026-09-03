@@ -46,6 +46,8 @@ import {
   saveProduct,
   saveProductOrder,
   saveSettings,
+  setEmergencyClosure,
+
   toOrder,
   type OrderPatch,
   type ShopSnapshot,
