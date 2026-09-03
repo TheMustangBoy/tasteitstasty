@@ -1,5 +1,5 @@
 import { Plus } from "lucide-react";
-import { formatPrice, type MenuItem } from "@/data/menu";
+import { formatPrice, pattyLabel, type MenuItem } from "@/data/menu";
 
 export function ProductCard({
   item,
