@@ -280,8 +280,10 @@ export function CatalogManager() {
           <AlertDialogHeader>
             <AlertDialogTitle>„{pending?.label}“ löschen?</AlertDialogTitle>
             <AlertDialogDescription>
-              Der Eintrag wird aus dem Katalog und aus zugeordneten Produkten entfernt.
+              Der Eintrag wird aus dem Katalog und aus zugeordneten Produkten entfernt. Bei Zutaten
+              werden alle Vorkommen in Zutatenlisten und Abwahl-Optionen automatisch bereinigt.
             </AlertDialogDescription>
+
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Abbrechen</AlertDialogCancel>

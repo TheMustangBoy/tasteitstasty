@@ -284,13 +284,32 @@ export async function saveIngredient(row: IngredientRecord) {
   );
 }
 
+/**
+ * Umbenennen einer Zutat: alle exakten Vorkommen in `products.ingredients`
+ * und `products.removable` werden serverseitig atomar mitgezogen.
+ */
+export async function renameIngredientRefs(oldName: string, newName: string) {
+  if (!oldName || !newName || oldName === newName) return;
+  const { error } = await supabase.rpc("rename_ingredient_refs", {
+    p_old_name: oldName,
+    p_new_name: newName,
+  });
+  if (error) throw new Error(error.message);
+}
+
 export async function saveIngredientOrder(rows: IngredientRecord[]) {
   await Promise.all(rows.map((r) => saveIngredient(r)));
 }
 
-export async function removeIngredient(id: string) {
+/** Löscht die Zutat und entfernt sie atomar aus allen Produktlisten. */
+export async function removeIngredient(id: string, name?: string) {
+  if (name) {
+    const { error } = await supabase.rpc("delete_ingredient_refs", { p_name: name });
+    if (error) throw new Error(error.message);
+  }
   check((await supabase.from("ingredients").delete().eq("id", id)).error);
 }
+
 
 export async function saveExtra(row: ExtraRecord) {
   check(

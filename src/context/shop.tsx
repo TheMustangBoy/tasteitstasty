@@ -22,6 +22,7 @@ import {
 } from "@/data/menu";
 import { DEFAULT_MAX_ORDERS_PER_SLOT, DEFAULT_MIN_LEAD_MINUTES } from "@/lib/pickup";
 import { toast } from "sonner";
+import { removeFromProduct, renameInProduct } from "@/lib/ingredient-sync";
 import { refundAndCloseOrderRemote } from "@/lib/payments/refund-client";
 import {
   checkIsAdmin,
@@ -38,6 +39,7 @@ import {
   saveExtra,
   saveExtraOrder,
   saveHours,
+  renameIngredientRefs,
   saveIngredient,
   saveIngredientOrder,
   saveOrderPatch,
@@ -750,6 +752,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         }, "Kategorie konnte nicht gelöscht werden.");
       },
       upsertIngredient: (row) => {
+        const previous = state.catalog.ingredients.find((c) => c.id === row.id);
+        const oldName = previous?.name ?? "";
+        const renamed = Boolean(oldName) && oldName !== row.name;
         patch((prev) => ({
           ...prev,
           catalog: {
@@ -758,17 +763,33 @@ export function ShopProvider({ children }: { children: ReactNode }) {
               ? prev.catalog.ingredients.map((c) => (c.id === row.id ? row : c))
               : [...prev.catalog.ingredients, row],
           },
+          // Umbenennen zieht die gespeicherten Namen in den Produkt-Arrays mit.
+          productRows: renamed
+            ? prev.productRows.map((p) => renameInProduct(p, oldName, row.name))
+            : prev.productRows,
         }));
-        persist(() => saveIngredient(row), "Zutat konnte nicht gespeichert werden.");
+        persist(async () => {
+          await saveIngredient(row);
+          if (renamed) await renameIngredientRefs(oldName, row.name);
+        }, "Zutat konnte nicht gespeichert werden.");
       },
       deleteIngredient: (id) => {
+        const name = state.catalog.ingredients.find((c) => c.id === id)?.name ?? "";
         const rest = reindex(state.catalog.ingredients.filter((c) => c.id !== id));
-        patch((prev) => ({ ...prev, catalog: { ...prev.catalog, ingredients: rest } }));
+        patch((prev) => ({
+          ...prev,
+          catalog: { ...prev.catalog, ingredients: rest },
+          // Gelöschte Zutat verschwindet auch aus allen Produktlisten.
+          productRows: name
+            ? prev.productRows.map((p) => removeFromProduct(p, name))
+            : prev.productRows,
+        }));
         persist(async () => {
-          await removeIngredient(id);
+          await removeIngredient(id, name);
           await saveIngredientOrder(rest);
         }, "Zutat konnte nicht gelöscht werden.");
       },
+
       upsertExtra: (row) => {
         patch((prev) => ({
           ...prev,
