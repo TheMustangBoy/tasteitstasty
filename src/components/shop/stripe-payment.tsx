@@ -27,6 +27,10 @@ type Props = {
   clientSecret: string;
   returnUrl: string;
   amountLabel: string;
+  /** Zahlung blockieren (z. B. solange AGB/Widerruf nicht akzeptiert sind). */
+  disabled?: boolean;
+  /** Hinweis, warum die Zahlung gerade nicht möglich ist. */
+  disabledHint?: string;
   onPaid: () => void | Promise<void>;
 };
 
@@ -49,7 +53,14 @@ export function StripePaymentSection(props: Props) {
 
 type PaymentFormProps = Props & { isTestMode: boolean };
 
-function PaymentForm({ returnUrl, amountLabel, onPaid, isTestMode }: PaymentFormProps) {
+function PaymentForm({
+  returnUrl,
+  amountLabel,
+  onPaid,
+  isTestMode,
+  disabled = false,
+  disabledHint,
+}: PaymentFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const [busy, setBusy] = useState(false);
@@ -59,7 +70,7 @@ function PaymentForm({ returnUrl, amountLabel, onPaid, isTestMode }: PaymentForm
 
   return (
     <div className="mt-4 space-y-4 rounded-2xl border border-border bg-card p-4">
-      <div className={expressAvailable ? "space-y-3" : "hidden"}>
+      <div className={expressAvailable && !disabled ? "space-y-3" : "hidden"}>
         <ExpressCheckoutElement
           options={{
             buttonTheme: { applePay: "black", googlePay: "black" },
@@ -74,7 +85,7 @@ function PaymentForm({ returnUrl, amountLabel, onPaid, isTestMode }: PaymentForm
           }}
           onConfirm={async () => {
             // Gleicher PaymentIntent / Elements-Kontext – keine neue Reservierung.
-            if (!stripe || !elements || busy) return;
+            if (!stripe || !elements || busy || disabled) return;
             setBusy(true);
             setError(null);
             const result = await stripe.confirmPayment({
@@ -96,6 +107,11 @@ function PaymentForm({ returnUrl, amountLabel, onPaid, isTestMode }: PaymentForm
       <PaymentElement options={{ layout: "tabs" }} />
 
 
+      {disabled && disabledHint && (
+        <p className="rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+          {disabledHint}
+        </p>
+      )}
       {error && (
         <p
           role="alert"
@@ -107,11 +123,11 @@ function PaymentForm({ returnUrl, amountLabel, onPaid, isTestMode }: PaymentForm
       )}
       <Button
         size="lg"
-        disabled={!stripe || !elements || busy}
+        disabled={!stripe || !elements || busy || disabled}
         aria-busy={busy}
         className="h-14 w-full rounded-xl bg-flame text-base font-bold uppercase tracking-wide text-primary-foreground shadow-flame hover:opacity-90"
         onClick={async () => {
-          if (!stripe || !elements || busy) return;
+          if (!stripe || !elements || busy || disabled) return;
           setBusy(true);
           setError(null);
           const result = await stripe.confirmPayment({
