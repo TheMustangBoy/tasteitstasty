@@ -39,12 +39,22 @@ function LocationPage() {
           </p>
           <div className="mt-6 space-y-2 text-sm text-muted-foreground">
             <p className="flex items-center gap-2">
-              <Phone className="h-4 w-4 text-primary" /> {BUSINESS.phone}
+              <Phone className="h-4 w-4 text-primary" />
+              <a href={`tel:${LEGAL.phone}`} className="hover:text-primary">
+                {LEGAL.phone}
+              </a>
             </p>
             <p className="flex items-center gap-2">
-              <Mail className="h-4 w-4 text-primary" /> {BUSINESS.email}
+              <Mail className="h-4 w-4 text-primary" />
+              <a href={`mailto:${LEGAL.email}`} className="break-all hover:text-primary">
+                {LEGAL.email}
+              </a>
+            </p>
+            <p className="text-xs">
+              Betreiber: {LEGAL.operatorName} / {LEGAL.brand}
             </p>
           </div>
+
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <Button
               asChild
