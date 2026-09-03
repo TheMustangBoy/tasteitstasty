@@ -69,11 +69,9 @@ export function buildSlotDays(config: SlotConfig = {}): SlotDay[] {
   const emergencyClosedDate = config.emergencyClosedDate ?? null;
 
   // Frühester Zeitpunkt: Vorlaufzeit, aufgerundet auf den 5-Minuten-Takt.
-  const earliest = new Date(Math.ceil((now.getTime() + minLead * 60_000) / 1000) * 1000);
-  earliest.setUTCMilliseconds(0);
-  earliest.setUTCSeconds(0);
   const stepMs = SLOT_STEP_MINUTES * 60_000;
-  const earliestMs = Math.ceil(earliest.getTime() / stepMs) * stepMs;
+  const earliestMs = Math.ceil((now.getTime() + minLead * 60_000) / stepMs) * stepMs;
+
 
   const todayKey = berlinDayKey(now);
   const days: SlotDay[] = [];
