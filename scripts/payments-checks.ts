@@ -165,6 +165,8 @@ console.log("order-checks: OK");
 import { pattyLabel } from "../src/data/menu";
 import { extraNames, optionNames, type CartLine } from "../src/context/cart";
 import { closedReasonFor } from "../src/lib/order-status";
+import { createStatusToken } from "../src/lib/order-status";
+import { toOrder } from "../src/lib/repository";
 
 // Veggie schlägt die Patty-Anzahl.
 assert.equal(pattyLabel({ vegetarian: true, patties: 2 }), "Veggie Patty");
