@@ -473,6 +473,7 @@ function CheckoutPage() {
                   setSubmitError(
                     "Die Abholzeit war leider vergeben, bevor die Zahlung bestätigt wurde. Der Betrag wurde vollständig zurückerstattet – bitte wähle eine andere Zeit.",
                   );
+                  intentRef.current = null;
                   setIntent(null);
                   void refresh();
                   return;
