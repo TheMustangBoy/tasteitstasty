@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { MapPin, Phone, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BUSINESS } from "@/data/menu";
+import { LEGAL } from "@/data/legal";
 
 export const Route = createFileRoute("/standort")({
   head: () => ({
