@@ -269,7 +269,10 @@ assert.equal(statusLabel({ status: "neu" }).title, "Bestellung eingegangen");
 assert.equal(statusLabel({ status: "abholbereit" }).title, "Abholbereit");
 
 // Zustandswechsel storniert -> angenommen macht die Bestellung wieder aktiv.
-const trackedOrder = { pickupISO: pickup.toISOString(), statusToken: tokenHex };
+const trackedOrder = {
+  pickupISO: new Date(Date.now() + 30 * 60_000).toISOString(),
+  statusToken: tokenHex,
+};
 const activeFor = (state: { status: string; paymentStatus?: string }) =>
   isOrderActive(trackedOrder) && !closedReasonFor(state) ? trackedOrder : null;
 assert.equal(activeFor({ status: "storniert" }), null);
