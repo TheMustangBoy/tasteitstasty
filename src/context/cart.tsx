@@ -112,6 +112,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [lastOrder, setLastOrder] = useState<PlacedOrder | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [nowTick, setNowTick] = useState(0);
+  const [orderClosedReason, setOrderClosedReason] = useState<OrderClosedReason | null>(null);
 
   // Erst nach dem Mount lesen, damit SSR und erster Client-Render identisch sind.
   useEffect(() => {
@@ -120,8 +121,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (raw) {
         const parsed = JSON.parse(raw) as { lines?: CartLine[]; lastOrder?: PlacedOrder | null };
         if (Array.isArray(parsed.lines)) setLines(parsed.lines);
-        // Abgelaufene bzw. Legacy-Bestellungen ohne pickupISO werden verworfen.
-        if (parsed.lastOrder && isOrderActive(parsed.lastOrder)) setLastOrder(parsed.lastOrder);
+        // Abgelaufene bzw. Legacy-Bestellungen ohne pickupISO/Status-Token werden verworfen.
+        if (parsed.lastOrder && parsed.lastOrder.statusToken && isOrderActive(parsed.lastOrder)) {
+          setLastOrder(parsed.lastOrder);
+        }
       }
     } catch {
       /* ignore */
@@ -139,6 +142,35 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (!hydrated) return;
     if (lastOrder && !isOrderActive(lastOrder)) setLastOrder(null);
   }, [hydrated, lastOrder, nowTick]);
+
+  // Serverstatus der lokalen Bestellung nachziehen: beim Laden, bei Fokus
+  // und in Intervallen. Storniert/abgelehnt/erstattet entfernt die Anzeige.
+  const statusToken = lastOrder?.statusToken ?? "";
+  useEffect(() => {
+    if (!hydrated || !statusToken) return;
+    let active = true;
+    const check = async () => {
+      const result = await fetchOrderStatus(statusToken);
+      if (!active || !result) return;
+      if (result === "gone") return;
+      const reason = closedReasonFor(result);
+      if (reason) {
+        setOrderClosedReason(reason);
+        setLastOrder(null);
+      }
+    };
+    void check();
+    const timer = setInterval(() => void check(), 60_000);
+    const onFocus = () => void check();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      active = false;
+      clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [hydrated, statusToken]);
+
+
 
 
   useEffect(() => {
