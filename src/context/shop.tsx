@@ -687,6 +687,21 @@ export function ShopProvider({ children }: { children: ReactNode }) {
           if (p.hours) await saveHours(next.hours);
         }, "Einstellungen konnten nicht gespeichert werden.");
       },
+      setEmergencyClosed: async (closed) => {
+        try {
+          const date = await setEmergencyClosure(closed);
+          // Optimistisch übernehmen; der Server bleibt die maßgebliche Quelle.
+          patch((prev) => ({
+            ...prev,
+            settings: { ...prev.settings, emergencyClosedDate: date },
+          }));
+          void refresh();
+          return { ok: true };
+        } catch {
+          return { ok: false, error: "Der Status konnte nicht gespeichert werden." };
+        }
+      },
+
       setDayHours: (index, p) => {
         const hours = state.settings.hours.map((h, i) => (i === index ? { ...h, ...p } : h));
         patch((prev) => ({ ...prev, settings: { ...prev.settings, hours } }));
