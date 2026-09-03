@@ -13,7 +13,6 @@ import {
   ArrowUp,
   ChevronDown,
   ChevronRight,
-  GripVertical,
   Pencil,
   Plus,
   Power,
@@ -25,7 +24,23 @@ import {
   Volume2,
   VolumeX,
 } from "lucide-react";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { toast } from "sonner";
+import { SortableRow } from "@/components/admin/sortable-row";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -516,7 +531,6 @@ function AdminConsole() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ProductRecord | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const [dragId, setDragId] = useState<string | null>(null);
 
   /**
    * Wiederhergestellte Session (kein Login-Submit): Audio bei der ersten
@@ -537,20 +551,23 @@ function AdminConsole() {
     };
   }, [soundOn]);
 
-  /** Drag & Drop: gezogenes Produkt vor dem Ziel innerhalb der Kategorie einsortieren. */
-  const dropOn = (categoryId: string, targetId: string) => {
-    if (!dragId || dragId === targetId) return setDragId(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  /** Drag & Drop innerhalb einer Kategorie: neue Reihenfolge persistieren. */
+  const handleDragEnd = (categoryId: string, event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
     const ids = productRows
       .filter((r) => r.categoryId === categoryId)
       .sort((a, b) => a.sortOrder - b.sortOrder)
       .map((r) => r.id);
-    const from = ids.indexOf(dragId);
-    if (from < 0) return setDragId(null);
-    ids.splice(from, 1);
-    const to = ids.indexOf(targetId);
-    ids.splice(to < 0 ? ids.length : to, 0, dragId);
-    reorderProducts(categoryId, ids);
-    setDragId(null);
+    const from = ids.indexOf(String(active.id));
+    const to = ids.indexOf(String(over.id));
+    if (from < 0 || to < 0) return;
+    reorderProducts(categoryId, arrayMove(ids, from, to));
   };
 
   const categoryLabel = (id: string) => catalog.categories.find((c) => c.id === id)?.label ?? id;
