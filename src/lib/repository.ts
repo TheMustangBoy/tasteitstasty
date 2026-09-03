@@ -299,7 +299,7 @@ export async function renameIngredientAtomic(
     p_id: id,
     p_old_name: oldName,
     p_new_name: newName,
-    p_sort_order: sortOrder,
+    ...(typeof sortOrder === "number" ? { p_sort_order: sortOrder } : {}),
   });
   if (error) throw new Error(error.message);
 }
