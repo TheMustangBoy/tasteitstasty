@@ -229,6 +229,39 @@ export function CartProvider({ children }: { children: ReactNode }) {
             },
           ];
         }),
+      updateLine: (lineId, item, opts) =>
+        setLines((prev) => {
+          const sig = (l: CartLine) =>
+            `${l.itemId}|${[...l.removed].sort().join(",")}|${(l.extras ?? [])
+              .map((e) => e.id)
+              .sort()
+              .join(",")}|${lineOptions(l)
+              .map((o) => o.id)
+              .sort()
+              .join(",")}`;
+          const updated: CartLine = {
+            lineId,
+            itemId: item.id,
+            name: item.name,
+            basePrice: item.price,
+            quantity: opts.quantity,
+            removed: opts.removed,
+            bacon: opts.bacon,
+            extras: opts.extras ?? [],
+            options: opts.options ?? [],
+          };
+          // Passt die bearbeitete Zeile zu einer anderen bestehenden Zeile,
+          // werden beide zusammengeführt.
+          const twin = prev.find((l) => l.lineId !== lineId && sig(l) === sig(updated));
+          if (twin) {
+            return prev
+              .filter((l) => l.lineId !== lineId)
+              .map((l) =>
+                l.lineId === twin.lineId ? { ...l, quantity: l.quantity + updated.quantity } : l,
+              );
+          }
+          return prev.map((l) => (l.lineId === lineId ? updated : l));
+        }),
       setQuantity: (lineId, quantity) =>
         setLines((prev) =>
           quantity <= 0
@@ -239,7 +272,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
       clear: () => setLines([]),
       lastOrder,
       activeOrder: lastOrder && isOrderActive(lastOrder) ? lastOrder : null,
+      orderClosedReason,
+      dismissOrderClosed: () => setOrderClosedReason(null),
       placeOrder: (data) => {
+        setOrderClosedReason(null);
+
         // Eine neue Bestellung ersetzt immer die vorherige (nur eine aktive).
         const order: PlacedOrder = {
           ...data,
