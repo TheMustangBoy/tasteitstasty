@@ -1,8 +1,18 @@
 import { DEFAULT_HOURS, WEEKDAYS, type DayHours } from "@/data/menu";
-import { berlinDayKey } from "@/lib/berlin-day";
+import {
+  addBerlinDays,
+  berlinDateFrom,
+  berlinDayDiff,
+  berlinDayKey,
+  berlinParts,
+  berlinWeekdayOf,
+} from "@/lib/berlin-day";
 
-
-/** Abholzeiten-Logik: Vorlauf + 5-Minuten-Takt, immer innerhalb der Öffnungszeiten. */
+/**
+ * Abholzeiten-Logik: Vorlauf + 5-Minuten-Takt, immer innerhalb der Öffnungszeiten.
+ * Alle Tages- und Uhrzeitberechnungen laufen in Europe/Berlin, damit Gäste in
+ * anderen Zeitzonen dieselben Slots sehen wie Küche und Datenbank.
+ */
 export const SLOT_STEP_MINUTES = 5;
 export const DEFAULT_MIN_LEAD_MINUTES = 15;
 export const DEFAULT_MAX_ORDERS_PER_SLOT = 4;
@@ -26,29 +36,26 @@ export type SlotConfig = {
   maxOrdersPerSlot?: number;
   bookings?: Record<string, number>;
   daysAhead?: number;
-  /** Notfall-Schließung: `YYYY-MM-DD` (Europe/Berlin) ohne Abholzeiten. */
+  /** Berliner Tagesschlüssel einer Notfall-Schließung (`YYYY-MM-DD`). */
   emergencyClosedDate?: string | null;
 };
 
-
 const pad = (n: number) => String(n).padStart(2, "0");
-export const dayKeyOf = (d: Date) =>
-  `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+/** Tagesschlüssel eines Zeitpunkts – immer in Berliner Zeit. */
+export const dayKeyOf = (d: Date) => berlinDayKey(d);
 
 function parseTime(value: string) {
   const [h, m] = value.split(":").map(Number);
   return { h: h ?? 0, m: m ?? 0 };
 }
 
-function dayLabelFor(date: Date, now: Date) {
-  const diff = Math.round(
-    (new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime() -
-      new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) /
-      86_400_000,
-  );
+function dayLabelForKey(dayKey: string, todayKey: string) {
+  const diff = berlinDayDiff(todayKey, dayKey);
   if (diff === 0) return "Heute";
   if (diff === 1) return "Morgen";
-  return `${WEEKDAYS[date.getDay()]}, ${pad(date.getDate())}.${pad(date.getMonth() + 1)}.`;
+  const [, m, d] = dayKey.split("-");
+  return `${WEEKDAYS[berlinWeekdayOf(dayKey)]}, ${d}.${m}.`;
 }
 
 /** Alle wählbaren Abholzeiten, nach Tag gruppiert. */
@@ -61,46 +68,49 @@ export function buildSlotDays(config: SlotConfig = {}): SlotDay[] {
   const daysAhead = config.daysAhead ?? 6;
   const emergencyClosedDate = config.emergencyClosedDate ?? null;
 
-  const earliest = new Date(now.getTime() + minLead * 60_000);
-  earliest.setSeconds(0, 0);
-  const rest = earliest.getMinutes() % SLOT_STEP_MINUTES;
-  if (rest !== 0) earliest.setMinutes(earliest.getMinutes() + (SLOT_STEP_MINUTES - rest));
+  // Frühester Zeitpunkt: Vorlaufzeit, aufgerundet auf den 5-Minuten-Takt.
+  const earliest = new Date(Math.ceil((now.getTime() + minLead * 60_000) / 1000) * 1000);
+  earliest.setUTCMilliseconds(0);
+  earliest.setUTCSeconds(0);
+  const stepMs = SLOT_STEP_MINUTES * 60_000;
+  const earliestMs = Math.ceil(earliest.getTime() / stepMs) * stepMs;
 
+  const todayKey = berlinDayKey(now);
   const days: SlotDay[] = [];
-  for (let offset = 0; offset <= daysAhead; offset++) {
-    const base = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset);
-    // Notfall-Schließung betrifft ausschließlich den markierten Berliner Tag.
-    if (emergencyClosedDate && berlinDayKey(base) === emergencyClosedDate) continue;
-    const dayHours = hours[base.getDay()] ?? DEFAULT_HOURS[base.getDay()]!;
-    if (dayHours.closed) continue;
 
+  for (let offset = 0; offset <= daysAhead; offset++) {
+    const dayKey = addBerlinDays(todayKey, offset);
+    if (emergencyClosedDate && dayKey === emergencyClosedDate) continue;
+
+    const weekday = berlinWeekdayOf(dayKey);
+    const dayHours = hours[weekday] ?? DEFAULT_HOURS[weekday]!;
+    if (dayHours.closed) continue;
 
     const open = parseTime(dayHours.open);
     const close = parseTime(dayHours.close);
-    const start = new Date(base);
-    start.setHours(open.h, open.m, 0, 0);
-    const end = new Date(base);
-    end.setHours(close.h, close.m, 0, 0);
-    if (end <= start) continue;
+    const openMinutes = open.h * 60 + open.m;
+    const closeMinutes = close.h * 60 + close.m;
+    if (closeMinutes <= openMinutes) continue;
 
+    const dayLabel = dayLabelForKey(dayKey, todayKey);
     const slots: Slot[] = [];
-    for (let t = start.getTime(); t <= end.getTime(); t += SLOT_STEP_MINUTES * 60_000) {
-      const date = new Date(t);
-      if (date < earliest) continue; // vergangene / zu kurzfristige Fenster ausblenden
+    for (let minutes = openMinutes; minutes <= closeMinutes; minutes += SLOT_STEP_MINUTES) {
+      // Wanduhrzeit → echter Zeitpunkt (sommerzeitsicher).
+      const date = berlinDateFrom(dayKey, Math.floor(minutes / 60), minutes % 60);
+      if (date.getTime() < earliestMs) continue; // vergangene / zu kurzfristige Fenster
       const key = date.toISOString();
       const booked = bookings[key] ?? 0;
       slots.push({
         key,
         date,
-        label: `${pad(date.getHours())}:${pad(date.getMinutes())}`,
-        dayLabel: dayLabelFor(date, now),
-        dayKey: dayKeyOf(date),
+        label: `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`,
+        dayLabel,
+        dayKey,
         booked,
         full: booked >= maxPerSlot,
       });
     }
-    if (slots.length > 0)
-      days.push({ dayKey: dayKeyOf(base), dayLabel: dayLabelFor(base, now), slots });
+    if (slots.length > 0) days.push({ dayKey, dayLabel, slots });
   }
   return days;
 }
@@ -114,31 +124,34 @@ export function nextAvailableSlot(days: SlotDay[]) {
   return flattenSlots(days).find((s) => !s.full);
 }
 
-/** Ist der Truck gerade geöffnet? */
+/** Ist der Truck gerade geöffnet? (Berliner Zeit) */
 export function isOpenNow(now = new Date(), hours: DayHours[] = DEFAULT_HOURS) {
-  const dayHours = hours[now.getDay()];
+  const p = berlinParts(now);
+  const dayHours = hours[p.weekday];
   if (!dayHours || dayHours.closed) return false;
   const open = parseTime(dayHours.open);
   const close = parseTime(dayHours.close);
-  const minutes = now.getHours() * 60 + now.getMinutes();
+  const minutes = p.hour * 60 + p.minute;
   return minutes >= open.h * 60 + open.m && minutes <= close.h * 60 + close.m;
 }
 
 /** Text für „wann kann wieder bestellt werden“. */
 export function nextOpeningLabel(now = new Date(), hours: DayHours[] = DEFAULT_HOURS) {
+  const todayKey = berlinDayKey(now);
+  const p = berlinParts(now);
+  const nowMinutes = p.hour * 60 + p.minute;
+
   for (let offset = 0; offset <= 7; offset++) {
-    const base = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset);
-    const dayHours = hours[base.getDay()];
+    const dayKey = addBerlinDays(todayKey, offset);
+    const dayHours = hours[berlinWeekdayOf(dayKey)];
     if (!dayHours || dayHours.closed) continue;
     const open = parseTime(dayHours.open);
     const close = parseTime(dayHours.close);
-    const opensAt = new Date(base);
-    opensAt.setHours(open.h, open.m, 0, 0);
-    const closesAt = new Date(base);
-    closesAt.setHours(close.h, close.m, 0, 0);
-    if (offset === 0 && now > closesAt) continue;
-    if (offset === 0 && now >= opensAt) return `heute bis ${dayHours.close} Uhr`;
-    return `${dayLabelFor(base, now).replace(",", "")} ab ${dayHours.open} Uhr`;
+    const openMinutes = open.h * 60 + open.m;
+    const closeMinutes = close.h * 60 + close.m;
+    if (offset === 0 && nowMinutes > closeMinutes) continue;
+    if (offset === 0 && nowMinutes >= openMinutes) return `heute bis ${dayHours.close} Uhr`;
+    return `${dayLabelForKey(dayKey, todayKey).replace(",", "")} ab ${dayHours.open} Uhr`;
   }
   return "in Kürze";
 }
