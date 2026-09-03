@@ -29,6 +29,7 @@ import {
 } from "@/lib/payments/client";
 
 import { StripePaymentSection } from "@/components/shop/stripe-payment";
+import { clearPendingPayment, writePendingPayment } from "@/lib/pending-order";
 
 type PaymentChoice = "cash" | "terminal" | "online";
 
@@ -204,6 +205,7 @@ function CheckoutPage() {
     const open = intentRef.current;
     intentRef.current = null;
     setIntent(null);
+    clearPendingPayment();
     if (!open) return;
     void cancelPaymentReservation(open.reservationId, open.token)
       .catch(() => null)
@@ -505,6 +507,7 @@ function CheckoutPage() {
                   );
                   intentRef.current = null;
                   setIntent(null);
+                  clearPendingPayment();
                   void refresh();
                   return;
                 }
@@ -515,9 +518,11 @@ function CheckoutPage() {
                   return;
                 }
 
+                clearPendingPayment();
                 placeOrder({
                   reference: intent.reference,
                   pickupLabel,
+                  pickupISO: selectedSlot ? new Date(selectedSlot.key).toISOString() : "",
                   payment: "Online bezahlt",
                   name: name.trim(),
                 });
@@ -556,6 +561,23 @@ function CheckoutPage() {
                       total,
                     });
                     setIntent(created);
+                    // Rückkehrwerte + minimaler Anzeige-Snapshot browserpersistent
+                    // sichern, damit ein Redirect/Reload die Bestellung wiederfindet.
+                    writePendingPayment({
+                      reservation: created.reservationId,
+                      token: created.token,
+                      reference: created.reference,
+                      createdAt: Date.now(),
+                      snapshot: {
+                        reference: created.reference,
+                        lines,
+                        total,
+                        pickupLabel,
+                        pickupISO,
+                        payment: "Online bezahlt",
+                        name: name.trim(),
+                      },
+                    });
                     return;
                   }
 
@@ -589,6 +611,7 @@ function CheckoutPage() {
                   placeOrder({
                     reference: saved.reference,
                     pickupLabel,
+                    pickupISO: new Date(selectedSlot.key).toISOString(),
                     payment: paymentLabel,
                     name: name.trim(),
                   });
