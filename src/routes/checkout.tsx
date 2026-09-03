@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AlertCircle, Banknote, Clock, CreditCard, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,10 +20,11 @@ import {
 import { isValidPhone, PHONE_ERROR, sanitizePhoneInput } from "@/lib/phone";
 import { PAYMENT_ON_SITE, type PaymentConfig } from "@/lib/payments/config";
 import {
+  cancelPaymentReservation,
+  checkoutKeyFor,
   createPaymentIntent,
   fetchPaymentConfig,
   waitForPaidReservation,
-
 } from "@/lib/payments/client";
 import { StripePaymentSection } from "@/components/shop/stripe-payment";
 
@@ -156,14 +157,37 @@ function CheckoutPage() {
 
   // Ändern sich Warenkorb, Zeit oder Kontaktdaten, wird eine offene
   // Zahlungssitzung verworfen (verhindert Zahlungen auf veraltete Daten).
-  const intentSignature = `${total}|${selectedSlot?.key ?? ""}|${name.trim()}|${phone.trim()}|${note.trim()}|${lines.length}`;
+  const intentSignature = `${total}|${selectedSlot?.key ?? ""}|${name.trim()}|${phone.trim()}|${note.trim()}|${lines.length}|${payment}`;
   const [intentKey, setIntentKey] = useState("");
+
+  // Aktuelle Sitzung als Ref, damit der Abbruch auch aus Effects sicher greift.
+  const intentRef = useRef<typeof intent>(null);
+  useEffect(() => {
+    intentRef.current = intent;
+  }, [intent]);
+
+  /**
+   * Verwirft eine offene Zahlungssitzung: UI sofort, Serverabbruch best effort.
+   * Der Slot wird dadurch unmittelbar wieder freigegeben.
+   */
+  const discardIntent = useCallback(() => {
+    const open = intentRef.current;
+    intentRef.current = null;
+    setIntent(null);
+    if (!open) return;
+    void cancelPaymentReservation(open.reservationId, open.token)
+      .catch(() => null)
+      .then(() => {
+        void refresh();
+      });
+  }, [refresh]);
+
   useEffect(() => {
     setIntentKey((prev) => {
-      if (prev && prev !== intentSignature) setIntent(null);
+      if (prev && prev !== intentSignature) discardIntent();
       return intentSignature;
     });
-  }, [intentSignature]);
+  }, [intentSignature, discardIntent]);
 
   const canSubmit =
     lines.length > 0 &&
@@ -439,6 +463,8 @@ function CheckoutPage() {
               publishableKey={paymentConfig.publishableKey}
               clientSecret={intent.clientSecret}
               amountLabel={formatPrice(total)}
+              disabled={!termsAccepted}
+              disabledHint="Bitte akzeptiere zuerst die AGB und die Widerrufsinformationen, um die Zahlung abzuschließen."
               returnUrl={`${typeof window === "undefined" ? "" : window.location.origin}/bestellung?reservation=${intent.reservationId}&token=${intent.token}&ref=${intent.reference}`}
               onPaid={async () => {
                 setSubmitError(null);
@@ -512,6 +538,17 @@ function CheckoutPage() {
                   }
 
                   const paymentLabel = PAYMENT_ON_SITE[payment];
+                  // Stabiler Schlüssel je vollständigem Snapshot: ein Retry nach
+                  // verlorener Antwort liefert exakt dieselbe Bestellung zurück.
+                  const checkoutKey = checkoutKeyFor({
+                    lines: orderLines,
+                    total,
+                    pickupISO: selectedSlot.key,
+                    name: name.trim(),
+                    phone: phone.trim(),
+                    note: note.trim(),
+                    payment: paymentLabel,
+                  });
                   // Erst speichern (inkl. serverseitiger Kapazitätsprüfung), dann bestätigen.
                   // Die Bestellnummer vergibt ausschließlich der Server.
                   const saved = await addOrder({
@@ -525,6 +562,7 @@ function CheckoutPage() {
                     payment: paymentLabel,
                     lines,
                     total,
+                    checkoutKey,
                   });
                   placeOrder({
                     reference: saved.reference,
