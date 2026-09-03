@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { BACON_EXTRA, type Extra, type MenuItem, type SelectionOption } from "@/data/menu";
+import { closedReasonFor, fetchOrderStatus, type OrderClosedReason } from "@/lib/order-status";
 
 const STORAGE_KEY = "tit-cart-v1";
 
