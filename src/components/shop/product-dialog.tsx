@@ -11,32 +11,53 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { BACON_EXTRA, formatPrice, REMOVABLE, type Extra, type MenuItem } from "@/data/menu";
-import { useCart } from "@/context/cart";
+import {
+  BACON_EXTRA,
+  formatPrice,
+  pattyLabel,
+  REMOVABLE,
+  type Extra,
+  type MenuItem,
+} from "@/data/menu";
+import { lineOptions, useCart, type CartLine } from "@/context/cart";
 
 export function ProductDialog({
   item,
   open,
   onOpenChange,
+  editLine = null,
 }: {
   item: MenuItem | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Wenn gesetzt: bestehende Warenkorbzeile bearbeiten statt neu hinzufügen. */
+  editLine?: CartLine | null;
 }) {
-  const { add } = useCart();
+  const { add, updateLine } = useCart();
   const [removed, setRemoved] = useState<string[]>([]);
   const [extraIds, setExtraIds] = useState<string[]>([]);
   const [optionIds, setOptionIds] = useState<string[]>([]);
   const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
-    if (open) {
-      setRemoved([]);
-      setExtraIds([]);
-      setOptionIds([]);
-      setQuantity(1);
+    if (!open) return;
+    if (editLine) {
+      // Bestehende Auswahl vorbelegen, damit nichts erneut gesetzt werden muss.
+      setRemoved(editLine.removed ?? []);
+      setExtraIds(
+        (editLine.extras?.length ? editLine.extras.map((e) => e.id) : editLine.bacon
+          ? [BACON_EXTRA.id]
+          : []) as string[],
+      );
+      setOptionIds(lineOptions(editLine).map((o) => o.id));
+      setQuantity(editLine.quantity);
+      return;
     }
-  }, [open, item?.id]);
+    setRemoved([]);
+    setExtraIds([]);
+    setOptionIds([]);
+    setQuantity(1);
+  }, [open, item?.id, editLine?.lineId]);
 
   if (!item) return null;
 
@@ -59,6 +80,8 @@ export function ProductDialog({
     item.price +
     selectedOptions.reduce((s, o) => s + o.priceDelta, 0) +
     selectedExtras.reduce((s, e) => s + e.price, 0);
+  const isEditing = !!editLine;
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -68,8 +91,8 @@ export function ProductDialog({
           <DialogDescription>
             {item.description
               ? item.description
-              : item.patties
-                ? `${item.patties >= 3 ? "Drei Patties" : "Double Patty"} · frisch gesmasht`
+              : pattyLabel(item)
+                ? `${pattyLabel(item)} · frisch gesmasht`
                 : "Frisch frittiert"}
           </DialogDescription>
         </DialogHeader>
@@ -231,20 +254,27 @@ export function ProductDialog({
             size="lg"
             className="h-14 w-full rounded-xl bg-flame text-base font-bold uppercase tracking-wide text-primary-foreground shadow-flame hover:opacity-90"
             onClick={() => {
-              add(item, {
+              const opts = {
                 removed,
                 bacon: extraIds.includes(BACON_EXTRA.id),
                 quantity,
                 extras: selectedExtras,
                 options: selectedOptions,
-              });
+              };
+              if (editLine) {
+                updateLine(editLine.lineId, item, opts);
+                onOpenChange(false);
+                toast.success("Änderungen gespeichert", { description: item.name });
+                return;
+              }
+              add(item, opts);
               onOpenChange(false);
               toast.success("Zum Warenkorb hinzugefügt", {
                 description: `${quantity}× ${item.name}`,
               });
             }}
           >
-            In den Warenkorb
+            {isEditing ? "Änderungen speichern" : "In den Warenkorb"}
           </Button>
         </div>
       </DialogContent>

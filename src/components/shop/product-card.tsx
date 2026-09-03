@@ -1,5 +1,5 @@
 import { Plus } from "lucide-react";
-import { formatPrice, type MenuItem } from "@/data/menu";
+import { formatPrice, pattyLabel, type MenuItem } from "@/data/menu";
 
 export function ProductCard({
   item,
@@ -41,9 +41,9 @@ export function ProductCard({
                 ? item.ingredients.join(" · ")
                 : "Frisch frittiert"}
         </p>
-        {item.patties && (
+        {pattyLabel(item) && (
           <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-primary">
-            {item.patties === 3 ? "Triple Patty" : "Double Patty"}
+            {pattyLabel(item)}
           </p>
         )}
       </div>

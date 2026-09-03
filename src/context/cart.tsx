@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { BACON_EXTRA, type Extra, type MenuItem, type SelectionOption } from "@/data/menu";
+import { closedReasonFor, fetchOrderStatus, type OrderClosedReason } from "@/lib/order-status";
 
 const STORAGE_KEY = "tit-cart-v1";
 
@@ -28,7 +29,10 @@ export type PlacedOrder = {
   pickupISO: string;
   payment: string;
   name: string;
+  /** Zufälliger Token für die kundenseitige Statusabfrage (kein PII). */
+  statusToken?: string;
 };
+
 
 /** Eine Bestellung bleibt bis 2 Stunden nach der Abholzeit lokal sichtbar. */
 export const ORDER_ACTIVE_WINDOW_MS = 2 * 60 * 60 * 1000;
@@ -65,28 +69,32 @@ export const linePrice = (line: CartLine) => {
 export const lineOptions = (line: CartLine): SelectionOption[] =>
   (line.options ?? []).length > 0 ? line.options! : line.variant ? [line.variant] : [];
 
+export type CartLineOptions = {
+  removed: string[];
+  bacon: boolean;
+  quantity: number;
+  extras?: Extra[];
+  options?: SelectionOption[];
+};
+
 type CartContextValue = {
   lines: CartLine[];
   count: number;
   total: number;
   isOpen: boolean;
   setOpen: (open: boolean) => void;
-  add: (
-    item: MenuItem,
-    opts: {
-      removed: string[];
-      bacon: boolean;
-      quantity: number;
-      extras?: Extra[];
-      options?: SelectionOption[];
-    },
-  ) => void;
+  add: (item: MenuItem, opts: CartLineOptions) => void;
+  /** Bestehende Zeile vollständig durch eine bearbeitete Version ersetzen. */
+  updateLine: (lineId: string, item: MenuItem, opts: CartLineOptions) => void;
   setQuantity: (lineId: string, quantity: number) => void;
   remove: (lineId: string) => void;
   clear: () => void;
   lastOrder: PlacedOrder | null;
   /** Bestellung nur, solange sie innerhalb des 2-Stunden-Fensters liegt. */
   activeOrder: PlacedOrder | null;
+  /** Grund, warum die lokale Bestellung serverseitig beendet wurde. */
+  orderClosedReason: OrderClosedReason | null;
+  dismissOrderClosed: () => void;
   placeOrder: (
     data: Omit<PlacedOrder, "reference" | "lines" | "total"> & {
       reference?: string;
@@ -96,6 +104,7 @@ type CartContextValue = {
   ) => PlacedOrder;
 };
 
+
 const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: ReactNode }) {
@@ -104,6 +113,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [lastOrder, setLastOrder] = useState<PlacedOrder | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [nowTick, setNowTick] = useState(0);
+  const [orderClosedReason, setOrderClosedReason] = useState<OrderClosedReason | null>(null);
 
   // Erst nach dem Mount lesen, damit SSR und erster Client-Render identisch sind.
   useEffect(() => {
@@ -112,8 +122,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (raw) {
         const parsed = JSON.parse(raw) as { lines?: CartLine[]; lastOrder?: PlacedOrder | null };
         if (Array.isArray(parsed.lines)) setLines(parsed.lines);
-        // Abgelaufene bzw. Legacy-Bestellungen ohne pickupISO werden verworfen.
-        if (parsed.lastOrder && isOrderActive(parsed.lastOrder)) setLastOrder(parsed.lastOrder);
+        // Abgelaufene bzw. Legacy-Bestellungen ohne pickupISO/Status-Token werden verworfen.
+        if (parsed.lastOrder && parsed.lastOrder.statusToken && isOrderActive(parsed.lastOrder)) {
+          setLastOrder(parsed.lastOrder);
+        }
       }
     } catch {
       /* ignore */
@@ -131,6 +143,35 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (!hydrated) return;
     if (lastOrder && !isOrderActive(lastOrder)) setLastOrder(null);
   }, [hydrated, lastOrder, nowTick]);
+
+  // Serverstatus der lokalen Bestellung nachziehen: beim Laden, bei Fokus
+  // und in Intervallen. Storniert/abgelehnt/erstattet entfernt die Anzeige.
+  const statusToken = lastOrder?.statusToken ?? "";
+  useEffect(() => {
+    if (!hydrated || !statusToken) return;
+    let active = true;
+    const check = async () => {
+      const result = await fetchOrderStatus(statusToken);
+      if (!active || !result) return;
+      if (result === "gone") return;
+      const reason = closedReasonFor(result);
+      if (reason) {
+        setOrderClosedReason(reason);
+        setLastOrder(null);
+      }
+    };
+    void check();
+    const timer = setInterval(() => void check(), 60_000);
+    const onFocus = () => void check();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      active = false;
+      clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [hydrated, statusToken]);
+
+
 
 
   useEffect(() => {
@@ -189,6 +230,39 @@ export function CartProvider({ children }: { children: ReactNode }) {
             },
           ];
         }),
+      updateLine: (lineId, item, opts) =>
+        setLines((prev) => {
+          const sig = (l: CartLine) =>
+            `${l.itemId}|${[...l.removed].sort().join(",")}|${(l.extras ?? [])
+              .map((e) => e.id)
+              .sort()
+              .join(",")}|${lineOptions(l)
+              .map((o) => o.id)
+              .sort()
+              .join(",")}`;
+          const updated: CartLine = {
+            lineId,
+            itemId: item.id,
+            name: item.name,
+            basePrice: item.price,
+            quantity: opts.quantity,
+            removed: opts.removed,
+            bacon: opts.bacon,
+            extras: opts.extras ?? [],
+            options: opts.options ?? [],
+          };
+          // Passt die bearbeitete Zeile zu einer anderen bestehenden Zeile,
+          // werden beide zusammengeführt.
+          const twin = prev.find((l) => l.lineId !== lineId && sig(l) === sig(updated));
+          if (twin) {
+            return prev
+              .filter((l) => l.lineId !== lineId)
+              .map((l) =>
+                l.lineId === twin.lineId ? { ...l, quantity: l.quantity + updated.quantity } : l,
+              );
+          }
+          return prev.map((l) => (l.lineId === lineId ? updated : l));
+        }),
       setQuantity: (lineId, quantity) =>
         setLines((prev) =>
           quantity <= 0
@@ -199,7 +273,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
       clear: () => setLines([]),
       lastOrder,
       activeOrder: lastOrder && isOrderActive(lastOrder) ? lastOrder : null,
+      orderClosedReason,
+      dismissOrderClosed: () => setOrderClosedReason(null),
       placeOrder: (data) => {
+        setOrderClosedReason(null);
+
         // Eine neue Bestellung ersetzt immer die vorherige (nur eine aktive).
         const order: PlacedOrder = {
           ...data,
@@ -219,7 +297,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return order;
       },
     };
-  }, [lines, isOpen, lastOrder]);
+  }, [lines, isOpen, lastOrder, orderClosedReason]);
 
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

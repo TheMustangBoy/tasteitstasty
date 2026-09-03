@@ -22,6 +22,7 @@ import { Route as SpeisekarteRouteImport } from './routes/speisekarte'
 import { Route as StandortRouteImport } from './routes/standort'
 import { Route as WiderrufRouteImport } from './routes/widerruf'
 import { Route as ApiPublicOrderPushRouteImport } from './routes/api/public/order-push'
+import { Route as ApiPublicOrdersStatusRouteImport } from './routes/api/public/orders/status'
 import { Route as ApiPublicPaymentsCancelRouteImport } from './routes/api/public/payments/cancel'
 import { Route as ApiPublicPaymentsConfigRouteImport } from './routes/api/public/payments/config'
 import { Route as ApiPublicPaymentsCreateIntentRouteImport } from './routes/api/public/payments/create-intent'
@@ -94,6 +95,11 @@ const ApiPublicOrderPushRoute = ApiPublicOrderPushRouteImport.update({
   path: '/api/public/order-push',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicOrdersStatusRoute = ApiPublicOrdersStatusRouteImport.update({
+  id: '/api/public/orders/status',
+  path: '/api/public/orders/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicPaymentsCancelRoute = ApiPublicPaymentsCancelRouteImport.update({
   id: '/api/public/payments/cancel',
   path: '/api/public/payments/cancel',
@@ -142,6 +148,7 @@ export interface FileRoutesByFullPath {
   '/standort': typeof StandortRoute
   '/widerruf': typeof WiderrufRoute
   '/api/public/order-push': typeof ApiPublicOrderPushRoute
+  '/api/public/orders/status': typeof ApiPublicOrdersStatusRoute
   '/api/public/payments/cancel': typeof ApiPublicPaymentsCancelRoute
   '/api/public/payments/config': typeof ApiPublicPaymentsConfigRoute
   '/api/public/payments/create-intent': typeof ApiPublicPaymentsCreateIntentRoute
@@ -163,6 +170,7 @@ export interface FileRoutesByTo {
   '/standort': typeof StandortRoute
   '/widerruf': typeof WiderrufRoute
   '/api/public/order-push': typeof ApiPublicOrderPushRoute
+  '/api/public/orders/status': typeof ApiPublicOrdersStatusRoute
   '/api/public/payments/cancel': typeof ApiPublicPaymentsCancelRoute
   '/api/public/payments/config': typeof ApiPublicPaymentsConfigRoute
   '/api/public/payments/create-intent': typeof ApiPublicPaymentsCreateIntentRoute
@@ -185,6 +193,7 @@ export interface FileRoutesById {
   '/standort': typeof StandortRoute
   '/widerruf': typeof WiderrufRoute
   '/api/public/order-push': typeof ApiPublicOrderPushRoute
+  '/api/public/orders/status': typeof ApiPublicOrdersStatusRoute
   '/api/public/payments/cancel': typeof ApiPublicPaymentsCancelRoute
   '/api/public/payments/config': typeof ApiPublicPaymentsConfigRoute
   '/api/public/payments/create-intent': typeof ApiPublicPaymentsCreateIntentRoute
@@ -208,6 +217,7 @@ export interface FileRouteTypes {
     | '/standort'
     | '/widerruf'
     | '/api/public/order-push'
+    | '/api/public/orders/status'
     | '/api/public/payments/cancel'
     | '/api/public/payments/config'
     | '/api/public/payments/create-intent'
@@ -229,6 +239,7 @@ export interface FileRouteTypes {
     | '/standort'
     | '/widerruf'
     | '/api/public/order-push'
+    | '/api/public/orders/status'
     | '/api/public/payments/cancel'
     | '/api/public/payments/config'
     | '/api/public/payments/create-intent'
@@ -250,6 +261,7 @@ export interface FileRouteTypes {
     | '/standort'
     | '/widerruf'
     | '/api/public/order-push'
+    | '/api/public/orders/status'
     | '/api/public/payments/cancel'
     | '/api/public/payments/config'
     | '/api/public/payments/create-intent'
@@ -272,6 +284,7 @@ export interface RootRouteChildren {
   StandortRoute: typeof StandortRoute
   WiderrufRoute: typeof WiderrufRoute
   ApiPublicOrderPushRoute: typeof ApiPublicOrderPushRoute
+  ApiPublicOrdersStatusRoute: typeof ApiPublicOrdersStatusRoute
   ApiPublicPaymentsCancelRoute: typeof ApiPublicPaymentsCancelRoute
   ApiPublicPaymentsConfigRoute: typeof ApiPublicPaymentsConfigRoute
   ApiPublicPaymentsCreateIntentRoute: typeof ApiPublicPaymentsCreateIntentRoute
@@ -373,6 +386,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicOrderPushRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/orders/status': {
+      id: '/api/public/orders/status'
+      path: '/api/public/orders/status'
+      fullPath: '/api/public/orders/status'
+      preLoaderRoute: typeof ApiPublicOrdersStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/payments/cancel': {
       id: '/api/public/payments/cancel'
       path: '/api/public/payments/cancel'
@@ -432,6 +452,7 @@ const rootRouteChildren: RootRouteChildren = {
   StandortRoute: StandortRoute,
   WiderrufRoute: WiderrufRoute,
   ApiPublicOrderPushRoute: ApiPublicOrderPushRoute,
+  ApiPublicOrdersStatusRoute: ApiPublicOrdersStatusRoute,
   ApiPublicPaymentsCancelRoute: ApiPublicPaymentsCancelRoute,
   ApiPublicPaymentsConfigRoute: ApiPublicPaymentsConfigRoute,
   ApiPublicPaymentsCreateIntentRoute: ApiPublicPaymentsCreateIntentRoute,

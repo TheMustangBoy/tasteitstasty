@@ -251,6 +251,23 @@ export const formatHoursSentence = (hours: DayHours[]) =>
     .map((g) => `${g.label}: ${g.value}`)
     .join(", ");
 
+/**
+ * Einheitliche Patty-Beschriftung für Kundenansichten.
+ * Vegetarische Produkte zeigen immer „Veggie Patty“, unabhängig von `patties`.
+ */
+export function pattyLabel(item: {
+  vegetarian?: boolean | undefined;
+  patties?: number | null | undefined;
+}): string | null {
+  if (item.vegetarian) return "Veggie Patty";
+  const count = item.patties ?? 0;
+  if (count >= 4) return `${count} Patties`;
+  if (count === 3) return "Triple Patty";
+  if (count === 2) return "Double Patty";
+  if (count === 1) return "Single Patty";
+  return null;
+}
 
 export const formatPrice = (value: number) =>
   new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(value);
+
