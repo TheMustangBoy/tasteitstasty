@@ -484,6 +484,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      delete_ingredient_refs: { Args: { p_name: string }; Returns: number }
       finalize_payment_reservation: {
         Args: {
           p_amount_cents: number
@@ -589,6 +590,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      rename_ingredient_refs: {
+        Args: { p_new_name: string; p_old_name: string }
+        Returns: number
       }
       slot_has_capacity_excluding: {
         Args: { p_pickup_at: string; p_reservation_id: string }
