@@ -32,14 +32,14 @@ import {
   placeOrderRemote,
   removeCategory,
   removeExtra,
-  removeIngredient,
+  deleteIngredientAtomic,
   removeProduct,
   saveCategory,
   saveCategoryOrder,
   saveExtra,
   saveExtraOrder,
   saveHours,
-  renameIngredientRefs,
+  renameIngredientAtomic,
   saveIngredient,
   saveIngredientOrder,
   saveOrderPatch,
@@ -769,8 +769,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
             : prev.productRows,
         }));
         persist(async () => {
-          await saveIngredient(row);
-          if (renamed) await renameIngredientRefs(oldName, row.name);
+          // Umbenennen läuft atomar über eine einzige RPC (Row + Produktreferenzen).
+          if (renamed) await renameIngredientAtomic(row.id, oldName, row.name, row.sortOrder);
+          else await saveIngredient(row);
         }, "Zutat konnte nicht gespeichert werden.");
       },
       deleteIngredient: (id) => {
@@ -785,7 +786,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
             : prev.productRows,
         }));
         persist(async () => {
-          await removeIngredient(id, name);
+          await deleteIngredientAtomic(id, name);
           await saveIngredientOrder(rest);
         }, "Zutat konnte nicht gelöscht werden.");
       },
