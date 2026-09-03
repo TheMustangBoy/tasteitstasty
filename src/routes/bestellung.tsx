@@ -131,7 +131,7 @@ function OrderPage() {
     );
   }
 
-  if (!lastOrder && redirectState.phase === "pending") {
+  if (redirectState.phase === "pending") {
     return (
       <div className="mx-auto max-w-2xl px-4 py-20 text-center sm:px-6">
         <Clock className="mx-auto h-10 w-10 text-primary" />
@@ -155,7 +155,7 @@ function OrderPage() {
     );
   }
 
-  if (!lastOrder && redirectState.phase === "done") {
+  if (redirectState.phase === "done" && (!lastOrder || blockOldOrder)) {
     const status = redirectState.status;
     const paid = status === "paid";
     const refunded = status === "refunded" || status === "slot_full_after_expiry";
@@ -175,18 +175,35 @@ function OrderPage() {
         <p className="mt-3 text-muted-foreground">{text}</p>
         {paid && reference && <p className="mt-5 font-display text-4xl">{reference}</p>}
 
-        <Button
-          asChild
-          className="mt-6 h-14 rounded-xl bg-flame px-8 font-bold uppercase text-primary-foreground"
-        >
-          <Link to="/speisekarte">Zur Speisekarte</Link>
-        </Button>
+        {!paid && lastOrder && (
+          <p className="mt-4 text-sm text-muted-foreground">
+            Deine frühere Bestellung {lastOrder.reference} ist weiterhin gültig.
+          </p>
+        )}
+
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
+          {!paid && lastOrder && (
+            <Button
+              variant="outline"
+              className="h-14 rounded-xl px-8 font-bold uppercase"
+              onClick={() => setDismissedFailure(true)}
+            >
+              Bestehende Bestellung anzeigen
+            </Button>
+          )}
+          <Button
+            asChild
+            className="h-14 rounded-xl bg-flame px-8 font-bold uppercase text-primary-foreground"
+          >
+            <Link to="/speisekarte">Zur Speisekarte</Link>
+          </Button>
+        </div>
       </div>
     );
   }
 
-
   if (!lastOrder) {
+
     return (
       <div className="mx-auto max-w-2xl px-4 py-20 text-center sm:px-6">
         <h1 className="text-3xl">Keine Bestellung gefunden</h1>
