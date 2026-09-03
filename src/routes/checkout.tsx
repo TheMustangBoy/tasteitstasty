@@ -288,12 +288,20 @@ function CheckoutPage() {
               </p>
             )}
 
+            {now && closedToday && (
+              <p className="mt-4 flex items-start gap-2 rounded-lg border border-destructive/60 bg-destructive/10 p-4 text-sm text-destructive">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                Heute geschlossen – Bestellungen für die nächsten Tage sind weiterhin möglich.
+              </p>
+            )}
+
             {now && slotDays.length === 0 && (
               <p className="mt-4 flex items-start gap-2 rounded-lg border border-primary/40 bg-primary/10 p-4 text-sm">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                 Aktuell sind keine Abholzeiten verfügbar.
               </p>
             )}
+
 
             {now && !isOpenNow(now, settings.hours) && slotDays.length > 0 && (
               <p className="mt-4 flex items-start gap-2 rounded-lg border border-primary/40 bg-primary/10 p-4 text-sm">
