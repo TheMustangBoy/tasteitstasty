@@ -25,9 +25,7 @@ function HoursPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 sm:py-16">
       <h1 className="text-3xl sm:text-5xl">Öffnungszeiten</h1>
-      <p className="mt-3 text-muted-foreground">
-        {formatHoursSentence(settings.hours)}. Pflegbar im Adminbereich.
-      </p>
+      <p className="mt-3 text-muted-foreground">{formatHoursSentence(settings.hours)}.</p>
       <ul className="mt-8 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
         {order.map((index) => {
           const entry = settings.hours[index]!;
@@ -44,10 +42,9 @@ function HoursPage() {
         })}
       </ul>
       <p className="mt-6 text-sm text-muted-foreground">
-        Bestellungen sind ausschließlich zur Abholung möglich – mit mindestens{" "}
-        {settings.minLeadMinutes} Minuten Vorlauf. Bestellbar{" "}
-        {nextOpeningLabel(new Date(), settings.hours)}.
+        Bestellungen sind ausschließlich zur Abholung möglich.
       </p>
+
     </div>
   );
 }
