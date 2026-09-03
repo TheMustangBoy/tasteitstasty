@@ -276,6 +276,9 @@ type ShopContextValue = ShopState & {
   overrides: Record<string, ProductOverride>;
   bookings: Record<string, number>;
   setSettings: (patch: Partial<ShopSettings>) => void;
+  /** Notfall-Schließung für heute setzen/aufheben (serverseitig abgesichert). */
+  setEmergencyClosed: (closed: boolean) => Promise<{ ok: boolean; error?: string }>;
+
   setDayHours: (index: number, patch: Partial<DayHours>) => void;
   setOverride: (id: string, patch: ProductOverride) => void;
   upsertProduct: (row: ProductRecord) => void;
