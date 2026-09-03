@@ -167,7 +167,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const check = async () => {
       const result = await fetchOrderStatus(statusToken);
       if (!active || !result) return;
-      if (result === "gone") return;
+      // 404: Bestellung serverseitig unbekannt -> lokal entfernen, ohne Grund zu raten.
+      // Netz-/Serverfehler liefern `null` und lassen die Bestellung unangetastet.
+      if (result === "gone") {
+        setOrderClosedReason(null);
+        setLastOrder(null);
+        return;
+      }
       const reason = closedReasonFor(result);
       if (reason) {
         setOrderClosedReason(reason);

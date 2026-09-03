@@ -628,7 +628,8 @@ function CheckoutPage() {
                     pickupISO: new Date(selectedSlot.key).toISOString(),
                     payment: paymentLabel,
                     name: name.trim(),
-                    statusToken,
+                    // Bei Idempotenz-Treffern gilt der Token der bestehenden Bestellung.
+                    statusToken: saved.customerStatusToken ?? statusToken,
                   });
 
                   navigate({ to: "/bestellung" });

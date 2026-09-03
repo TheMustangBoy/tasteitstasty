@@ -125,6 +125,8 @@ export type ShopOrder = {
   paymentProvider?: "manual" | "stripe" | null;
   paymentStatus?: "pay_on_pickup" | "paid" | "refunded" | null;
   paidAt?: string | null;
+  /** Serverseitig gespeicherter Statustoken (idempotent je checkout_key). */
+  customerStatusToken?: string | null;
 };
 
 /* -------------------------------------------------------------------------
