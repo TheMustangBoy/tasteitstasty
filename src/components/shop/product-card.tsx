@@ -16,22 +16,23 @@ export function ProductCard({
       onClick={onSelect}
       disabled={soldOut}
       aria-disabled={soldOut}
-      className="group flex w-full flex-col justify-between gap-4 rounded-2xl border border-border bg-card p-5 text-left transition-all hover:border-primary/60 hover:shadow-flame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+      className="group relative flex w-full flex-col justify-between gap-4 rounded-2xl border border-border bg-card p-5 text-left transition-all hover:border-primary/60 hover:shadow-flame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
     >
+      {item.tag && (
+        <span className="absolute right-3 top-3 z-10 max-w-[45%] truncate rounded-full bg-accent/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-accent">
+          {item.tag}
+        </span>
+      )}
       <div className="min-w-0">
-        <div className="flex items-start justify-between gap-3">
-          <h3 className="min-w-0 text-lg font-normal">{item.name}</h3>
-          {item.tag && (
-            <span className="shrink-0 rounded-full bg-accent/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-accent">
-              {item.tag}
-            </span>
-          )}
-        </div>
+        <h3 className={`min-w-0 break-words text-lg font-normal ${item.tag ? "pr-[48%]" : ""}`}>
+          {item.name}
+        </h3>
         {soldOut && (
           <p className="mt-2 inline-block rounded-full bg-destructive/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-destructive">
             Ausverkauft
           </p>
         )}
+
         <p className="mt-2 text-sm text-muted-foreground">
           {item.description
             ? item.description
