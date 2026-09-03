@@ -6,6 +6,15 @@
  * Ausführen:  bun scripts/payments-checks.ts
  */
 import assert from "node:assert/strict";
+
+// Minimaler sessionStorage-Ersatz: im Browser kommt der Key aus der Session.
+const store = new Map<string, string>();
+(globalThis as { sessionStorage?: unknown }).sessionStorage = {
+  getItem: (k: string) => store.get(k) ?? null,
+  setItem: (k: string, v: string) => void store.set(k, v),
+  removeItem: (k: string) => void store.delete(k),
+};
+
 import {
   checkoutKeyFor,
   checkoutSnapshotSignature,
