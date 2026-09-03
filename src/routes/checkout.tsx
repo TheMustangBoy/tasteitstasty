@@ -95,10 +95,13 @@ function CheckoutPage() {
             minLeadMinutes: settings.minLeadMinutes,
             maxOrdersPerSlot: settings.maxOrdersPerSlot,
             bookings,
+            emergencyClosedDate: settings.emergencyClosedDate,
           })
         : [],
     [now, settings, bookings],
   );
+  const closedToday = isEmergencyClosedToday(settings.emergencyClosedDate, now ?? new Date());
+
   const slots = useMemo(() => flattenSlots(slotDays), [slotDays]);
   const suggested = nextAvailableSlot(slotDays);
   const [slotKey, setSlotKey] = useState("");
