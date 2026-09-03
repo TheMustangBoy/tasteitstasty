@@ -285,14 +285,21 @@ export async function saveIngredient(row: IngredientRecord) {
 }
 
 /**
- * Umbenennen einer Zutat: alle exakten Vorkommen in `products.ingredients`
- * und `products.removable` werden serverseitig atomar mitgezogen.
+ * Umbenennen einer Zutat: Zutaten-Row und alle exakten Vorkommen in
+ * `products.ingredients` / `products.removable` werden in EINER
+ * serverseitigen Transaktion geändert.
  */
-export async function renameIngredientRefs(oldName: string, newName: string) {
-  if (!oldName || !newName || oldName === newName) return;
-  const { error } = await supabase.rpc("rename_ingredient_refs", {
+export async function renameIngredientAtomic(
+  id: string,
+  oldName: string,
+  newName: string,
+  sortOrder?: number,
+) {
+  const { error } = await supabase.rpc("rename_ingredient", {
+    p_id: id,
     p_old_name: oldName,
     p_new_name: newName,
+    p_sort_order: sortOrder ?? null,
   });
   if (error) throw new Error(error.message);
 }
@@ -301,13 +308,10 @@ export async function saveIngredientOrder(rows: IngredientRecord[]) {
   await Promise.all(rows.map((r) => saveIngredient(r)));
 }
 
-/** Löscht die Zutat und entfernt sie atomar aus allen Produktlisten. */
-export async function removeIngredient(id: string, name?: string) {
-  if (name) {
-    const { error } = await supabase.rpc("delete_ingredient_refs", { p_name: name });
-    if (error) throw new Error(error.message);
-  }
-  check((await supabase.from("ingredients").delete().eq("id", id)).error);
+/** Löscht die Zutat und entfernt sie in derselben Transaktion aus allen Produktlisten. */
+export async function deleteIngredientAtomic(id: string, name: string) {
+  const { error } = await supabase.rpc("delete_ingredient", { p_id: id, p_name: name });
+  if (error) throw new Error(error.message);
 }
 
 
