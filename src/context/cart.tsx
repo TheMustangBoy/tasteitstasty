@@ -68,28 +68,32 @@ export const linePrice = (line: CartLine) => {
 export const lineOptions = (line: CartLine): SelectionOption[] =>
   (line.options ?? []).length > 0 ? line.options! : line.variant ? [line.variant] : [];
 
+export type CartLineOptions = {
+  removed: string[];
+  bacon: boolean;
+  quantity: number;
+  extras?: Extra[];
+  options?: SelectionOption[];
+};
+
 type CartContextValue = {
   lines: CartLine[];
   count: number;
   total: number;
   isOpen: boolean;
   setOpen: (open: boolean) => void;
-  add: (
-    item: MenuItem,
-    opts: {
-      removed: string[];
-      bacon: boolean;
-      quantity: number;
-      extras?: Extra[];
-      options?: SelectionOption[];
-    },
-  ) => void;
+  add: (item: MenuItem, opts: CartLineOptions) => void;
+  /** Bestehende Zeile vollständig durch eine bearbeitete Version ersetzen. */
+  updateLine: (lineId: string, item: MenuItem, opts: CartLineOptions) => void;
   setQuantity: (lineId: string, quantity: number) => void;
   remove: (lineId: string) => void;
   clear: () => void;
   lastOrder: PlacedOrder | null;
   /** Bestellung nur, solange sie innerhalb des 2-Stunden-Fensters liegt. */
   activeOrder: PlacedOrder | null;
+  /** Grund, warum die lokale Bestellung serverseitig beendet wurde. */
+  orderClosedReason: OrderClosedReason | null;
+  dismissOrderClosed: () => void;
   placeOrder: (
     data: Omit<PlacedOrder, "reference" | "lines" | "total"> & {
       reference?: string;
@@ -98,6 +102,7 @@ type CartContextValue = {
     },
   ) => PlacedOrder;
 };
+
 
 const CartContext = createContext<CartContextValue | null>(null);
 
