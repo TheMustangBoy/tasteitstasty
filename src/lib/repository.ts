@@ -362,6 +362,8 @@ export async function placeOrderRemote(input: {
   lines: CartLine[];
   total: number;
   note: string;
+  /** Idempotenzschlüssel des Browsers für genau diesen Bestell-Snapshot. */
+  checkoutKey?: string;
 }): Promise<ShopOrder> {
   const { data, error } = await supabase.rpc("place_order", {
     p_reference: input.reference,
@@ -373,6 +375,7 @@ export async function placeOrderRemote(input: {
     p_lines: input.lines as unknown as never,
     p_total: input.total,
     p_note: input.note,
+    ...(input.checkoutKey ? { p_checkout_key: input.checkoutKey } : {}),
   });
   if (error) throw new Error(orderErrorMessage(error.message));
   const row = (Array.isArray(data) ? data[0] : data) as OrderRow | null;
