@@ -938,90 +938,95 @@ function AdminConsole() {
                                 <>
                                   <div className="flex flex-wrap items-start gap-3 sm:flex-nowrap">
                                     {handle}
-                          <div className="min-w-0 flex-1 basis-[calc(100%-2.5rem)]">
-
-                            <div className="flex flex-wrap items-center gap-2">
-                              <h3 className="min-w-0 break-words text-lg">
-                                {row.name || "Ohne Namen"}
-                              </h3>
-                              {row.soldOut && <Badge variant="destructive">Ausverkauft</Badge>}
-                              {!row.active && <Badge variant="outline">Inaktiv</Badge>}
-                            </div>
-                            <p className="mt-1 text-sm text-muted-foreground">
-                              {categoryLabel(row.categoryId)} · {formatPrice(row.price)}
-                              {row.ingredients.length > 0 && ` · ${row.ingredients.join(", ")}`}
-                            </p>
-                          </div>
-                          <span className="flex basis-full flex-wrap gap-1 sm:basis-auto sm:shrink-0">
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-11 w-11"
-                              aria-label="Nach oben schieben"
-                              onClick={() => moveProduct(row.id, -1)}
-                            >
-                              <ArrowUp className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-11 w-11"
-                              aria-label="Nach unten schieben"
-                              onClick={() => moveProduct(row.id, 1)}
-                            >
-                              <ArrowDown className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-11 w-11"
-                              aria-label="Produkt bearbeiten"
-                              onClick={() => {
-                                setEditing(row);
-                                setEditorOpen(true);
-                              }}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-11 w-11"
-                              aria-label="Produkt duplizieren"
-                              onClick={() => {
-                                const copy = duplicateProduct(row.id);
-                                if (copy) toast.success(`„${copy.name}“ angelegt (inaktiv)`);
-                              }}
-                            >
-                              <Copy className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-11 w-11 text-destructive"
-                              aria-label="Produkt löschen"
-                              onClick={() => setDeleteTarget(row)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </span>
-                        </div>
-                        <div className="mt-4 flex flex-wrap items-center gap-6">
-                          <label className="flex items-center gap-2 text-sm">
-                            <Switch
-                              checked={row.active}
-                              onCheckedChange={(v) => setOverride(row.id, { available: v })}
-                            />
-                            Aktiv
-                          </label>
-                          <label className="flex items-center gap-2 text-sm">
-                            <Switch
-                              checked={row.soldOut}
-                              onCheckedChange={(v) => setOverride(row.id, { soldOut: v })}
-                            />
-                            Ausverkauft
-                          </label>
-                        </div>
+                                    <div className="min-w-0 flex-1 basis-[calc(100%-2.5rem)]">
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <h3 className="min-w-0 break-words text-lg">
+                                          {row.name || "Ohne Namen"}
+                                        </h3>
+                                        {row.soldOut && (
+                                          <Badge variant="destructive">Ausverkauft</Badge>
+                                        )}
+                                        {!row.active && <Badge variant="outline">Inaktiv</Badge>}
+                                      </div>
+                                      <p className="mt-1 text-sm text-muted-foreground">
+                                        {categoryLabel(row.categoryId)} · {formatPrice(row.price)}
+                                        {row.ingredients.length > 0 &&
+                                          ` · ${row.ingredients.join(", ")}`}
+                                      </p>
+                                    </div>
+                                    <span className="flex basis-full flex-wrap gap-1 sm:basis-auto sm:shrink-0">
+                                      <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-11 w-11"
+                                        aria-label="Nach oben schieben"
+                                        onClick={() => moveProduct(row.id, -1)}
+                                      >
+                                        <ArrowUp className="h-4 w-4" />
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-11 w-11"
+                                        aria-label="Nach unten schieben"
+                                        onClick={() => moveProduct(row.id, 1)}
+                                      >
+                                        <ArrowDown className="h-4 w-4" />
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-11 w-11"
+                                        aria-label="Produkt bearbeiten"
+                                        onClick={() => {
+                                          setEditing(row);
+                                          setEditorOpen(true);
+                                        }}
+                                      >
+                                        <Pencil className="h-4 w-4" />
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-11 w-11"
+                                        aria-label="Produkt duplizieren"
+                                        onClick={() => {
+                                          const copy = duplicateProduct(row.id);
+                                          if (copy)
+                                            toast.success(`„${copy.name}“ angelegt (inaktiv)`);
+                                        }}
+                                      >
+                                        <Copy className="h-4 w-4" />
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-11 w-11 text-destructive"
+                                        aria-label="Produkt löschen"
+                                        onClick={() => setDeleteTarget(row)}
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </span>
+                                  </div>
+                                  <div className="mt-4 flex flex-wrap items-center gap-6">
+                                    <label className="flex items-center gap-2 text-sm">
+                                      <Switch
+                                        checked={row.active}
+                                        onCheckedChange={(v) =>
+                                          setOverride(row.id, { available: v })
+                                        }
+                                      />
+                                      Aktiv
+                                    </label>
+                                    <label className="flex items-center gap-2 text-sm">
+                                      <Switch
+                                        checked={row.soldOut}
+                                        onCheckedChange={(v) => setOverride(row.id, { soldOut: v })}
+                                      />
+                                      Ausverkauft
+                                    </label>
+                                  </div>
                                 </>
                               )}
                             </SortableRow>
@@ -1030,7 +1035,6 @@ function AdminConsole() {
                       </SortableContext>
                     </DndContext>
                   )}
-
                 </section>
               );
             })}

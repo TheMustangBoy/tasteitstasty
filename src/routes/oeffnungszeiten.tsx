@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { WEEKDAYS, formatDayHours, formatHoursSentence } from "@/data/menu";
 import { useShop } from "@/context/shop";
 
-
 export const Route = createFileRoute("/oeffnungszeiten")({
   head: () => ({
     meta: [
@@ -44,7 +43,6 @@ function HoursPage() {
       <p className="mt-6 text-sm text-muted-foreground">
         Bestellungen sind ausschließlich zur Abholung möglich.
       </p>
-
     </div>
   );
 }
