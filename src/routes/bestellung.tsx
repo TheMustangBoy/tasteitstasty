@@ -4,7 +4,13 @@ import { CheckCircle2, Clock, Loader2, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { BUSINESS, formatPrice } from "@/data/menu";
-import { linePrice, useCart } from "@/context/cart";
+import { linePrice, useCart, type CartLine } from "@/context/cart";
+import {
+  clearPendingPayment,
+  readPendingPayment,
+  writePendingPayment,
+  type PendingPayment,
+} from "@/lib/pending-order";
 import { waitForPaidReservation } from "@/lib/payments/client";
 import type { ReservationStatusValue } from "@/lib/payments/config";
 
@@ -29,52 +35,19 @@ type RedirectPhase =
   | { phase: "pending" }
   | { phase: "done"; status: ReservationStatusValue };
 
-type RedirectTicket = { reservation: string; token: string; reference: string };
-
-/** Technischer Key – enthält ausschließlich Reservierungs-/Tokenwerte, keine PII. */
-const TICKET_STORAGE_KEY = "tit-payment-redirect-v1";
-
-function readStoredTicket(): RedirectTicket | null {
-  try {
-    const raw = sessionStorage.getItem(TICKET_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<RedirectTicket>;
-    if (!parsed?.reservation || !parsed?.token) return null;
-    return {
-      reservation: parsed.reservation,
-      token: parsed.token,
-      reference: parsed.reference ?? "",
-    };
-  } catch {
-    return null;
-  }
-}
-
-function storeTicket(ticket: RedirectTicket) {
-  try {
-    sessionStorage.setItem(TICKET_STORAGE_KEY, JSON.stringify(ticket));
-  } catch {
-    /* Ohne sessionStorage bleibt der Check nur für diese Ansicht möglich. */
-  }
-}
-
-function clearStoredTicket() {
-  try {
-    sessionStorage.removeItem(TICKET_STORAGE_KEY);
-  } catch {
-    /* nichts zu tun */
-  }
-}
-
 function OrderPage() {
-  const { lastOrder, clear } = useCart();
+  const { activeOrder, clear, placeOrder } = useCart();
+  const lastOrder = activeOrder;
   // Rückkehr aus einem Stripe-Redirect (z. B. 3-D-Secure) ohne lokalen Bestellstand.
   const [redirectState, setRedirectState] = useState<RedirectPhase>({ phase: "idle" });
   // Reservierungsdaten intern halten, damit die URL bereinigt werden kann,
   // ein späterer erneuter Check aber weiterhin möglich bleibt.
-  const ticketRef = useRef<RedirectTicket | null>(null);
+  const ticketRef = useRef<PendingPayment | null>(null);
   const [reference, setReference] = useState("");
   const [attempt, setAttempt] = useState(0);
+  // Stabile Referenzen: der Statuscheck darf nicht bei jeder Warenkorbänderung neu starten.
+  const actionsRef = useRef({ clear, placeOrder });
+  actionsRef.current = { clear, placeOrder };
 
   useEffect(() => {
     if (lastOrder) return;
@@ -82,19 +55,24 @@ function OrderPage() {
       const params = new URLSearchParams(window.location.search);
       const reservation = params.get("reservation");
       const token = params.get("token");
+      const stored = readPendingPayment();
       if (reservation && token) {
-        const ticket: RedirectTicket = {
+        const ticket: PendingPayment = {
           reservation,
           token,
-          reference: params.get("ref") ?? "",
+          reference: params.get("ref") ?? stored?.reference ?? "",
+          createdAt: stored?.createdAt ?? Date.now(),
+          // Anzeige-Snapshot aus dem Checkout übernehmen, falls vorhanden.
+          snapshot:
+            stored && stored.reservation === reservation ? stored.snapshot : undefined,
         };
         // Erst dauerhaft sichern, dann die URL bereinigen – ein Reload
         // während `pending` verliert den Token dadurch nicht mehr.
-        storeTicket(ticket);
+        writePendingPayment(ticket);
         ticketRef.current = ticket;
         window.history.replaceState({}, "", window.location.pathname);
       } else {
-        ticketRef.current = readStoredTicket();
+        ticketRef.current = stored;
       }
       if (!ticketRef.current) return;
       setReference(ticketRef.current.reference);
@@ -104,17 +82,31 @@ function OrderPage() {
     setRedirectState({ phase: "checking" });
     void waitForPaidReservation(ticket.reservation, ticket.token).then((status) => {
       if (!active) return;
-      // Nur bei serverseitig bestätigter Zahlung den Warenkorb leeren.
-      if (status === "paid") clear();
+      if (status === "paid") {
+        // Bezahlte Bestellung lokal sichtbar machen und Warenkorb leeren.
+        const snap = ticket.snapshot;
+        if (snap) {
+          actionsRef.current.placeOrder({
+            reference: ticket.reference || snap.reference,
+            lines: (snap.lines ?? []) as CartLine[],
+            total: snap.total,
+            pickupLabel: snap.pickupLabel,
+            pickupISO: snap.pickupISO,
+            payment: snap.payment,
+            name: snap.name,
+          });
+        } else {
+          actionsRef.current.clear();
+        }
+      }
       // Terminaler Status: der Token wird nicht mehr gebraucht.
-      if (status !== "pending") clearStoredTicket();
+      if (status !== "pending") clearPendingPayment();
       setRedirectState(status === "pending" ? { phase: "pending" } : { phase: "done", status });
     });
     return () => {
       active = false;
     };
-  }, [lastOrder, clear, attempt]);
-
+  }, [lastOrder, attempt]);
 
   if (!lastOrder && redirectState.phase === "checking") {
     return (

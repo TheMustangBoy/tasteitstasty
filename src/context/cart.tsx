@@ -24,9 +24,32 @@ export type PlacedOrder = {
   lines: CartLine[];
   total: number;
   pickupLabel: string;
+  /** ISO-Zeitpunkt der Abholung – Basis für die 2-Stunden-Regel. */
+  pickupISO: string;
   payment: string;
   name: string;
 };
+
+/** Eine Bestellung bleibt bis 2 Stunden nach der Abholzeit lokal sichtbar. */
+export const ORDER_ACTIVE_WINDOW_MS = 2 * 60 * 60 * 1000;
+
+/** Ablaufzeitpunkt der lokalen Anzeige (null bei fehlendem/ungültigem pickupISO). */
+export function orderExpiresAt(order: Pick<PlacedOrder, "pickupISO"> | null | undefined) {
+  if (!order?.pickupISO) return null;
+  const pickup = new Date(order.pickupISO).getTime();
+  if (!Number.isFinite(pickup)) return null;
+  return new Date(pickup + ORDER_ACTIVE_WINDOW_MS);
+}
+
+/** Legacy-Bestellungen ohne pickupISO gelten als abgelaufen und werden bereinigt. */
+export function isOrderActive(
+  order: Pick<PlacedOrder, "pickupISO"> | null | undefined,
+  now: number = Date.now(),
+): boolean {
+  const expires = orderExpiresAt(order);
+  return expires ? expires.getTime() > now : false;
+}
+
 
 export const linePrice = (line: CartLine) => {
   const extras = line.extras ?? [];
@@ -62,8 +85,14 @@ type CartContextValue = {
   remove: (lineId: string) => void;
   clear: () => void;
   lastOrder: PlacedOrder | null;
+  /** Bestellung nur, solange sie innerhalb des 2-Stunden-Fensters liegt. */
+  activeOrder: PlacedOrder | null;
   placeOrder: (
-    data: Omit<PlacedOrder, "reference" | "lines" | "total"> & { reference?: string },
+    data: Omit<PlacedOrder, "reference" | "lines" | "total"> & {
+      reference?: string;
+      lines?: CartLine[];
+      total?: number;
+    },
   ) => PlacedOrder;
 };
 
@@ -74,6 +103,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [isOpen, setOpen] = useState(false);
   const [lastOrder, setLastOrder] = useState<PlacedOrder | null>(null);
   const [hydrated, setHydrated] = useState(false);
+  const [nowTick, setNowTick] = useState(0);
 
   // Erst nach dem Mount lesen, damit SSR und erster Client-Render identisch sind.
   useEffect(() => {
@@ -82,13 +112,26 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (raw) {
         const parsed = JSON.parse(raw) as { lines?: CartLine[]; lastOrder?: PlacedOrder | null };
         if (Array.isArray(parsed.lines)) setLines(parsed.lines);
-        if (parsed.lastOrder) setLastOrder(parsed.lastOrder);
+        // Abgelaufene bzw. Legacy-Bestellungen ohne pickupISO werden verworfen.
+        if (parsed.lastOrder && isOrderActive(parsed.lastOrder)) setLastOrder(parsed.lastOrder);
       }
     } catch {
       /* ignore */
     }
     setHydrated(true);
   }, []);
+
+  // Minütlich prüfen, damit die Bestellung nach Ablauf von selbst verschwindet.
+  useEffect(() => {
+    const timer = setInterval(() => setNowTick((n) => n + 1), 60_000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    if (lastOrder && !isOrderActive(lastOrder)) setLastOrder(null);
+  }, [hydrated, lastOrder, nowTick]);
+
 
   useEffect(() => {
     if (!hydrated) return;
@@ -155,12 +198,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
       remove: (lineId) => setLines((prev) => prev.filter((l) => l.lineId !== lineId)),
       clear: () => setLines([]),
       lastOrder,
+      activeOrder: lastOrder && isOrderActive(lastOrder) ? lastOrder : null,
       placeOrder: (data) => {
+        // Eine neue Bestellung ersetzt immer die vorherige (nur eine aktive).
         const order: PlacedOrder = {
           ...data,
           reference: data.reference ?? `TIT-${Math.floor(1000 + Math.random() * 9000)}`,
-          lines,
-          total,
+          lines: data.lines ?? lines,
+          total: data.total ?? total,
         };
         // Synchron persistieren, damit ein Reload/Navigation direkt nach der
         // Bestellung die Bestätigung noch findet (Effect läuft erst später).
@@ -175,6 +220,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       },
     };
   }, [lines, isOpen, lastOrder]);
+
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

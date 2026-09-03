@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Clock, MapPin, Flame, ShoppingBag } from "lucide-react";
+import { Clock, MapPin, Flame, Receipt, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import heroBurger from "@/assets/hero-burger.jpg";
 import { BUSINESS, formatPrice, groupHours } from "@/data/menu";
 import { useShop } from "@/context/shop";
+import { useCart } from "@/context/cart";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -26,6 +27,7 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   const { products, settings } = useShop();
+  const { activeOrder } = useCart();
   const highlights = products.filter((i) =>
     ["smash-burger", "tripple-smash", "trueffel-smash"].includes(i.id),
   );
@@ -68,6 +70,18 @@ function Index() {
                 <ShoppingBag className="mr-2 h-5 w-5" /> Jetzt bestellen
               </Link>
             </Button>
+            {activeOrder && (
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="h-14 rounded-xl border-primary/50 px-8 text-base font-bold uppercase tracking-wide text-primary"
+              >
+                <Link to="/bestellung">
+                  <Receipt className="mr-2 h-5 w-5" /> Meine Bestellung · {activeOrder.reference}
+                </Link>
+              </Button>
+            )}
             <Button
               asChild
               size="lg"

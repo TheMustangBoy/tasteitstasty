@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Menu, ShoppingBag } from "lucide-react";
+import { Menu, Receipt, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "./logo";
 import { useCart } from "@/context/cart";
@@ -13,7 +13,7 @@ const NAV = [
 ] as const;
 
 export function SiteHeader() {
-  const { count, total, setOpen } = useCart();
+  const { count, total, setOpen, activeOrder } = useCart();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
@@ -34,6 +34,17 @@ export function SiteHeader() {
                 {entry.label}
               </Link>
             ))}
+            {activeOrder && (
+              <Link
+                to="/bestellung"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-primary"
+                activeProps={{ className: "text-primary" }}
+              >
+                <Receipt className="h-4 w-4" />
+                <span className="hidden lg:inline">Meine Bestellung</span>
+                <span className="text-primary">{activeOrder.reference}</span>
+              </Link>
+            )}
           </nav>
         </div>
 
@@ -80,6 +91,15 @@ export function SiteHeader() {
               {entry.label}
             </Link>
           ))}
+          {activeOrder && (
+            <Link
+              to="/bestellung"
+              onClick={() => setMobileOpen(false)}
+              className="block py-3 text-base font-semibold uppercase tracking-wide text-primary"
+            >
+              Meine Bestellung · {activeOrder.reference}
+            </Link>
+          )}
         </nav>
       )}
     </header>
