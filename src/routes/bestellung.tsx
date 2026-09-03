@@ -29,13 +29,50 @@ type RedirectPhase =
   | { phase: "pending" }
   | { phase: "done"; status: ReservationStatusValue };
 
+type RedirectTicket = { reservation: string; token: string; reference: string };
+
+/** Technischer Key – enthält ausschließlich Reservierungs-/Tokenwerte, keine PII. */
+const TICKET_STORAGE_KEY = "tit-payment-redirect-v1";
+
+function readStoredTicket(): RedirectTicket | null {
+  try {
+    const raw = sessionStorage.getItem(TICKET_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<RedirectTicket>;
+    if (!parsed?.reservation || !parsed?.token) return null;
+    return {
+      reservation: parsed.reservation,
+      token: parsed.token,
+      reference: parsed.reference ?? "",
+    };
+  } catch {
+    return null;
+  }
+}
+
+function storeTicket(ticket: RedirectTicket) {
+  try {
+    sessionStorage.setItem(TICKET_STORAGE_KEY, JSON.stringify(ticket));
+  } catch {
+    /* Ohne sessionStorage bleibt der Check nur für diese Ansicht möglich. */
+  }
+}
+
+function clearStoredTicket() {
+  try {
+    sessionStorage.removeItem(TICKET_STORAGE_KEY);
+  } catch {
+    /* nichts zu tun */
+  }
+}
+
 function OrderPage() {
   const { lastOrder, clear } = useCart();
   // Rückkehr aus einem Stripe-Redirect (z. B. 3-D-Secure) ohne lokalen Bestellstand.
   const [redirectState, setRedirectState] = useState<RedirectPhase>({ phase: "idle" });
   // Reservierungsdaten intern halten, damit die URL bereinigt werden kann,
   // ein späterer erneuter Check aber weiterhin möglich bleibt.
-  const ticketRef = useRef<{ reservation: string; token: string; reference: string } | null>(null);
+  const ticketRef = useRef<RedirectTicket | null>(null);
   const [reference, setReference] = useState("");
   const [attempt, setAttempt] = useState(0);
 
@@ -45,11 +82,22 @@ function OrderPage() {
       const params = new URLSearchParams(window.location.search);
       const reservation = params.get("reservation");
       const token = params.get("token");
-      if (!reservation || !token) return;
-      ticketRef.current = { reservation, token, reference: params.get("ref") ?? "" };
-      setReference(params.get("ref") ?? "");
-      // Erst jetzt – die Daten liegen sicher intern für Retrys vor.
-      window.history.replaceState({}, "", window.location.pathname);
+      if (reservation && token) {
+        const ticket: RedirectTicket = {
+          reservation,
+          token,
+          reference: params.get("ref") ?? "",
+        };
+        // Erst dauerhaft sichern, dann die URL bereinigen – ein Reload
+        // während `pending` verliert den Token dadurch nicht mehr.
+        storeTicket(ticket);
+        ticketRef.current = ticket;
+        window.history.replaceState({}, "", window.location.pathname);
+      } else {
+        ticketRef.current = readStoredTicket();
+      }
+      if (!ticketRef.current) return;
+      setReference(ticketRef.current.reference);
     }
     const ticket = ticketRef.current;
     let active = true;
@@ -58,14 +106,15 @@ function OrderPage() {
       if (!active) return;
       // Nur bei serverseitig bestätigter Zahlung den Warenkorb leeren.
       if (status === "paid") clear();
-      setRedirectState(
-        status === "pending" ? { phase: "pending" } : { phase: "done", status },
-      );
+      // Terminaler Status: der Token wird nicht mehr gebraucht.
+      if (status !== "pending") clearStoredTicket();
+      setRedirectState(status === "pending" ? { phase: "pending" } : { phase: "done", status });
     });
     return () => {
       active = false;
     };
   }, [lastOrder, clear, attempt]);
+
 
   if (!lastOrder && redirectState.phase === "checking") {
     return (

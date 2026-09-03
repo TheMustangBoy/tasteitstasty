@@ -22,10 +22,12 @@ import { PAYMENT_ON_SITE, type PaymentConfig } from "@/lib/payments/config";
 import {
   cancelPaymentReservation,
   checkoutKeyFor,
+  checkoutSnapshotSignature,
   createPaymentIntent,
   fetchPaymentConfig,
   waitForPaidReservation,
 } from "@/lib/payments/client";
+
 import { StripePaymentSection } from "@/components/shop/stripe-payment";
 
 type PaymentChoice = "cash" | "terminal" | "online";
@@ -155,10 +157,38 @@ function CheckoutPage() {
     (activeDay ? (activeDay.slots.find((s) => !s.full) ?? suggested) : suggested);
   const pickupLabel = selectedSlot ? `${selectedSlot.dayLabel}, ${selectedSlot.label} Uhr` : "";
 
-  // Ändern sich Warenkorb, Zeit oder Kontaktdaten, wird eine offene
-  // Zahlungssitzung verworfen (verhindert Zahlungen auf veraltete Daten).
-  const intentSignature = `${total}|${selectedSlot?.key ?? ""}|${name.trim()}|${phone.trim()}|${note.trim()}|${lines.length}|${payment}`;
+  // Vollständiger, serverkompatibler Warenkorb-Snapshot – einmal zentral erzeugt
+  // und sowohl für die Intent-Signatur als auch für das Absenden verwendet.
+  const orderLines = useMemo(
+    () =>
+      lines.map((l) => ({
+        lineId: l.lineId,
+        itemId: l.itemId,
+        name: l.name,
+        basePrice: l.basePrice,
+        quantity: l.quantity,
+        removed: l.removed,
+        bacon: l.bacon,
+        extras: l.extras ?? [],
+        options: lineOptions(l),
+      })),
+    [lines],
+  );
+
+  // Ändern sich Warenkorb (inkl. Optionen/Extras/Zutaten), Zeit, Kontaktdaten
+  // oder Zahlungsart, wird eine offene Zahlungssitzung verworfen. Die Signatur
+  // deckt den kompletten Snapshot ab – nicht nur Summe und Zeilenanzahl.
+  const intentSignature = checkoutSnapshotSignature({
+    lines: orderLines,
+    total,
+    pickupISO: selectedSlot?.key ?? "",
+    name: name.trim(),
+    phone: phone.trim(),
+    note: note.trim(),
+    payment,
+  });
   const [intentKey, setIntentKey] = useState("");
+
 
   // Aktuelle Sitzung als Ref, damit der Abbruch auch aus Effects sicher greift.
   const intentRef = useRef<typeof intent>(null);
@@ -508,17 +538,8 @@ function CheckoutPage() {
                   return;
                 setSubmitting(true);
                 setSubmitError(null);
-                const orderLines = lines.map((l) => ({
-                  lineId: l.lineId,
-                  itemId: l.itemId,
-                  name: l.name,
-                  basePrice: l.basePrice,
-                  quantity: l.quantity,
-                  removed: l.removed,
-                  bacon: l.bacon,
-                  extras: l.extras ?? [],
-                  options: lineOptions(l),
-                }));
+                // orderLines stammt zentral aus dem Memo oben.
+
                 try {
                   if (payment === "online") {
                     // Es entsteht nur eine Reservierung – die Bestellung erzeugt
