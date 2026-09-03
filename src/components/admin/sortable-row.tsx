@@ -16,7 +16,7 @@ export function SortableRow({
   id: string;
   disabled?: boolean;
   label: string;
-  children: ReactNode;
+  children: (handle: ReactNode) => ReactNode;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
@@ -31,7 +31,7 @@ export function SortableRow({
         isDragging ? "z-10 border-primary opacity-70 shadow-flame" : "border-border"
       }`}
     >
-      <div className="flex flex-wrap items-start gap-3 sm:flex-nowrap">
+      {children(
         <button
           type="button"
           {...attributes}
@@ -42,9 +42,8 @@ export function SortableRow({
           className="mt-1 touch-none cursor-grab rounded-md p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-40"
         >
           <GripVertical className="h-5 w-5" />
-        </button>
-        {children}
-      </div>
+        </button>,
+      )}
     </div>
   );
 }
