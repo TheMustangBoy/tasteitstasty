@@ -510,6 +510,8 @@ function AdminConsole() {
     setSoundOn,
     setOverride,
     setSettings,
+    setEmergencyClosed,
+
     setDayHours,
     setOrderStatus,
     setOrderNote,
