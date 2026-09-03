@@ -364,6 +364,8 @@ export async function placeOrderRemote(input: {
   note: string;
   /** Idempotenzschlüssel des Browsers für genau diesen Bestell-Snapshot. */
   checkoutKey?: string;
+  /** Zufälliger Token, mit dem der Kunde später den Status abfragen darf. */
+  statusToken?: string;
 }): Promise<ShopOrder> {
   const { data, error } = await supabase.rpc("place_order", {
     p_reference: input.reference,
@@ -376,7 +378,9 @@ export async function placeOrderRemote(input: {
     p_total: input.total,
     p_note: input.note,
     ...(input.checkoutKey ? { p_checkout_key: input.checkoutKey } : {}),
+    ...(input.statusToken ? { p_status_token: input.statusToken } : {}),
   });
+
   if (error) throw new Error(orderErrorMessage(error.message));
   const row = (Array.isArray(data) ? data[0] : data) as OrderRow | null;
   if (!row) throw new Error("Die Bestellung konnte nicht gespeichert werden.");
