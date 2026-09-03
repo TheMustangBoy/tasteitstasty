@@ -91,8 +91,8 @@ export function ProductDialog({
           <DialogDescription>
             {item.description
               ? item.description
-              : item.patties
-                ? `${item.patties >= 3 ? "Drei Patties" : "Double Patty"} · frisch gesmasht`
+              : pattyLabel(item)
+                ? `${pattyLabel(item)} · frisch gesmasht`
                 : "Frisch frittiert"}
           </DialogDescription>
         </DialogHeader>
