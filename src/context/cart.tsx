@@ -85,8 +85,14 @@ type CartContextValue = {
   remove: (lineId: string) => void;
   clear: () => void;
   lastOrder: PlacedOrder | null;
+  /** Bestellung nur, solange sie innerhalb des 2-Stunden-Fensters liegt. */
+  activeOrder: PlacedOrder | null;
   placeOrder: (
-    data: Omit<PlacedOrder, "reference" | "lines" | "total"> & { reference?: string },
+    data: Omit<PlacedOrder, "reference" | "lines" | "total"> & {
+      reference?: string;
+      lines?: CartLine[];
+      total?: number;
+    },
   ) => PlacedOrder;
 };
 
@@ -97,6 +103,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [isOpen, setOpen] = useState(false);
   const [lastOrder, setLastOrder] = useState<PlacedOrder | null>(null);
   const [hydrated, setHydrated] = useState(false);
+  const [nowTick, setNowTick] = useState(0);
 
   // Erst nach dem Mount lesen, damit SSR und erster Client-Render identisch sind.
   useEffect(() => {
@@ -105,13 +112,26 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (raw) {
         const parsed = JSON.parse(raw) as { lines?: CartLine[]; lastOrder?: PlacedOrder | null };
         if (Array.isArray(parsed.lines)) setLines(parsed.lines);
-        if (parsed.lastOrder) setLastOrder(parsed.lastOrder);
+        // Abgelaufene bzw. Legacy-Bestellungen ohne pickupISO werden verworfen.
+        if (parsed.lastOrder && isOrderActive(parsed.lastOrder)) setLastOrder(parsed.lastOrder);
       }
     } catch {
       /* ignore */
     }
     setHydrated(true);
   }, []);
+
+  // Minütlich prüfen, damit die Bestellung nach Ablauf von selbst verschwindet.
+  useEffect(() => {
+    const timer = setInterval(() => setNowTick((n) => n + 1), 60_000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    if (lastOrder && !isOrderActive(lastOrder)) setLastOrder(null);
+  }, [hydrated, lastOrder, nowTick]);
+
 
   useEffect(() => {
     if (!hydrated) return;
