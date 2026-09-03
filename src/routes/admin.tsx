@@ -916,28 +916,30 @@ function AdminConsole() {
                     </p>
                   )}
 
-                  {isOpen &&
-                    rows.map((row) => (
-                      <div
-                        key={row.id}
-                        draggable={!productQuery.trim()}
-                        onDragStart={() => setDragId(row.id)}
-                        onDragOver={(e) => dragId && e.preventDefault()}
-                        onDrop={() => dropOn(category.id, row.id)}
-                        onDragEnd={() => setDragId(null)}
-                        className={`rounded-2xl border bg-card p-4 sm:p-5 ${
-                          dragId === row.id ? "border-primary opacity-60" : "border-border"
-                        }`}
+                  {isOpen && (
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={(event) => handleDragEnd(category.id, event)}
+                    >
+                      <SortableContext
+                        items={rows.map((r) => r.id)}
+                        strategy={verticalListSortingStrategy}
                       >
-                        <div className="flex flex-wrap items-start gap-3 sm:flex-nowrap">
-                          <span
-                            className="mt-1 cursor-grab text-muted-foreground"
-                            aria-label="Zum Sortieren ziehen"
-                            title="Zum Sortieren ziehen"
-                          >
-                            <GripVertical className="h-5 w-5" />
-                          </span>
+                        <div className="space-y-3">
+                          {rows.map((row) => (
+                            <SortableRow
+                              key={row.id}
+                              id={row.id}
+                              disabled={Boolean(productQuery.trim())}
+                              label={row.name || "Ohne Namen"}
+                            >
+                              {(handle) => (
+                                <>
+                                  <div className="flex flex-wrap items-start gap-3 sm:flex-nowrap">
+                                    {handle}
                           <div className="min-w-0 flex-1 basis-[calc(100%-2.5rem)]">
+
                             <div className="flex flex-wrap items-center gap-2">
                               <h3 className="min-w-0 break-words text-lg">
                                 {row.name || "Ohne Namen"}
