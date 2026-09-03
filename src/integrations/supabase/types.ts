@@ -144,6 +144,7 @@ export type Database = {
           checkout_key: string | null
           created_at: string
           customer_name: string
+          customer_status_token: string | null
           id: string
           internal_note: string
           lines: Json
@@ -168,6 +169,7 @@ export type Database = {
           checkout_key?: string | null
           created_at?: string
           customer_name?: string
+          customer_status_token?: string | null
           id?: string
           internal_note?: string
           lines?: Json
@@ -192,6 +194,7 @@ export type Database = {
           checkout_key?: string | null
           created_at?: string
           customer_name?: string
+          customer_status_token?: string | null
           id?: string
           internal_note?: string
           lines?: Json
@@ -494,6 +497,7 @@ export type Database = {
           checkout_key: string | null
           created_at: string
           customer_name: string
+          customer_status_token: string | null
           id: string
           internal_note: string
           lines: Json
@@ -551,6 +555,7 @@ export type Database = {
           p_pickup_at: string
           p_pickup_label: string
           p_reference: string
+          p_status_token?: string
           p_total: number
         }
         Returns: {
@@ -559,6 +564,7 @@ export type Database = {
           checkout_key: string | null
           created_at: string
           customer_name: string
+          customer_status_token: string | null
           id: string
           internal_note: string
           lines: Json
