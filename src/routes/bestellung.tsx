@@ -39,8 +39,18 @@ type RedirectPhase =
   | { phase: "done"; status: ReservationStatusValue };
 
 function OrderPage() {
-  const { activeOrder, clear, placeOrder, orderClosedReason, dismissOrderClosed } = useCart();
-  const lastOrder = activeOrder;
+  const {
+    activeOrder,
+    lastOrder: trackedOrder,
+    clear,
+    placeOrder,
+    orderClosedReason,
+    dismissOrderClosed,
+    orderStatusLabel,
+  } = useCart();
+  // Auch eine geschlossene, aber weiterhin getrackte Bestellung bleibt sichtbar,
+  // sobald der Hinweis ausgeblendet wurde – Reaktivierung stellt sie voll her.
+  const lastOrder = activeOrder ?? (orderClosedReason ? null : trackedOrder);
 
   // Rückkehr aus einem Stripe-Redirect (z. B. 3-D-Secure) ohne lokalen Bestellstand.
   const [redirectState, setRedirectState] = useState<RedirectPhase>({ phase: "idle" });
@@ -255,6 +265,23 @@ function OrderPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-14 sm:px-6">
       <div className="rounded-3xl border border-primary/40 bg-card p-6 shadow-flame sm:p-10">
+        {orderStatusLabel && (
+          <div
+            className={`mb-6 rounded-2xl border p-5 ${
+              orderStatusLabel.tone === "open"
+                ? "border-primary/50 bg-primary/10"
+                : "border-border bg-muted/40"
+            }`}
+            aria-live="polite"
+          >
+            <p className="text-xs font-bold uppercase tracking-[0.25em] text-primary">
+              Live-Status
+            </p>
+            <p className="mt-1 font-display text-2xl">{orderStatusLabel.title}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{orderStatusLabel.hint}</p>
+          </div>
+        )}
+
         <CheckCircle2 className="h-12 w-12 text-primary" />
         <h1 className="mt-4 text-3xl sm:text-4xl">Bestellung bestätigt</h1>
         <p className="mt-2 text-muted-foreground">

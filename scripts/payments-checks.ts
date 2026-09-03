@@ -163,8 +163,8 @@ console.log("order-checks: OK");
 
 // --- Produktdarstellung, Optionen und Statusabschluss -----------------------
 import { pattyLabel } from "../src/data/menu";
-import { extraNames, optionNames, type CartLine } from "../src/context/cart";
-import { closedReasonFor } from "../src/lib/order-status";
+import { extraNames,  optionNames, type CartLine } from "../src/context/cart";
+import { closedReasonFor, statusLabel } from "../src/lib/order-status";
 import { createStatusToken } from "../src/lib/order-status";
 import { toOrder } from "../src/lib/repository";
 
@@ -255,5 +255,27 @@ assert.equal(toOrder({ ...({} as never), ...{
 // Tokenformat: Reservierungs- und Statustoken sind 64 Hex-Zeichen.
 assert.match(createStatusToken(), /^[0-9a-f]{64}$/);
 assert.match(tokenHex, /^[0-9a-f]{32,128}$/);
+
+// Aktive vs. geschlossene Status inkl. Labels.
+for (const st of ["neu", "angenommen", "zubereitung", "abholbereit"]) {
+  assert.equal(closedReasonFor({ status: st }), null);
+  assert.equal(statusLabel({ status: st }).tone, "open");
+}
+for (const st of ["storniert", "abgelehnt", "abgeschlossen"]) {
+  assert.equal(statusLabel({ status: st }).tone, "closed");
+}
+assert.equal(statusLabel({ status: "neu", paymentStatus: "refunded" }).title, "Betrag erstattet");
+assert.equal(statusLabel({ status: "neu" }).title, "Bestellung eingegangen");
+assert.equal(statusLabel({ status: "abholbereit" }).title, "Abholbereit");
+
+// Zustandswechsel storniert -> angenommen macht die Bestellung wieder aktiv.
+const trackedOrder = {
+  pickupISO: new Date(Date.now() + 30 * 60_000).toISOString(),
+  statusToken: tokenHex,
+};
+const activeFor = (state: { status: string; paymentStatus?: string }) =>
+  isOrderActive(trackedOrder) && !closedReasonFor(state) ? trackedOrder : null;
+assert.equal(activeFor({ status: "storniert" }), null);
+assert.equal(activeFor({ status: "angenommen" }), trackedOrder);
 
 console.log("status-token-checks: OK");
