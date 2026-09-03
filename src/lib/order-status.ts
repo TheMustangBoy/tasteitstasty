@@ -44,6 +44,59 @@ export function closedReasonMessage(reason: OrderClosedReason): string {
   }
 }
 
+/** Anzeigetext für den Live-Status einer Bestellung. */
+export type OrderStatusLabel = {
+  title: string;
+  hint: string;
+  /** `open` = Bestellung läuft, `closed` = beendet. */
+  tone: "open" | "closed";
+};
+
+/** Label/Hinweis für jeden bekannten Serverstatus (inkl. Erstattung). */
+export function statusLabel(state: {
+  status: string;
+  paymentStatus?: string;
+}): OrderStatusLabel {
+  if (state.paymentStatus === "refunded") {
+    return {
+      title: "Betrag erstattet",
+      hint: "Der Betrag wurde vollständig zurückerstattet.",
+      tone: "closed",
+    };
+  }
+  switch (state.status) {
+    case "neu":
+      return {
+        title: "Bestellung eingegangen",
+        hint: "Warte auf Bestätigung durch den Truck.",
+        tone: "open",
+      };
+    case "angenommen":
+      return {
+        title: "Bestellung angenommen",
+        hint: "Der Truck hat deine Bestellung bestätigt.",
+        tone: "open",
+      };
+    case "zubereitung":
+      return { title: "In Zubereitung", hint: "Deine Bestellung wird frisch zubereitet.", tone: "open" };
+    case "abholbereit":
+      return { title: "Abholbereit", hint: "Deine Bestellung wartet am Truck.", tone: "open" };
+    case "storniert":
+      return { title: "Bestellung storniert", hint: closedReasonMessage("storniert"), tone: "closed" };
+    case "abgelehnt":
+      return { title: "Bestellung abgelehnt", hint: closedReasonMessage("abgelehnt"), tone: "closed" };
+    case "abgeschlossen":
+      return {
+        title: "Bestellung abgeschlossen",
+        hint: closedReasonMessage("abgeschlossen"),
+        tone: "closed",
+      };
+    default:
+      return { title: "Bestellung aktiv", hint: "Status wird aktualisiert.", tone: "open" };
+  }
+}
+
+
 /** Status abfragen. `null` bei Netz-/Serverfehlern, `"gone"` wenn unbekannt. */
 export async function fetchOrderStatus(
   token: string,
