@@ -179,8 +179,6 @@ export const BUSINESS = {
   street: "Kopernikusstraße 2",
   city: "85221 Dachau",
   place: "REWE-Parkplatz",
-  phone: "01234 567890",
-  email: "info@tasteitstasty.de",
 };
 
 /** Wochentage – Index entspricht Date.getDay() (0 = Sonntag). */
@@ -253,13 +251,13 @@ export const formatHoursSentence = (hours: DayHours[]) =>
 
 /**
  * Einheitliche Patty-Beschriftung für Kundenansichten.
- * Vegetarische Produkte zeigen immer „Veggie Patty“, unabhängig von `patties`.
+ * Vegetarische Produkte zeigen immer „Blumenkohl-Karotten Patty“, unabhängig von `patties`.
  */
 export function pattyLabel(item: {
   vegetarian?: boolean | undefined;
   patties?: number | null | undefined;
 }): string | null {
-  if (item.vegetarian) return "Veggie Patty";
+  if (item.vegetarian) return "Blumenkohl-Karotten Patty";
   const count = item.patties ?? 0;
   if (count >= 4) return `${count} Patties`;
   if (count === 3) return "Triple Patty";
