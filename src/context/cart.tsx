@@ -198,12 +198,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
       remove: (lineId) => setLines((prev) => prev.filter((l) => l.lineId !== lineId)),
       clear: () => setLines([]),
       lastOrder,
+      activeOrder: lastOrder && isOrderActive(lastOrder) ? lastOrder : null,
       placeOrder: (data) => {
+        // Eine neue Bestellung ersetzt immer die vorherige (nur eine aktive).
         const order: PlacedOrder = {
           ...data,
           reference: data.reference ?? `TIT-${Math.floor(1000 + Math.random() * 9000)}`,
-          lines,
-          total,
+          lines: data.lines ?? lines,
+          total: data.total ?? total,
         };
         // Synchron persistieren, damit ein Reload/Navigation direkt nach der
         // Bestellung die Bestätigung noch findet (Effect läuft erst später).
@@ -218,6 +220,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       },
     };
   }, [lines, isOpen, lastOrder]);
+
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
