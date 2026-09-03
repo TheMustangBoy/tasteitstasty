@@ -193,7 +193,10 @@ export type ShopSettings = {
   ordersPaused: boolean;
   /** Tick-Ton beim Scrollen im Wheel Picker. */
   wheelSoundOn: boolean;
+  /** Notfall-Schließung: gesperrter Tag als `YYYY-MM-DD` (Europe/Berlin). */
+  emergencyClosedDate: string | null;
 };
+
 
 type ShopState = {
   settings: ShopSettings;
