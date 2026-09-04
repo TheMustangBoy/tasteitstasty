@@ -1115,9 +1115,45 @@ function AdminConsole() {
           <EmergencyClosure
             closedToday={emergencyClosedToday}
             closedDate={settings.emergencyClosedDate}
-            openOrdersToday={openOrdersToday}
+            openOrdersToday={todayOpenOrders.length}
+            onlinePaidToday={todayOnlinePaid}
             onToggle={setEmergencyClosed}
           />
+
+          {emergencyClosedToday && (
+            <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+              <h2 className="text-xl">Betroffene Bestellungen heute</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Diese Bestellungen bleiben bestehen. Online bezahlte Bestellungen müssen beim
+                Stornieren über den bestehenden Erstattungsweg zurückgezahlt werden.
+              </p>
+              {todayOpenOrders.length === 0 ? (
+                <p className="mt-4 rounded-xl border border-dashed border-border p-6 text-sm text-muted-foreground">
+                  Keine offenen Bestellungen für heute.
+                </p>
+              ) : (
+                <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                  {todayOpenOrders.map((order) => (
+                    <OrderCard
+                      key={order.id}
+                      order={order}
+                      onStatus={(status) => setOrderStatus(order.id, status)}
+                      onNote={(note) => setOrderNote(order.id, note)}
+                      onCancel={(reason, cancelNote) => cancelOrder(order.id, reason, cancelNote)}
+                      onRefundClose={(status, reason, cancelNote) =>
+                        refundAndCloseOrder(order.id, status, reason, cancelNote)
+                      }
+                      onRestore={(status) => {
+                        restoreOrder(order.id, status);
+                        toast.success(`${order.reference} wieder aktiv`);
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
 
           <PaymentsHealth />
 
