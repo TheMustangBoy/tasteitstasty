@@ -425,8 +425,7 @@ assert.equal(
 /* ------------------------------- Berliner Tagesgrenze in der Slot-Planung */
 import { buildSlotDays } from "../src/lib/pickup";
 
-const hoursAllOpen = [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({
-  weekday,
+const hoursAllOpen = [0, 1, 2, 3, 4, 5, 6].map(() => ({
   open: "11:00",
   close: "20:00",
   closed: false,
@@ -441,7 +440,7 @@ const days = buildSlotDays({
   bookings: {},
   emergencyClosedDate: "2026-09-04",
 });
-const keys = days.map((d) => d.key);
+const keys = days.map((d) => d.dayKey);
 assert.equal(keys.includes("2026-09-04"), false, "Berliner Notfalltag muss entfallen");
 assert.equal(keys.includes("2026-09-05"), true, "Folgetag bleibt buchbar");
 
