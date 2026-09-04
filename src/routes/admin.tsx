@@ -643,12 +643,13 @@ function AdminConsole() {
 
   const emergencyClosedToday = isEmergencyClosedToday(settings.emergencyClosedDate);
   // Offene Bestellungen mit Abholung am heutigen Berliner Tag.
-  const openOrdersToday = useMemo(() => {
-    const today = berlinDayKey();
-    return orders.filter(
-      (o) => !CLOSED_STATUSES.includes(o.status) && berlinDayKey(new Date(o.pickupISO)) === today,
-    ).length;
-  }, [orders]);
+  const todayOpenOrders = useMemo(
+    () => openOrdersForBerlinDay(orders, CLOSED_STATUSES, berlinDayKey()),
+    [orders],
+  );
+  const todayOnlinePaid = useMemo(() => onlinePaidCount(todayOpenOrders), [todayOpenOrders]);
+
+
 
 
 
