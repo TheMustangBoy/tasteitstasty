@@ -23,11 +23,13 @@ export function EmergencyClosure({
   closedToday,
   closedDate,
   openOrdersToday,
+  onlinePaidToday,
   onToggle,
 }: {
   closedToday: boolean;
   closedDate: string | null;
   openOrdersToday: number;
+  onlinePaidToday: number;
   onToggle: (closed: boolean) => Promise<{ ok: boolean; error?: string }>;
 }) {
   const [open, setOpen] = useState(false);
