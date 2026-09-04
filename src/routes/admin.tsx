@@ -64,6 +64,8 @@ import { CatalogManager } from "@/components/admin/catalog-manager";
 import { EmergencyClosure } from "@/components/admin/emergency-closure";
 import { PaymentsHealth } from "@/components/admin/payments-health";
 import { berlinDayKey, isEmergencyClosedToday } from "@/lib/berlin-day";
+import { onlinePaidCount, openOrdersForBerlinDay } from "@/lib/today-orders";
+
 
 import { supabase } from "@/integrations/supabase/client";
 import { formatPrice, WEEKDAYS } from "@/data/menu";
