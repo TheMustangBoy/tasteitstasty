@@ -64,6 +64,8 @@ import { CatalogManager } from "@/components/admin/catalog-manager";
 import { EmergencyClosure } from "@/components/admin/emergency-closure";
 import { PaymentsHealth } from "@/components/admin/payments-health";
 import { berlinDayKey, isEmergencyClosedToday } from "@/lib/berlin-day";
+import { onlinePaidCount, openOrdersForBerlinDay } from "@/lib/today-orders";
+
 
 import { supabase } from "@/integrations/supabase/client";
 import { formatPrice, WEEKDAYS } from "@/data/menu";
@@ -643,12 +645,13 @@ function AdminConsole() {
 
   const emergencyClosedToday = isEmergencyClosedToday(settings.emergencyClosedDate);
   // Offene Bestellungen mit Abholung am heutigen Berliner Tag.
-  const openOrdersToday = useMemo(() => {
-    const today = berlinDayKey();
-    return orders.filter(
-      (o) => !CLOSED_STATUSES.includes(o.status) && berlinDayKey(new Date(o.pickupISO)) === today,
-    ).length;
-  }, [orders]);
+  const todayOpenOrders = useMemo(
+    () => openOrdersForBerlinDay(orders, CLOSED_STATUSES, berlinDayKey()),
+    [orders],
+  );
+  const todayOnlinePaid = useMemo(() => onlinePaidCount(todayOpenOrders), [todayOpenOrders]);
+
+
 
 
 
@@ -1112,9 +1115,45 @@ function AdminConsole() {
           <EmergencyClosure
             closedToday={emergencyClosedToday}
             closedDate={settings.emergencyClosedDate}
-            openOrdersToday={openOrdersToday}
+            openOrdersToday={todayOpenOrders.length}
+            onlinePaidToday={todayOnlinePaid}
             onToggle={setEmergencyClosed}
           />
+
+          {emergencyClosedToday && (
+            <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+              <h2 className="text-xl">Betroffene Bestellungen heute</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Diese Bestellungen bleiben bestehen. Online bezahlte Bestellungen müssen beim
+                Stornieren über den bestehenden Erstattungsweg zurückgezahlt werden.
+              </p>
+              {todayOpenOrders.length === 0 ? (
+                <p className="mt-4 rounded-xl border border-dashed border-border p-6 text-sm text-muted-foreground">
+                  Keine offenen Bestellungen für heute.
+                </p>
+              ) : (
+                <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                  {todayOpenOrders.map((order) => (
+                    <OrderCard
+                      key={order.id}
+                      order={order}
+                      onStatus={(status) => setOrderStatus(order.id, status)}
+                      onNote={(note) => setOrderNote(order.id, note)}
+                      onCancel={(reason, cancelNote) => cancelOrder(order.id, reason, cancelNote)}
+                      onRefundClose={(status, reason, cancelNote) =>
+                        refundAndCloseOrder(order.id, status, reason, cancelNote)
+                      }
+                      onRestore={(status) => {
+                        restoreOrder(order.id, status);
+                        toast.success(`${order.reference} wieder aktiv`);
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
 
           <PaymentsHealth />
 

@@ -23,11 +23,13 @@ export function EmergencyClosure({
   closedToday,
   closedDate,
   openOrdersToday,
+  onlinePaidToday,
   onToggle,
 }: {
   closedToday: boolean;
   closedDate: string | null;
   openOrdersToday: number;
+  onlinePaidToday: number;
   onToggle: (closed: boolean) => Promise<{ ok: boolean; error?: string }>;
 }) {
   const [open, setOpen] = useState(false);
@@ -92,8 +94,16 @@ export function EmergencyClosure({
                   <span className="block pt-1 font-medium text-foreground">
                     Offene Bestellungen für heute: {openOrdersToday}
                   </span>
+                  <span className="block font-medium text-foreground">
+                    Davon online bezahlt: {onlinePaidToday}
+                  </span>
+                  <span className="block">
+                    Online bezahlte Bestellungen müssen beim Stornieren über den bestehenden
+                    Erstattungsweg zurückgezahlt werden.
+                  </span>
                 </span>
               )}
+
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
