@@ -314,3 +314,135 @@ assert.deepEqual(removeFromProduct(burger, "Gurke"), {
 });
 
 console.log("ingredient-sync-checks: OK");
+
+/* ------------------------------------- Zahlungsabgleich: reine Regeln */
+import {
+  classifyOrder,
+  classifyReservation,
+  type IntentState,
+} from "../src/lib/payments/health-rules";
+
+const intent = (over: Partial<IntentState> = {}): IntentState => ({
+  status: "succeeded",
+  amount: 850,
+  currency: "eur",
+  refunded: 0,
+  ...over,
+});
+
+// DB paid + Stripe processing => Warnung, kein kritischer Fund.
+const processing = classifyOrder(
+  { reference: "TIT-1000", totalCents: 850, paymentStatus: "paid", paymentIntentShort: "pi_…A1b2" },
+  intent({ status: "processing" }),
+);
+assert.equal(processing.length, 1);
+assert.equal(processing[0]!.code, "stripe_processing");
+assert.equal(processing[0]!.severity, "warning");
+
+// DB paid + Stripe nicht bezahlt => kritisch.
+const unpaid = classifyOrder(
+  { reference: "TIT-1001", totalCents: 850, paymentStatus: "paid", paymentIntentShort: null },
+  intent({ status: "requires_payment_method" }),
+);
+assert.equal(unpaid[0]!.code, "db_paid_stripe_unpaid");
+assert.equal(unpaid[0]!.severity, "critical");
+
+// Reservierung: final_order_id vorhanden, Bestellung fehlt => kritisch.
+const missingOrder = classifyReservation(
+  {
+    reference: "Reservierung abc1",
+    status: "paid",
+    paymentIntentShort: "pi_…A1b2",
+    hasFinalOrderId: true,
+    finalOrderExists: false,
+    finalOrderIntentMatches: false,
+  },
+  intent(),
+);
+assert.equal(missingOrder[0]!.code, "reservation_final_order_missing");
+assert.equal(missingOrder[0]!.severity, "critical");
+
+// Reservierung: Bestellung vorhanden, aber andere Zahlung => Warnung.
+const linkMismatch = classifyReservation(
+  {
+    reference: "Reservierung abc2",
+    status: "paid",
+    paymentIntentShort: "pi_…A1b2",
+    hasFinalOrderId: true,
+    finalOrderExists: true,
+    finalOrderIntentMatches: false,
+  },
+  intent(),
+);
+assert.equal(linkMismatch[0]!.code, "reservation_link_mismatch");
+assert.equal(linkMismatch[0]!.severity, "warning");
+
+// Sauberer Fall erzeugt keine Meldung.
+assert.deepEqual(
+  classifyReservation(
+    {
+      reference: "Reservierung abc3",
+      status: "paid",
+      paymentIntentShort: "pi_…A1b2",
+      hasFinalOrderId: true,
+      finalOrderExists: true,
+      finalOrderIntentMatches: true,
+    },
+    intent(),
+  ),
+  [],
+);
+
+console.log("health-rule-checks: OK");
+
+/* ------------------------------- Heutige betroffene Bestellungen (Admin) */
+import { onlinePaidCount, openOrdersForBerlinDay } from "../src/lib/today-orders";
+
+const CLOSED = ["abgeschlossen", "abgelehnt", "storniert"];
+const todayOrders = [
+  { status: "neu", pickupISO: "2026-09-03T15:00:00.000Z", paymentProvider: "stripe", paymentStatus: "paid" },
+  { status: "angenommen", pickupISO: "2026-09-03T16:00:00.000Z", paymentProvider: null, paymentStatus: "pay_on_pickup" },
+  { status: "storniert", pickupISO: "2026-09-03T17:00:00.000Z", paymentProvider: "stripe", paymentStatus: "refunded" },
+  { status: "neu", pickupISO: "2026-09-04T10:00:00.000Z", paymentProvider: "stripe", paymentStatus: "paid" },
+  { status: "neu", pickupISO: "kein-datum", paymentProvider: null, paymentStatus: null },
+];
+const affected = openOrdersForBerlinDay(todayOrders, CLOSED, "2026-09-03");
+assert.equal(affected.length, 2);
+assert.equal(onlinePaidCount(affected), 1);
+assert.equal(openOrdersForBerlinDay(todayOrders, CLOSED, "2026-09-05").length, 0);
+assert.equal(onlinePaidCount([]), 0);
+
+// Abholung 22:30 UTC am 03.09. ist in Berlin bereits der 04.09.
+assert.equal(
+  openOrdersForBerlinDay(
+    [{ status: "neu", pickupISO: "2026-09-03T22:30:00.000Z" }],
+    CLOSED,
+    "2026-09-04",
+  ).length,
+  1,
+);
+
+/* ------------------------------- Berliner Tagesgrenze in der Slot-Planung */
+import { buildSlotDays } from "../src/lib/pickup";
+
+const hoursAllOpen = [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({
+  weekday,
+  open: "11:00",
+  close: "20:00",
+  closed: false,
+}));
+// 22:30 UTC am 03.09. => in Berlin bereits 04.09., 00:30 Uhr.
+const nowUtc = new Date("2026-09-03T22:30:00.000Z");
+const days = buildSlotDays({
+  now: nowUtc,
+  hours: hoursAllOpen,
+  minLeadMinutes: 15,
+  maxOrdersPerSlot: 4,
+  bookings: {},
+  emergencyClosedDate: "2026-09-04",
+});
+const keys = days.map((d) => d.key);
+assert.equal(keys.includes("2026-09-04"), false, "Berliner Notfalltag muss entfallen");
+assert.equal(keys.includes("2026-09-05"), true, "Folgetag bleibt buchbar");
+
+console.log("today-orders/slot-checks: OK");
