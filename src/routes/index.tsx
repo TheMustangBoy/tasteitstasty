@@ -28,9 +28,8 @@ export const Route = createFileRoute("/")({
 function Index() {
   const { products, settings } = useShop();
   const { activeOrder } = useCart();
-  const highlights = products.filter((i) =>
-    ["smash-burger", "tripple-smash", "trueffel-smash"].includes(i.id),
-  );
+  // Auswahl kommt ausschließlich aus dem Admin-Schalter „Auf Startseite hervorheben“.
+  const highlights = products.filter((i) => i.homeFeatured).slice(0, 3);
 
   return (
     <div>
@@ -127,6 +126,7 @@ function Index() {
         </div>
       </section>
 
+      {highlights.length > 0 && (
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4">
           <h2 className="min-w-0 text-2xl sm:text-3xl">Beliebt am Truck</h2>
@@ -142,15 +142,26 @@ function Index() {
             <Link
               key={item.id}
               to="/speisekarte"
-              className="rounded-2xl border border-border bg-card p-6 transition-colors hover:border-primary/60"
+              className="overflow-hidden rounded-2xl border border-border bg-card transition-colors hover:border-primary/60"
             >
-              <h3 className="text-lg font-normal">{item.name}</h3>
-              <p className="mt-2 text-sm text-muted-foreground">{item.ingredients.join(" · ")}</p>
-              <p className="mt-4 font-display text-xl">{formatPrice(item.price)}</p>
+              {item.imageUrl && (
+                <img
+                  src={item.imageUrl}
+                  alt={item.name}
+                  loading="lazy"
+                  className="aspect-[16/10] w-full object-cover"
+                />
+              )}
+              <div className="p-6">
+                <h3 className="text-lg font-normal">{item.name}</h3>
+                <p className="mt-2 text-sm text-muted-foreground">{item.ingredients.join(" · ")}</p>
+                <p className="mt-4 font-display text-xl">{formatPrice(item.price)}</p>
+              </div>
             </Link>
           ))}
         </div>
       </section>
+      )}
     </div>
   );
 }
