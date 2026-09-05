@@ -37,6 +37,7 @@ type ProductRow = {
   tag: string;
   vegetarian: boolean;
   ingredients_placeholder: boolean;
+  home_featured?: boolean;
   sort_order: number | string;
 };
 
@@ -59,6 +60,7 @@ export const toProduct = (row: ProductRow): ProductRecord => ({
   tag: row.tag ?? "",
   vegetarian: row.vegetarian,
   ingredientsPlaceholder: row.ingredients_placeholder,
+  homeFeatured: row.home_featured === true,
   sortOrder: num(row.sort_order),
 });
 
@@ -79,6 +81,7 @@ const fromProduct = (row: ProductRecord) => ({
   tag: row.tag ?? "",
   vegetarian: row.vegetarian,
   ingredients_placeholder: row.ingredientsPlaceholder,
+  home_featured: row.homeFeatured === true,
   sort_order: row.sortOrder,
 });
 
