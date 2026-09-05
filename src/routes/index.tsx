@@ -127,40 +127,42 @@ function Index() {
       </section>
 
       {highlights.length > 0 && (
-      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4">
-          <h2 className="min-w-0 text-2xl sm:text-3xl">Beliebt am Truck</h2>
-          <Link
-            to="/speisekarte"
-            className="shrink-0 text-sm font-bold uppercase tracking-wide text-primary"
-          >
-            Alle ansehen
-          </Link>
-        </div>
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {highlights.map((item) => (
+        <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4">
+            <h2 className="min-w-0 text-2xl sm:text-3xl">Beliebt am Truck</h2>
             <Link
-              key={item.id}
               to="/speisekarte"
-              className="overflow-hidden rounded-2xl border border-border bg-card transition-colors hover:border-primary/60"
+              className="shrink-0 text-sm font-bold uppercase tracking-wide text-primary"
             >
-              {item.imageUrl && (
-                <img
-                  src={item.imageUrl}
-                  alt={item.name}
-                  loading="lazy"
-                  className="aspect-[16/10] w-full object-cover"
-                />
-              )}
-              <div className="p-6">
-                <h3 className="text-lg font-normal">{item.name}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{item.ingredients.join(" · ")}</p>
-                <p className="mt-4 font-display text-xl">{formatPrice(item.price)}</p>
-              </div>
+              Alle ansehen
             </Link>
-          ))}
-        </div>
-      </section>
+          </div>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {highlights.map((item) => (
+              <Link
+                key={item.id}
+                to="/speisekarte"
+                className="overflow-hidden rounded-2xl border border-border bg-card transition-colors hover:border-primary/60"
+              >
+                {item.imageUrl && (
+                  <img
+                    src={item.imageUrl}
+                    alt={item.name}
+                    loading="lazy"
+                    className="aspect-[16/10] w-full object-cover"
+                  />
+                )}
+                <div className="p-6">
+                  <h3 className="text-lg font-normal">{item.name}</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {item.ingredients.join(" · ")}
+                  </p>
+                  <p className="mt-4 font-display text-xl">{formatPrice(item.price)}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
       )}
     </div>
   );

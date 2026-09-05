@@ -42,7 +42,9 @@ export function validateImageFile(file: File): string | null {
   return null;
 }
 
-async function loadBitmap(file: File): Promise<{ width: number; height: number; draw: CanvasImageSource }> {
+async function loadBitmap(
+  file: File,
+): Promise<{ width: number; height: number; draw: CanvasImageSource }> {
   if (typeof createImageBitmap === "function") {
     const bitmap = await createImageBitmap(file);
     return { width: bitmap.width, height: bitmap.height, draw: bitmap };

@@ -99,9 +99,7 @@ export function ProductEditor({
   const priceError = priceText.trim() === "" ? "Preis ist ein Pflichtfeld." : "";
   const invalid = Boolean(nameError || priceError);
 
-  const featuredElsewhere = productRows.filter(
-    (r) => r.homeFeatured && r.id !== draft.id,
-  ).length;
+  const featuredElsewhere = productRows.filter((r) => r.homeFeatured && r.id !== draft.id).length;
   const featuredLimitReached = featuredElsewhere >= MAX_HOME_FEATURED;
 
   const currentDraft = draft;
