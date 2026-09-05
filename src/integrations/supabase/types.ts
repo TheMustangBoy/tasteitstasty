@@ -299,6 +299,7 @@ export type Database = {
           created_at: string
           description: string
           extra_ids: string[]
+          home_featured: boolean
           id: string
           image_url: string
           ingredients: string[]
@@ -320,6 +321,7 @@ export type Database = {
           created_at?: string
           description?: string
           extra_ids?: string[]
+          home_featured?: boolean
           id: string
           image_url?: string
           ingredients?: string[]
@@ -341,6 +343,7 @@ export type Database = {
           created_at?: string
           description?: string
           extra_ids?: string[]
+          home_featured?: boolean
           id?: string
           image_url?: string
           ingredients?: string[]

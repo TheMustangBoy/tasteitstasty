@@ -170,6 +170,8 @@ export type ProductRecord = {
   tag: string;
   vegetarian: boolean;
   ingredientsPlaceholder: boolean;
+  /** Auf der Startseite unter „Beliebt am Truck“ hervorheben (max. 3 Produkte). */
+  homeFeatured: boolean;
   sortOrder: number;
 };
 
@@ -264,6 +266,7 @@ function seedProducts(): ProductRecord[] {
     tag: item.tag ?? "",
     vegetarian: item.vegetarian === true,
     ingredientsPlaceholder: item.ingredientsPlaceholder === true,
+    homeFeatured: ["smash-burger", "tripple-smash", "trueffel-smash"].includes(item.id),
     sortOrder: i,
   }));
 }
@@ -641,6 +644,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       if (row.tag) item.tag = row.tag;
       if (row.vegetarian) item.vegetarian = true;
       if (row.ingredientsPlaceholder) item.ingredientsPlaceholder = true;
+      if (row.homeFeatured) item.homeFeatured = true;
       return item;
     };
 
@@ -1114,6 +1118,7 @@ export function emptyProduct(categoryId: string, sortOrder: number): ProductReco
     tag: "",
     vegetarian: false,
     ingredientsPlaceholder: false,
+    homeFeatured: false,
     sortOrder,
   };
 }

@@ -29,6 +29,8 @@ export type MenuItem = {
   tag?: string;
   vegetarian?: boolean;
   imageUrl?: string;
+  /** Auf der Startseite unter „Beliebt am Truck“ hervorgehoben. */
+  homeFeatured?: boolean;
   /** Abwählbare Zutaten (Teilmenge von ingredients). */
   removable?: string[];
   extras?: Extra[];
