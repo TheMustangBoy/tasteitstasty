@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, ArrowDown, ArrowUp } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AlertTriangle, ArrowDown, ArrowUp, ImagePlus, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -27,6 +27,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useShop, type ProductRecord } from "@/context/shop";
 import { formatPrice } from "@/data/menu";
+import {
+  ACCEPT_ATTRIBUTE,
+  deleteProductImage,
+  uploadProductImage,
+  validateImageFile,
+} from "@/lib/product-image";
+
+/** Maximal gleichzeitig auf der Startseite hervorgehobene Produkte. */
+const MAX_HOME_FEATURED = 3;
 
 /** "8,50" und "8.50" akzeptieren; leere Eingabe ergibt 0. */
 function parsePrice(input: string): number {
@@ -55,15 +64,20 @@ export function ProductEditor({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { catalog, upsertProduct } = useShop();
+  const { catalog, productRows, upsertProduct } = useShop();
   const [draft, setDraft] = useState<ProductRecord | null>(product);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [priceText, setPriceText] = useState(
     product ? String(product.price).replace(".", ",") : "",
   );
   const [showErrors, setShowErrors] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  /** Beim Abbrechen wieder zu löschende, bereits hochgeladene Bilder. */
+  const pendingUploads = useRef<string[]>([]);
 
   useEffect(() => {
+    pendingUploads.current = [];
     setDraft(product);
     setPriceText(product ? String(product.price).replace(".", ",") : "");
     setShowErrors(false);
@@ -84,6 +98,53 @@ export function ProductEditor({
   const nameError = !draft.name.trim() ? "Name ist ein Pflichtfeld." : "";
   const priceError = priceText.trim() === "" ? "Preis ist ein Pflichtfeld." : "";
   const invalid = Boolean(nameError || priceError);
+
+  const featuredElsewhere = productRows.filter(
+    (r) => r.homeFeatured && r.id !== draft.id,
+  ).length;
+  const featuredLimitReached = featuredElsewhere >= MAX_HOME_FEATURED;
+
+  const currentDraft = draft;
+
+  /** Bereits hochgeladene, aber noch nicht gespeicherte Dateien wieder entfernen. */
+  const cleanupPendingUploads = async (keep?: string) => {
+    const urls = pendingUploads.current.filter((u) => u !== keep);
+    pendingUploads.current = keep && pendingUploads.current.includes(keep) ? [keep] : [];
+    await Promise.all(urls.map((u) => deleteProductImage(u).catch(() => undefined)));
+  };
+
+  const handleFile = async (file: File) => {
+    const problem = validateImageFile(file);
+    if (problem) {
+      toast.error(problem);
+      return;
+    }
+    setUploading(true);
+    try {
+      const url = await uploadProductImage(currentDraft.id, file);
+      // Ein zuvor in dieser Sitzung hochgeladenes Bild ist damit überflüssig.
+      await cleanupPendingUploads();
+      pendingUploads.current = [url];
+      set({ imageUrl: url });
+      toast.success("Bild hochgeladen");
+    } catch (error) {
+      toast.error("Bild konnte nicht hochgeladen werden.", {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleRemoveImage = async () => {
+    const url = currentDraft.imageUrl;
+    set({ imageUrl: "" });
+    if (url && pendingUploads.current.includes(url)) {
+      pendingUploads.current = pendingUploads.current.filter((u) => u !== url);
+      await deleteProductImage(url).catch(() => undefined);
+    }
+  };
 
   const close = () => {
     if (dirty) setConfirmDiscard(true);
@@ -188,14 +249,66 @@ export function ProductEditor({
               </div>
 
               <div className="sm:col-span-2">
-                <Label htmlFor="p-img">Bild-URL (optional)</Label>
-                <Input
-                  id="p-img"
-                  value={draft.imageUrl}
-                  onChange={(e) => set({ imageUrl: e.target.value })}
-                  className="mt-2 h-12"
-                  placeholder="https://… (Platzhalter, solange kein Bild hinterlegt ist)"
-                />
+                <Label>Produktbild (optional)</Label>
+                <div className="mt-2 flex flex-wrap items-start gap-4">
+                  <div className="h-28 w-28 shrink-0 overflow-hidden rounded-xl border border-border bg-secondary/30">
+                    {draft.imageUrl ? (
+                      <img
+                        src={draft.imageUrl}
+                        alt="Vorschau des Produktbilds"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <span className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
+                        Kein Bild
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex min-w-0 flex-1 flex-col gap-2">
+                    <input
+                      ref={fileInputRef}
+                      id="p-img-file"
+                      type="file"
+                      accept={ACCEPT_ATTRIBUTE}
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) void handleFile(file);
+                      }}
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-11"
+                        disabled={uploading}
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        {uploading ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <ImagePlus className="mr-2 h-4 w-4" />
+                        )}
+                        {draft.imageUrl ? "Bild ersetzen" : "Bild auswählen"}
+                      </Button>
+                      {draft.imageUrl && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="h-11 text-destructive"
+                          disabled={uploading}
+                          onClick={() => void handleRemoveImage()}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" /> Bild entfernen
+                        </Button>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Foto oder Datei vom Handy bzw. PC. Das Bild wird automatisch auf max. 1600 px
+                      verkleinert und als WebP gespeichert.
+                    </p>
+                  </div>
+                </div>
               </div>
               <div className="sm:col-span-2">
                 <Label htmlFor="p-desc">Beschreibung</Label>
@@ -224,6 +337,31 @@ export function ProductEditor({
                 />{" "}
                 Vegetarisch
               </label>
+              <div className="w-full">
+                <label className="flex items-center gap-2 text-sm">
+                  <Switch
+                    checked={draft.homeFeatured}
+                    disabled={!draft.homeFeatured && featuredLimitReached}
+                    onCheckedChange={(v) => {
+                      if (v && featuredLimitReached) {
+                        toast.error(
+                          "Es sind bereits 3 Produkte auf der Startseite hervorgehoben. Bitte zuerst eines abwählen.",
+                        );
+                        return;
+                      }
+                      set({ homeFeatured: v });
+                    }}
+                  />{" "}
+                  Auf Startseite hervorheben („Beliebt am Truck“)
+                </label>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {featuredLimitReached && !draft.homeFeatured
+                    ? "Maximum erreicht: 3 von 3 Produkten sind bereits hervorgehoben."
+                    : `Maximal 3 Produkte – aktuell hervorgehoben: ${
+                        featuredElsewhere + (draft.homeFeatured ? 1 : 0)
+                      } von ${MAX_HOME_FEATURED}.`}
+                </p>
+              </div>
             </div>
 
             <section>
@@ -505,6 +643,7 @@ export function ProductEditor({
                   price: parsePrice(priceText),
                 };
 
+                void cleanupPendingUploads(saved.imageUrl);
                 upsertProduct(saved);
                 toast.success("✓ Gespeichert", {
                   description: `${saved.name} · ${formatPrice(saved.price)}`,
@@ -530,6 +669,7 @@ export function ProductEditor({
             <AlertDialogCancel>Weiter bearbeiten</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
+                void cleanupPendingUploads();
                 setDraft(product);
                 setConfirmDiscard(false);
                 onOpenChange(false);
